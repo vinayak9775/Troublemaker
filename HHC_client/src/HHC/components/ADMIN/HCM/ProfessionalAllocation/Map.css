@@ -1,0 +1,26 @@
+/* Map.css */
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+
+.polygon-label {
+  /* position: relative; */
+  text-align: center;
+  color: Red;
+  font-weight: bold;
+  background-color: None; /* Adjust background color */
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-top: -18px; /* Adjust vertical alignment */
+  font-size: 12px; /* Adjust font size */
+}
+
+.custom-popup {
+  /* Add your custom styles here */
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 5px;
+  padding: 5px;
+}

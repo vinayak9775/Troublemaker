@@ -1,0 +1,90 @@
+/* calendar.css */
+
+/* General styles for the calendar */
+.rbc-calendar {
+    height: 500px;
+    margin: 0 auto;
+    max-width: 100%;
+  }
+  
+  /* Adjust the calendar height for smaller screens */
+  @media (max-width: 768px) {
+    .rbc-calendar {
+      height: 400px;
+    }
+  }
+  
+  /* Styles for the calendar events */
+  .rbc-event {
+    background-color: #26C0E2;
+    color: white;
+    /* border: 1px solid #3174ad; */
+    padding: 5px;
+    border-radius: 5px;
+  }
+  
+  /* Styles for the event tooltip */
+  .rbc-event-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Styles for the event tooltip on smaller screens */
+  @media (max-width: 576px) {
+    .rbc-event-label {
+      font-size: 10px;
+    }
+  }
+  
+  /* Styles for the event modal */
+  .rbc-show-more {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+  
+  /* Styles for the event modal content */
+  .rbc-overlay-content {
+    padding: 10px;
+  }
+
+  .rbc-event-content {
+    text-align: center;
+    font-size: 12px;
+  }
+  
+  /* Styles for the event modal title */
+  .rbc-overlay-header {
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  /* Styles for the event modal body */
+  .rbc-overlay-body {
+    font-size: 14px;
+  }
+  
+  /* Styles for the event modal close button */
+  .rbc-overlay-close {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  /* Styles for the "Add Event" button */
+  .add-event-button {
+    margin-top: 10px;
+    background-color: #28a745;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  /* Styles for the "Add Event" button on smaller screens */
+  @media (max-width: 576px) {
+    .add-event-button {
+      font-size: 12px;
+    }
+  }
+  

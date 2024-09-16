@@ -1,0 +1,10 @@
+/* Styling for Profile Dialog only */
+.contact-info {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Style the icons */
+  .contact-info svg {
+    margin-right: 5px; /* Adjust the space between the icon and text */
+  }

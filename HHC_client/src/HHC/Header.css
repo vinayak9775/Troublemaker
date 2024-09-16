@@ -1,0 +1,12 @@
+.tab-root:hover {
+    background-color: transparent !important;
+  }
+  
+  .tab-root.Mui-selected:hover {
+    background-color: #F3FAFF !important;
+  }
+
+  .tab-link {
+    text-decoration: none;
+    color: black;
+  }

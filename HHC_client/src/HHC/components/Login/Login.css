@@ -1,0 +1,76 @@
+.container {
+    position: relative;
+    width: 100%;
+    /* height: 624px; */
+    height: 100vh;
+    background-image: url('../../assets/login_bg.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 16px;
+}
+
+.input_fields {
+    position: absolute;
+    top: 40%;
+    left: 82%;
+    width: 25%;
+    transform: translate(-50%, -50%);
+    padding: 10px;
+    /* border: 1px solid #ccc; */
+    border-radius: 5px;
+}
+
+input {
+    /* position: absolute; */
+    /* Set the positioning of the input elements relative to the container */
+    /* top: 50%; */
+    /* left: 80%; */
+    /* transform: translate(-50%, -50%); */
+    /* Add any other styles you want for the input elements */
+    width: 300px;
+    padding: 15px;
+    margin: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* @media only screen and (max-width: 768px) {
+    .container {
+        position: relative;
+        height: auto;
+        background-image: url('../../assets/login_bg_tab.png');
+        background-size: cover;
+        background-position: center;
+        border-radius: 16px;
+    }
+
+    .input_fields {
+        position: absolute;
+        top: 50%;
+        width: 80%;
+        transform: translate(-50%, -50%);
+    }
+} */
+
+@media only screen and (max-width: 450px) {
+    .container {
+        position: relative;
+        /* width: 100%; */
+        background-image: url('../../assets/login_bg_m2.png');
+        background-size: cover;
+        background-position: center;
+        border-radius: 16px;
+    }
+
+    .input_fields {
+        background-color: #ffff;
+        border-radius: 10px 10px 0 0;
+        position: absolute;
+        top: 72%;
+        left: 50%;
+        width: 94%;
+        padding: 10px;
+        transform: translate(-50%, -50%);
+    }
+}
+

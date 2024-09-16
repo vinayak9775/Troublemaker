@@ -1,0 +1,108 @@
+:root {
+    --switches-bg-color: goldenrod;
+    --switches-label-color: white;
+    --switch-bg-color: white;
+    --switch-text-color: white;
+  }
+  
+  .switches-container-follow {
+    width: 18rem;
+    position: relative;
+    display: flex;
+    padding: 0;
+    background: #EDEDEF;
+    line-height: 3rem;
+    border-radius: 8px;
+    margin-right: auto;
+  }
+  
+  /* input (radio) for toggling. hidden - use labels for clicking on */
+  .switches-container-follow input {
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+  }
+
+  .switches-container-follow a {
+    text-decoration: none;
+  }
+
+  .switches-container-follow b {
+    font-size: 15px;
+  }
+  
+  /* labels for the input (radio) boxes - something to click on */
+  .switches-container-follow label {
+    width: 50%;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+    cursor: pointer;
+    /* color: white; */
+    color: var(--switches-label-color);
+  }
+  
+  /* switch highlighters wrapper (sliding left / right) 
+    - need wrapper to enable the even margins around the highlight box
+  */
+  .switch-wrapper-follow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    padding: 0.15rem;
+    z-index: 3;
+    transition: transform .5s cubic-bezier(.77, 0, .175, 1);
+    /* transition: transform 1s; */
+  }
+  
+  /* switch box highlighter */
+  .switch-follow {
+    border-radius: 6px;
+    background: #69A5EB;
+    height: 100%;
+    width: 100%;
+    /* justify-content: center; */
+  }
+
+  .switch-follow a {
+    color: white;
+  }
+  
+
+  .switch-follow div {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    opacity: 0;
+    display: block;
+    /* color: white; */
+    color: var(--switch-text-color) ;
+    transition: opacity .2s cubic-bezier(.77, 0, .175, 1) .125s;
+    will-change: opacity;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  
+  /* slide the switch box from right to left */
+  .switches-container-follow input:nth-of-type(1):checked~.switch-wrapper-follow {
+    transform: translateX(0%);
+  }
+  
+  /* slide the switch box from left to right */
+  .switches-container-follow input:nth-of-type(2):checked~.switch-wrapper-follow {
+    transform: translateX(100%);
+  }
+  
+  
+  /* toggle the switch box labels - first checkbox:checked - show first switch div */
+  .switches-container-follow input:nth-of-type(1):checked~.switch-wrapper-follow .switch-follow div:nth-of-type(1) {
+    opacity: 1;
+  }
+  
+  /* toggle the switch box labels - second checkbox:checked - show second switch div */
+  .switches-container-follow input:nth-of-type(2):checked~.switch-wrapper-follow .switch-follow div:nth-of-type(2) {
+    opacity: 1;
+  }
+  
