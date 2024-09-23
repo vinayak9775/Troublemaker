@@ -3,6 +3,11 @@ pipeline{
     stages {
     
         stage('Setup Python Virtual ENV for dependencies'){
+      stage('Check Files') {
+            steps {
+                sh 'ls -al'
+            }
+        }
        
       steps  {
             sh '''
