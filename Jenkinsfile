@@ -10,9 +10,12 @@ pipeline{
             steps  {
                 sh '''
                 ls
-                chmod +x envsetup.sh
+                cd /var/www/html/Aggregation_test_project/Troublemakers
+                ls
+                #chmod +x envsetup.sh
+                chmod +x /var/www/html/Aggregation_test_project/Troublemakers/envsetup.sh
                 ./envsetup.sh
-                '''}
+                '''
             }
             stage('Setup Gunicorn Setup'){
                 steps {
@@ -31,4 +34,5 @@ pipeline{
                 }
             }
     }
+}
 }
