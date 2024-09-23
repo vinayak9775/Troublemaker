@@ -12,7 +12,7 @@ pipeline {
                     echo "Checking current workspace directory"
                     ls -al
                     cd /var/www/html/Aggregation_test_project/Troublemakers
-                    chmod +x /var/www/html/Aggregation_test_project/Troublemakers/envsetup.sh
+                    sudo chmod +x /var/www/html/Aggregation_test_project/Troublemakers/envsetup.sh
                     ./envsetup.sh
                 '''
             }
