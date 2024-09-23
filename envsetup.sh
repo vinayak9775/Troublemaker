@@ -1,13 +1,13 @@
 #!/bin/bash
 cd ..
-if [ -d "env" ] 
+if [ -d "myenv" ] 
 then
     echo "Python virtual environment exists." 
 else
     python3 -m venv myenv
 fi
 echo $PWD
-source env/bin/activate
+source myenv/bin/activate
 
 cd Troublemakers
 
