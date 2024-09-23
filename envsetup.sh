@@ -9,9 +9,8 @@ fi
 echo $PWD
 source myenv/bin/activate
 
-cd Troublemakers
 
-pip3 install -r requirements.txt
+pip3 install -r requirnment.txt
 
 if [ -d "logs" ] 
 then
