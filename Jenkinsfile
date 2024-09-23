@@ -9,9 +9,9 @@ pipeline{
         stage('Setup Python Virtual ENV for dependencies'){
             steps  {
                 sh '''
-                ls
+                echo "Checking current workspace directory"
+                ls -al
                 cd /var/www/html/Aggregation_test_project/Troublemakers
-                ls
                 #chmod +x envsetup.sh
                 chmod +x /var/www/html/Aggregation_test_project/Troublemakers/envsetup.sh
                 ./envsetup.sh
