@@ -1,0 +1,9 @@
+version:'3'
+services:
+    web:
+        build: .
+        command: ./commandpoint.sh
+        volumes:
+            - .:/HHC
+        ports:
+            - "8282:8282"
