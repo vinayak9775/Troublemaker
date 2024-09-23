@@ -9,7 +9,7 @@ fi
 echo $PWD
 source myenv/bin/activate
 
-
+ls
 pip3 install -r requirnment.txt
 
 if [ -d "logs" ] 
