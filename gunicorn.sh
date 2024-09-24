@@ -1,7 +1,9 @@
 #!/bin/bash
 ls
 pwd
-source env/bin/activate
+cd ..
+source myenv/bin/activate
+cd HHC_CICD
 
 # cd /var/lib/jenkins/workspace/django-cicd/app
 
