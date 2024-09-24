@@ -1,0 +1,17 @@
+[Unit]
+Description=HHC CICD gunicorn daemon
+Requires=hhc_cicd_gunicorn.socket
+After=network.target
+[Service]
+User=spero_it
+Group=www-data
+WorkingDirectory= /var/lib/jenkins/workspace/HHC_CICD
+ExecStart=/var/lib/jenkins/workspace/myenv/bin/gunicorn \
+        --error-logfile /var/lib/jenkins/workspace/HHC_CICD/logs/error.log \
+        --access-logfile /var/lib/jenkins/workspace/HHC_CICD/logs/access.log \
+        --workers 3 \
+        --capture-output --log-level debug \
+        --bind unix:/run/hhc_cicd_gunicorn.sock \
+        hhcspero.wsgi:application
+[Install]
+WantedBy=multi-user.target 
