@@ -9,9 +9,9 @@ fi
 echo $PWD
 source myenv/bin/activate
 
-cd Troublemakers
-
-pip3 install -r requirements.txt
+ls
+cd HHC_CICD
+pip3 install -r requirnment.txt
 
 if [ -d "logs" ] 
 then

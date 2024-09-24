@@ -108,7 +108,7 @@ DATABASES = {
     
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'HHC_test_db',
+        'NAME': 'HHC_main',
         'USER': 'hhcpython',
         'PASSWORD': 'Python!1!hhc',
         'HOST': '192.168.1.174',
@@ -241,38 +241,38 @@ CORS_ALLOWED_ORIGINS=[
 
 
 
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath('django_logs/django_logger.log')))
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_FILE_PATH = os.path.join(BASE_DIR, 'logs', 'django_logs/django_logger.log')
+# # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath('django_logs/django_logger.log')))
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# LOG_FILE_PATH = os.path.join(BASE_DIR, 'logs', 'django_logs/django_logger.log')
 
-if not os.path.exists(os.path.dirname(LOG_FILE_PATH)):
-    os.makedirs(os.path.dirname(LOG_FILE_PATH))
+# if not os.path.exists(os.path.dirname(LOG_FILE_PATH)):
+#     os.makedirs(os.path.dirname(LOG_FILE_PATH))
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',  # Adjust the logging level as needed (INFO, WARNING, ERROR, CRITICAL)
-            'class': 'logging.FileHandler',
-            'filename': 'django_logs/django_logger.log',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['file'],
-        'level': 'INFO',  # Set the logging level for the root logger
-    },
-}
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'verbose': {
+#             'format': '{levelname} {asctime} {module} {message}',
+#             'style': '{',
+#         },
+#         'simple': {
+#             'format': '{levelname} {message}',
+#             'style': '{',
+#         },
+#     },
+#     'handlers': {
+#         'file': {
+#             'level': 'INFO',  # Adjust the logging level as needed (INFO, WARNING, ERROR, CRITICAL)
+#             'class': 'logging.FileHandler',
+#             'filename': 'django_logs/django_logger.log',
+#             'formatter': 'verbose',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['file'],
+#         'level': 'INFO',  # Set the logging level for the root logger
+#     },
+# }
 
 

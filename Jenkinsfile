@@ -10,7 +10,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Checking current workspace directory"
-                    ls -al
+                    #ls -al
                     chmod +x envsetup.sh
                     ./envsetup.sh
                 '''

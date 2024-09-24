@@ -1,0 +1,7 @@
+[Unit]
+Description= HHC CICD gunicorn socket
+[Socket]
+ListenStream=/run/hhc_cicd_gunicorn.sock
+SocketUser=www-data
+[Install]
+WantedBy=sockets.target
