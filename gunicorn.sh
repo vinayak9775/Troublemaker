@@ -7,6 +7,12 @@ cd HHC_CICD
  
 python3 manage.py makemigrations
 python3 manage.py migrate
+
+
+cd HHC_client
+npm run build
+cd ..
+
 python3 manage.py collectstatic -- yes-input
 
 echo "Migrations done"
