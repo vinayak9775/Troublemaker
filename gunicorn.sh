@@ -10,6 +10,7 @@ python3 manage.py migrate
 
 
 cd HHC_client
+echo "npm run build"
 npm run build
 cd ..
 
@@ -19,7 +20,8 @@ python3 manage.py collectstatic --noinput
 echo "Migrations done"
 
 # cd /var/lib/jenkins/workspace/django-cicd
-
+echo "$USER"
+echo "$PWD"
 sudo cp -rf hhc_cicd_gunicorn.socket /etc/systemd/system/
 sudo cp -rf hhc_cicd_gunicorn.service /etc/systemd/system/
 
