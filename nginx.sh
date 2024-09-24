@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo cp -rf HHC_cicd.conf /etc/nginx/sites-available/HHC_cicd
-chmod 710 /var/lib/jenkins/workspace/django-cicd
+chmod 710 /var/lib/jenkins/workspace/HHC_CICD
 
 sudo ln -s /etc/nginx/sites-available/HHC_cicd /etc/nginx/sites-enabled
 sudo nginx -t
