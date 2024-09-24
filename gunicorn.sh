@@ -13,7 +13,8 @@ cd HHC_client
 npm run build
 cd ..
 
-python3 manage.py collectstatic -- yes-input
+python3 manage.py collectstatic --noinput
+
 
 echo "Migrations done"
 
