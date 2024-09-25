@@ -3,7 +3,7 @@ Description=HHC CICD gunicorn daemon
 Requires=hhc_cicd_gunicorn.socket
 After=network.target
 [Service]
-User=spero_it
+User=jenkins
 Group=www-data
 WorkingDirectory= /var/lib/jenkins/workspace/HHC_CICD
 ExecStart=/var/lib/jenkins/workspace/myenv/bin/gunicorn \
