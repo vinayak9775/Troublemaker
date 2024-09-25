@@ -114,10 +114,7 @@ def whatsapp_sms(to_number,template_name,placeholders):
     conn.close()
     print('hii')
     print('hii22')
-    print('hii22')
-    print('hii22')
-    print('hii22')
-    print('hii22')
+   
     if res.status == 200:
         return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))})
     else:

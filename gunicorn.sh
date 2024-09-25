@@ -19,7 +19,6 @@ python3 manage.py collectstatic --noinput
 
 echo "Migrations done"
 
-# cd /var/lib/jenkins/workspace/django-cicd
 echo "$USER"
 echo "$PWD"
 sudo cp -rf hhc_cicd_gunicorn.socket /etc/systemd/system/
