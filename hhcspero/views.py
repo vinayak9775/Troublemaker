@@ -11,6 +11,7 @@ from hhcweb import models
 import jwt
 
 def index(request):
+    print('jiiii')
     return render(request, 'index.html')
 
 
