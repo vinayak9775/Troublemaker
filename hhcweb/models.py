@@ -5115,7 +5115,7 @@ class agg_hhc_wallet(models.Model):
 	Amount_status=enum.EnumField(Amount_status_enum,null=True)#	Amount_Used=1 Amount_not_used=2 Amount_return=3
 	Amount_used_from=enum.EnumField(Add_through_enum,null=True,blank=True)#    HD=1 Professional=2 Community_App=3
 	status=enum.EnumField(status_enum,null=True)
-	Amount_send_to_wallet_id=models.CharField(null=True,blank=True)
+	Amount_send_to_wallet_id=models.CharField(max_length=200,null=True,blank=True)
 	pay_dt_id=models.ForeignKey('agg_hhc_payment_details',on_delete=models.CASCADE,null=True)#for which payment this amount is send
 	added_by=models.CharField(max_length=100, blank=True,null=True)
 	added_date=models.DateTimeField(auto_now_add=True,null=True)
