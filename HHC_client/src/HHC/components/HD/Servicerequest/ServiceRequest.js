@@ -105,8 +105,6 @@ const ServiceRequest = () => {
 
   const [loading, setLoading] = useState(true);
 
-  const [flagValue, setFlagValue] = useState(null);
-
   //   useState for service requestupdate patient details
   const [patientID, setPatientID] = useState(null);
   console.log("patientID.......", patientID);
@@ -316,8 +314,6 @@ const ServiceRequest = () => {
       setEventID(selectedRequest.event_id);
       setPatientID(selectedRequest.agg_sp_pt_id?.agg_sp_pt_id);
       console.log("hhhfjhdfh", selectedRequest.agg_sp_pt_id?.agg_sp_pt_id);
-      setFlagValue(selectedRequest.flag);
-      console.log("ffffffffflag", selectedRequest.flag)
       setPaydone("ac");
       getRequestAllocation(selectedRequest.payment_is_done);
     }
@@ -333,7 +329,6 @@ const ServiceRequest = () => {
     if (selectedRequest) {
       console.log("Selected Event ID:", selectedRequest.event_id);
       setEventID(selectedRequest.event_id);
-      setFlagValue(selectedRequest.flag);
       setcallerID(selectedRequest.caller_id);
       console.log(selectedRequest.caller_id, "callerddddddd");
       setclrName(selectedRequest.caller_name, "callername");
@@ -377,8 +372,7 @@ const ServiceRequest = () => {
             callerID: callerValue,
             eventPlanID: eventPlanValue,
             eventID: eventValue,
-            // flag: 1,
-            flag: flagValue,
+            flag: 1,
             paymentStatus: a,
           },
         });
@@ -629,7 +623,6 @@ const ServiceRequest = () => {
               filteredData.length === 0 || filteredData.length < 5
                 ? "60vh"
                 : "default",
-            // overflow: "visible",
           }}
         >
           <Table>
@@ -1020,12 +1013,6 @@ const ServiceRequest = () => {
                                   style: {
                                     maxHeight: ITEM_HEIGHT * 4.5,
                                     width: "15ch",
-                                    boxShadow: rowsPerPage === 5
-                                      ? "0px 4px 10px rgba(0, 0, 0, 0.2)"
-                                      : "none",
-                                      border: rowsPerPage === 5
-                                      ? "none"
-                                      : "1px solid gray",
                                   },
                                 },
                               }}

@@ -1,3 +1,7 @@
+.body{
+  overflow-y: hidden;
+}
+
 .legend {
     padding: 10px;
     background: white;

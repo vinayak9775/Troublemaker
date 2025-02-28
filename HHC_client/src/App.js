@@ -72,7 +72,6 @@ import Servicedetails from './HHC/components/HrPartner/ServiceDetails/Servicedet
 import ClinicalHeader from './HHC/components/Clinical/ClinicalHeader';
 import OnlineTransaction from './HHC/components/ADMIN/ACCOUNT/OnlineTransaction';
 // import AuthUser from './HHC/components/AuthUser';
-import ClosureRevalidation from './HHC/components/ADMIN/HCM/ClosureRevalidation/ClosureRevalidation';
 
 // import ProtectedRoute from './HHC/ProtectedRoute';
 import ProfessionalDetails from './HHC/components/ADMIN/HCM/ProfessionalDetails';
@@ -135,7 +134,6 @@ function App() {
             <Route path='/hhc/HCM/login employee' element={<LoginEmployees />} />
             <Route path='/hhc/HCM/professional allocation' element={<AllocatedList />} />
             <Route path='/hhc/HCM/professional details' element={<ProfessionalDetails />} />
-            <Route path='/hhc/HCM/closure revalidation' element={<ClosureRevalidation />} />
 
             {/* ACCOUNT Routing */}
             <Route path='/hhc/account/dashboard' element={<AccountDashboard />} />

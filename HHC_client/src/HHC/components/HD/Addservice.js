@@ -220,9 +220,7 @@ const Addservice = () => {
     // const [totalDiscount, setTotalDiscount] = useState(0);
     // const [totalDiscount, setTotalDiscount] = useState(null);
 
-    // const [medTransAmt, setMedTransAmt] = useState();
-    const [medTransAmt, setMedTransAmt] = useState(() => enqToServicePay?.Total_cost || '');
-    console.log("medTransAmt.....", medTransAmt)
+    const [medTransAmt, setMedTransAmt] = useState();
 
     const [callerDetails, setCallerDetails] = useState(null);
     const [patientDetails, setPatientDetails] = useState(null);
@@ -1179,18 +1177,6 @@ const Addservice = () => {
     }, [enqToServiceSrv, srvExtendSrv]);
 
     useEffect(() => {
-        if (enqToServicePay?.Total_cost && medTransAmt === '') {
-            setMedTransAmt(enqToServicePay.Total_cost);
-        }
-    }, [enqToServicePay]);
-
-    useEffect(() => {
-        if (selectedService === 12) {
-            setGetCost(medTransAmt);
-        }
-    }, [medTransAmt, selectedService]);
-
-    useEffect(() => {
         if (selectedConsultant === 0) {
             handleOpenConsult();
         }
@@ -1460,12 +1446,7 @@ const Addservice = () => {
         const selectedSubService = subService.find(item => item.sub_srv_id === subServiceId);
         if (selectedSubService) {
             setSelectedSubService(subServiceId);
-            // setGetCost(selectedSubService.cost);
-            if (selectedService === 10) {
-                setGetCost(medTransAmt);
-            } else {
-                setGetCost(selectedSubService.cost);
-            }
+            setGetCost(selectedSubService.cost);
             setSrvHrs(selectedSubService.Service_Time);
             if (selectedService === 3) {
                 handleOpenQuestions();
@@ -2139,8 +2120,7 @@ const Addservice = () => {
             requestData.end_time = endTime;
             requestData.prof_prefered = selectedProfGender;
             requestData.remark = remark;
-            // requestData.Total_cost = calculatedAmount;
-            requestData.Total_cost = selectedService === 12 ? medTransAmt * dateCount : calculatedAmount;
+            requestData.Total_cost = calculatedAmount;
             requestData.discount_type = selectedDiscountId === 6 ? 1 : selectedDiscountId;
             requestData.discount_value = discountValue;
             requestData.coupon_id = selectedCoupon;
@@ -6299,59 +6279,31 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
-                                                {selectedService === 12 ? (
-                                                    <TextField
-                                                        required
-                                                        id="med_Trans_amount"
-                                                        name="med_Trans_amount"
-                                                        label="Enter Amount"
-                                                        size="small"
-                                                        fullWidth
-                                                        value={medTransAmt}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            if (/^\d*$/.test(value)) {
-                                                                setMedTransAmt(value);
-                                                            }
-                                                        }}
-                                                        sx={{
-                                                            textAlign: "left", '& input': {
-                                                                fontSize: '14px',
-                                                            },
-                                                        }}
-                                                        inputProps={{
-                                                            maxLength: 5,
-                                                        }}
-                                                        error={!/^\d*$/.test(medTransAmt)}
-                                                        helperText={!/^\d*$/.test(medTransAmt) ? "Please enter a valid integer." : ""}
-                                                    />
-                                                ) : (
-                                                    <TextField
-                                                        id="prof_prefered"
-                                                        select
-                                                        name="prof_prefered"
-                                                        label="Preferred Professional"
-                                                        value={enqToServiceSrv.prof_prefered ? enqToServiceSrv.prof_prefered : selectedProfGender}
-                                                        onChange={(e) => enqToServiceSrv.prof_prefered ? handleFieldChange("prof_prefered", e.target.value) : handleDropdownProfGender(e)}
-                                                        size="small"
-                                                        fullWidth
-                                                        InputLabelProps={{
-                                                            shrink: true,
-                                                        }}
-                                                        sx={{
-                                                            textAlign: "left", '& input': {
-                                                                fontSize: '14px',
-                                                            },
-                                                        }}
-                                                    >
-                                                        {profGender.map((option) => (
-                                                            <MenuItem key={option.gender_id} value={option.gender_id}
-                                                                sx={{ fontSize: "14px", }}>
-                                                                {option.name}
-                                                            </MenuItem>
-                                                        ))}
-                                                    </TextField>
-                                                )}
+                                                <TextField
+                                                    id="prof_prefered"
+                                                    select
+                                                    name="prof_prefered"
+                                                    label="Preferred Professional"
+                                                    value={enqToServiceSrv.prof_prefered ? enqToServiceSrv.prof_prefered : selectedProfGender}
+                                                    onChange={(e) => enqToServiceSrv.prof_prefered ? handleFieldChange("prof_prefered", e.target.value) : handleDropdownProfGender(e)}
+                                                    size="small"
+                                                    fullWidth
+                                                    InputLabelProps={{
+                                                        shrink: true,
+                                                    }}
+                                                    sx={{
+                                                        textAlign: "left", '& input': {
+                                                            fontSize: '14px',
+                                                        },
+                                                    }}
+                                                >
+                                                    {profGender.map((option) => (
+                                                        <MenuItem key={option.gender_id} value={option.gender_id}
+                                                            sx={{ fontSize: "14px", }}>
+                                                            {option.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </TextField>
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
@@ -6605,59 +6557,31 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
-                                                {selectedService === 12 ? (
-                                                    <TextField
-                                                        required
-                                                        id="med_Trans_amount"
-                                                        name="med_Trans_amount"
-                                                        label="Enter Amount"
-                                                        size="small"
-                                                        fullWidth
-                                                        value={medTransAmt}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            if (/^\d*$/.test(value)) {
-                                                                setMedTransAmt(value);
-                                                            }
-                                                        }}
-                                                        sx={{
-                                                            textAlign: "left", '& input': {
-                                                                fontSize: '14px',
-                                                            },
-                                                        }}
-                                                        inputProps={{
-                                                            maxLength: 5,
-                                                        }}
-                                                        error={!/^\d*$/.test(medTransAmt)}
-                                                        helperText={!/^\d*$/.test(medTransAmt) ? "Please enter a valid integer." : ""}
-                                                    />
-                                                ) : (
-                                                    <TextField
-                                                        id="prof_prefered"
-                                                        select
-                                                        name="prof_prefered"
-                                                        label="Preferred Professional"
-                                                        value={selectedProfGender}
-                                                        onChange={handleDropdownProfGender}
-                                                        size="small"
-                                                        fullWidth
-                                                        InputLabelProps={{
-                                                            shrink: true,
-                                                        }}
-                                                        sx={{
-                                                            textAlign: "left", '& input': {
-                                                                fontSize: '14px',
-                                                            },
-                                                        }}
-                                                    >
-                                                        {profGender.map((option) => (
-                                                            <MenuItem key={option.gender_id} value={option.gender_id}
-                                                                sx={{ fontSize: "14px", }}>
-                                                                {option.name}
-                                                            </MenuItem>
-                                                        ))}
-                                                    </TextField>
-                                                )}
+                                                <TextField
+                                                    id="prof_prefered"
+                                                    select
+                                                    name="prof_prefered"
+                                                    label="Preferred Professional"
+                                                    value={selectedProfGender}
+                                                    onChange={handleDropdownProfGender}
+                                                    size="small"
+                                                    fullWidth
+                                                    InputLabelProps={{
+                                                        shrink: true,
+                                                    }}
+                                                    sx={{
+                                                        textAlign: "left", '& input': {
+                                                            fontSize: '14px',
+                                                        },
+                                                    }}
+                                                >
+                                                    {profGender.map((option) => (
+                                                        <MenuItem key={option.gender_id} value={option.gender_id}
+                                                            sx={{ fontSize: "14px", }}>
+                                                            {option.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </TextField>
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>

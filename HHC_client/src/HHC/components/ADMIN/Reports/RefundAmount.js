@@ -102,11 +102,10 @@ const RefundAmount = () => {
 
             const renamedData = data.map(item => ({
                 'Total Session': item.total_sessions,
-                'Event Id': item.event_id,
                 'Service total Amount': item.service_total_amount,
                 'Cancellation Charges': item.cancellation_charges,
                 'Cancelled Sessions': item.cancelled_sessions,
-                // 'Dates': item.dates,
+                'Dates': item.dates,
                 'Cancelation Status': item.cancelation_staus,
                 'Service': item.srvice,
                 'Sub Service': item.sub_service,
@@ -198,7 +197,6 @@ const RefundAmount = () => {
                         </Button>
 
                         <FileDownloadOutlinedIcon
-                            sx={{ cursor: 'pointer' }}
                             onClick={handleDownloadExcel}
                         />
                     </Stack>
@@ -211,9 +209,6 @@ const RefundAmount = () => {
                                 <Refundamt style={{ background: "#69A5EB", color: "#FFFFFF", borderRadius: "8px 10px 0 0", height: '3rem' }}>
                                     <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Sr No</Typography>
-                                    </CardContent>
-                                    <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
-                                        <Typography variant='subtitle2'>Event ID</Typography>
                                     </CardContent>
                                     <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Total Session</Typography>
@@ -236,12 +231,12 @@ const RefundAmount = () => {
                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>SubService</Typography>
                                     </CardContent>
-                                    {/* <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Service Start Date</Typography>
                                     </CardContent>
                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Service End Date</Typography>
-                                    </CardContent> */}
+                                    </CardContent>
                                 </Refundamt>
                             </TableRow>
                         </TableHead>
@@ -266,9 +261,6 @@ const RefundAmount = () => {
                                                 <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant='subtitle2'>{page * rowsPerPage + index + 1}</Typography>
                                                 </CardContent>
-                                                <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
-                                                    <Typography variant='subtitle2'>{refund.event_id || '-'}</Typography>
-                                                </CardContent>
                                                 <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant='subtitle2'>{refund.total_sessions || '-'}</Typography>
                                                 </CardContent>
@@ -290,12 +282,12 @@ const RefundAmount = () => {
                                                 <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant='subtitle2'>{refund.sub_service || '-'}</Typography>
                                                 </CardContent>
-                                                {/* <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant='subtitle2'>{refund.service_start_date || '-'}</Typography>
                                                 </CardContent>
                                                 <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant='subtitle2'>{refund.service_end_date || '-'}</Typography>
-                                                </CardContent> */}
+                                                </CardContent>
                                             </Refundamt>
                                         </TableRow>
                                     ))

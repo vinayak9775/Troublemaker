@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState,useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -11,83 +11,43 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [serviceData, setServiceData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+
   const [cancellationData, setCancellationData] = useState([]);
   const [error, setError] = useState(null);
-  const [selectedYear, setSelectedYear] = useState(null);
-  const [someValue, setSomeValue] = useState("");
 
 
-  const resetValue = (newValue) => {
-    setSomeValue(newValue); // Set a new value on reset
-    console.log("New Value",newValue)
-  };
 
-  useEffect(()=>{
-    setCancellationData([]);
-  },[someValue])
-  
-  // const fetchCancellationData = async (cancel_flag, month_flag,selectedYear,srv_flag,can_res_id,prof_alloc) => {
-
-  //   if (!selectedYear) {
-  //     console.error("Year is not selected or invalid:", selectedYear);
-  //     return; // Don't make the API call if selectedYear is undefined or null
-  //   }
-  //   console.log({ cancel_flag, month_flag, selectedYear, srv_flag, can_res_id, prof_alloc });
-
-  //   setError(null);
-  //   try {
-  //     const accessToken = localStorage.getItem('token');
-  //     // console.log("all data",);
-
-  //     const response = await axios.get(`${apiKeymap}/web/srv_enq_cancellation_data/`,{
-  //       headers: {
-  //         Authorization: `Bearer ${accessToken}` 
-  //       },
-  //       params: {
-  //         cancel_flag,
-  //         month_flag,
-  //         year:selectedYear,
-  //         srv_flag,
-  //         can_res_id,
-  //         prof_alloc
-  //       }
-  //     });
-  //     setCancellationData(response.data);
-  //     console.log("API Response:", response);
-
-  //   } catch (err) {
-  //     setError(err.message);
-  //   }
-  // };
-
-  const fetchCancellationData = async (cancel_flag, month_flag, year, srv_flag, can_res_id, prof_alloc) => {
+  const fetchCancellationData = async (cancel_flag, month_flag,srv_flag,can_res_id,prof_alloc) => {
+    setError(null);
     try {
       const accessToken = localStorage.getItem('token');
-      const response = await axios.get(`${apiKeymap}/web/srv_enq_cancellation_data/`, {
+      // console.log("all data",);
+      
+      const response = await axios.get(`${apiKeymap}/web/srv_enq_cancellation_data/`,{
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}` 
         },
         params: {
           cancel_flag,
           month_flag,
-          year,
           srv_flag,
           can_res_id,
-          prof_alloc,
-        },
+          prof_alloc
+        }
       });
       setCancellationData(response.data);
       console.log("API Response:", response);
-      console.log(response.data,"Data from Context")
+
     } catch (err) {
       setError(err.message);
     }
   };
 
-
+  
   const handleAuth = () => {
     // setIsLoggedIn(true);
-    localStorage.setItem('isLoggedIn', setIsLoggedIn(true));
+    localStorage.setItem('isLoggedIn',setIsLoggedIn(true));
   };
   const handleAuthLogout = () => {
     setIsLoggedIn(false);
@@ -98,8 +58,8 @@ export const AuthProvider = ({ children }) => {
 
   // Function to fetch cancellation reasons
   const fetchCancellationReasons = async (id) => {
-
-
+   
+  
     try {
       const response = await fetch(
         `${apiKeymap}/web/cancellation_reason_follow_up_list/${id}`,
@@ -111,7 +71,7 @@ export const AuthProvider = ({ children }) => {
           },
         }
       );
-
+  
       if (response.ok) {
         const data = await response.json();
         setSubmenuData(data); // Use your state update function
@@ -125,12 +85,12 @@ export const AuthProvider = ({ children }) => {
 
 
 
-  // Function to fetch services data
+ // Function to fetch services data
 
   // Fetch services data
   const fetchServicesData = async () => {
     console.log("Fetching services data...");
-
+    
     try {
       const response = await axios.get(`${apiKeymap}/web/agg_hhc_services_api`, {
         headers: {
@@ -149,11 +109,11 @@ export const AuthProvider = ({ children }) => {
 
   // Fetch services data on mount
   useEffect(() => {
-    fetchServicesData();
-  }, []);
+    fetchServicesData(); 
+  }, []); 
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, handleAuth, handleAuthLogout, cancellationData, fetchCancellationData, submenuData, fetchCancellationReasons, fetchServicesData, serviceData, selectedYear, setSelectedYear, someValue, setSomeValue, resetValue }}>
+    <AuthContext.Provider value={{ isLoggedIn, handleAuth, handleAuthLogout,cancellationData, fetchCancellationData, submenuData, fetchCancellationReasons, fetchServicesData, serviceData}}>
       {children}
     </AuthContext.Provider>
   );

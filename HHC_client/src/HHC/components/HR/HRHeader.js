@@ -65,7 +65,6 @@ import AddProfPartner from '../HrPartner/Professionals/AddProfPartner';
 import ExternalProf from './ExternalProfessional/ExternalProf';
 import Servicedetails from '../HrPartner/ServiceDetails/Servicedetails';
 import { useNavigate } from 'react-router-dom';
-import ClosureRevalidation from '../ADMIN/HCM/ClosureRevalidation/ClosureRevalidation';
 
 const HRHeader = () => {
     const accessToken = localStorage.getItem('token');
@@ -505,8 +504,6 @@ const HRHeader = () => {
                         <Route path='/hhc/HCM/login employee' element={<LoginEmployees />} />
                         <Route path='/hhc/HCM/professional allocation' element={<AllocatedList />} />
                         <Route path='/hhc/HCM/professional details' element={<ProfessionalDetails />} />
-                        {/* shubham code */}
-                        <Route path='/hhc/HCM/closure revalidation' element={<ClosureRevalidation />} />
 
                         {/*ADMIN ACCOUNT Routing */}
                         <Route path='/account/dashboard' element={<AccountDashboard />} />

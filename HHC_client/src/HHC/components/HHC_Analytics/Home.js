@@ -6,10 +6,6 @@ import Navbar from "../../Navbar";
 import Footer from "../../Footer";
 import './Home.css';
 import "leaflet/dist/leaflet.css";
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TextField } from '@mui/material';
 import {
   Box,
   Grid,
@@ -33,7 +29,7 @@ const cancellationTypes = [
 
 const monthTypes = [
   { id: 13, name: "Last 6 Month" },
-  // { id: 14, name: "All" },
+  { id: 14, name: "All" },
   { id: 1, name: "January" },
   { id: 2, name: "February" },
   { id: 3, name: "March" },
@@ -68,7 +64,7 @@ const profAlloc = [
 ]
 
 function Home() {
-  const [selectedCancellation, setSelectedCancellation] = useState("");
+  const [selectedCancellation, setSelectedCancellation] = useState(2);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [loadingEnquiry, setLoadingEnquiry] = useState(false);
@@ -85,70 +81,12 @@ function Home() {
   const [selectedCanResId, setSelectedCanResId] = useState("");
   const [profAllocValue, setProfAllocValue] = useState("");
   const [showProfAlloc, setShowProfAlloc] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [marker,setMarker] = useState();
-  const { resetValue } = useAuth();
-  console.log(marker,"From Home")
-
-
-  const { cancellationData, error, fetchCancellationData, fetchCancellationReasons, submenuData, fetchServicesData, serviceData, selectedYear, setSelectedYear } = useAuth();
-
-  // const handleYearChange = (event) => {
-  //   const year = new Date(event.target.value).getFullYear(); // Ensure you get the correct year value
-  //   setSelectedYear(year);
-
-  //   // Only trigger fetch when all filters are selected
-  //   if (selectedCancellation && selectedMonth && year) {
-  //     setLoading(true);
-  //     setLoadingEnquiry(selectedCancellation === "1" || selectedCancellation === "3");
-  //     setLoadingService(selectedCancellation === "2" || selectedCancellation === "3");
-
-  //     fetchCancellationData(selectedCancellation, selectedMonth, year)
-  //       .then(() => {
-  //         setLoading(false);
-  //         setLoadingEnquiry(false);
-  //         setLoadingService(false);
-  //       })
-  //       .catch((err) => {
-  //         setLoading(false);
-  //         setLoadingEnquiry(false);
-  //         setLoadingService(false);
-  //         console.error("Error fetching data:", err);
-  //       });
-  //   }
-  // };
 
 
 
-  const handleYearChange = (value) => {
-    if (value) {
-      const year = value.getFullYear(); // Extract the year from the Date object
-      setSelectedYear(year); // Update the selectedYear state
+  const { cancellationData, error, fetchCancellationData, fetchCancellationReasons, submenuData, fetchServicesData, serviceData } = useAuth();
 
-      // Only trigger fetch when all filters are selected
-      if (selectedCancellation && selectedMonth && (selectedMonth === 13 || year) && selectedService) {
-        setLoading(true);
-        setLoadingEnquiry(selectedCancellation === "1" || selectedCancellation === "3");
-        setLoadingService(selectedCancellation === "2" || selectedCancellation === "3");
-
-        fetchCancellationData(selectedCancellation, selectedMonth, year || null,selectedService)
-          .then(() => {
-            setLoading(false);
-            setLoadingEnquiry(false);
-            setLoadingService(false);
-          })
-          .catch((err) => {
-            setLoading(false);
-            setLoadingEnquiry(false);
-            setLoadingService(false);
-            console.error("Error fetching data:", err);
-          });
-      }
-    } else {
-      setSelectedYear(null); // Handle null case if the input is cleared
-      console.error("Invalid date value");
-    }
-  };
+  console.log();
 
   const handleChangeCancellation = (event) => {
 
@@ -160,13 +98,13 @@ function Home() {
     console.log("Show profAlloc: ", showProfAlloc);
 
     // Only set the loading state when both cancellation type and month are selected
-    if (cancelFlag && selectedMonth && (selectedMonth === 13 || selectedYear)) {
+    if (cancelFlag && selectedMonth) {
       setLoading(true);
       setLoadingEnquiry(cancelFlag === "1" || cancelFlag === "3");
       setLoadingService(cancelFlag === "2" || cancelFlag === "3");
 
       // Trigger the fetch when both fields are selected
-      fetchCancellationData(cancelFlag, selectedMonth, selectedMonth === 13 ? null : selectedYear)
+      fetchCancellationData(cancelFlag, selectedMonth)
         .then(() => {
           setLoading(false);
           setLoadingEnquiry(false);
@@ -190,13 +128,13 @@ function Home() {
     setSelectedMonth(monthFlag);
 
     // Only set the loading state when both cancellation type and month are selected
-    if (selectedCancellation && (monthFlag === 13 || (monthFlag && selectedYear))) {
+    if (selectedCancellation && monthFlag) {
       setLoading(true);
       setLoadingEnquiry(selectedCancellation === "1" || selectedCancellation === "3");
       setLoadingService(selectedCancellation === "2" || selectedCancellation === "3");
 
       // Trigger the fetch when both fields are selected
-      fetchCancellationData(selectedCancellation, monthFlag, monthFlag === 13 ? null : selectedYear)
+      fetchCancellationData(selectedCancellation, monthFlag)
         .then(() => {
           setLoading(false);
           setLoadingEnquiry(false);
@@ -214,43 +152,17 @@ function Home() {
   const handleChangeService = (event) => {
     const srvFlag = event.target.value;
     setSelectedService(srvFlag);
-    console.log("Selected Prof Alloc:", profAllocValue);
-  
+
+    // Check if both selectedCancellation and selectedMonth are available before fetching data
     if (selectedCancellation && selectedMonth) {
       setLoading(true);
-  
-      // Define the parameters you want to send to the API
-      let params = {
-        cancel_flag: selectedCancellation,
-        month_flag: selectedMonth,
-        year: selectedMonth === "13" ? "0" : selectedYear,  // Correct year parameter
-        srv_flag: srvFlag,
-      };
-  
-      // Conditionally add `can_res_id` and `prof_alloc` if they are selected
-      if (selectedCanResId) {
-        params.can_res_id = selectedCanResId;
-      }
-  
-      if (profAllocValue) {
-        params.prof_alloc = profAllocValue;
-      }
-  
-      // Log the parameters to make sure everything is correct
-      console.log("API Params:", params);
-  
-      // Call the fetchCancellationData function from context with the dynamic params
-      fetchCancellationData(
-        params.cancel_flag,
-        params.month_flag,
-        params.year,
-        params.srv_flag,
-        params.can_res_id,
-        params.prof_alloc
-      )
-      .finally(() => {
-        setLoading(false); // Ensure loading state is turned off
-      });
+
+      // Call the fetchCancellationData function
+      fetchCancellationData(selectedCancellation, selectedMonth, srvFlag)
+        .finally(() => {
+          // This will stop the loader when the API call is done (either success or failure)
+          setLoading(false);
+        });
     }
   };
 
@@ -262,17 +174,14 @@ function Home() {
     // Execute handleOptionClick logic
     setSelectedCanResId(reason.cancelation_reason_id);
     console.log("Selected Reason ID:", reason.cancelation_reason_id);
-    console.log("Selected Prof Alloc:", profAllocValue);
 
     // Execute fetchCancellationData
     if (selectedCancellation && selectedMonth) {
       fetchCancellationData(
         selectedCancellation,
         selectedMonth,
-        selectedYear,
         selectedService || null, // Pass srv_flag only if it exists
-        reason.cancelation_reason_id, // Pass the selected cancellation reason ID
-        profAllocValue || null 
+        reason.cancelation_reason_id // Pass the selected cancellation reason ID
       )
         .then(() => {
 
@@ -304,7 +213,6 @@ function Home() {
       fetchCancellationData(
         selectedCancellation,
         selectedMonth,
-        selectedYear,
         selectedService || null,
         selectedCanResId || null,
         profAllocValue
@@ -398,7 +306,6 @@ function Home() {
   const handleReset = () => {
     setSelectedCancellation(""); // Reset cancellation type
     setSelectedMonth(""); // Reset month selection
-    setSelectedYear(null);
     setSelectedService(""); // Reset service type
     setSelectedCancellationBy(""); // Reset cancellation by
     setSelectedReason(""); // Reset reason selection
@@ -409,12 +316,8 @@ function Home() {
     setSelectedId(null); // Reset selected group ID
     setIsDropdownOpen(false); // Close custom dropdown
     setOpenGroup(""); // Reset group visibility
-    setMarker(false)
-    const uniqueMarkerValue = `${Math.random()}`;
-    resetValue(uniqueMarkerValue); // Pass the unique value to marker
   };
 
-  
   useEffect(() => {
     if (!serviceData && !loading) {  // Only call the API once if serviceData is not already fetched
       fetchServicesData();
@@ -428,7 +331,7 @@ function Home() {
       <Navbar />
       {/* <Header /> */}
       {/* main content */}
-      <Box sx={{ mt: 2, mb: 1 }}>
+      <Box sx={{ mt: 5, mb: 1, ml: 15 }}>
         {/* Full-page loader */}
         {loading && (
           <Box
@@ -450,7 +353,7 @@ function Home() {
         )}
 
         <Grid container spacing={1} sx={{ mt: 5 }} columnSpacing={{ md: 2 }}>
-          <Grid item xs={12} sm={4} md={1.8} sx={{ ml: 1, mt: 1.5, mb: 1 }}>
+          <Grid item xs={12} sm={4} md={2} sx={{ ml: 1, mt: 1.5}}>
             <FormControl fullWidth>
               <Select
                 id="cancellationDropdown"
@@ -472,7 +375,7 @@ function Home() {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={3} md={1.4} sx={{ ml: 1, mt: 1.5, mb: 1 }}>
+          <Grid item xs={12} sm={3} md={1.7} sx={{ ml: 1, mt: 1.5 }}>
             <FormControl fullWidth>
               <Select
                 id="monthDropdown"
@@ -494,70 +397,7 @@ function Home() {
             </FormControl>
           </Grid>
 
-          {/* <Grid item xs={12} sm={3} md={1.4} sx={{ ml: 1, mt: 1.5, mb: 1 }}>
-            <FormControl fullWidth>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  value={selectedYear}
-                  onChange={(newValue) => setSelectedYear(newValue)}
-                  views={['year']} // Only show the year selection
-                  minDate={new Date(1900, 0, 1)} // Start year
-                  maxDate={new Date(2025, 0, 1)} // End year (till 2024)
-                  slotProps={{
-                    textField: {
-                      placeholder: 'Select Year', // Placeholder text
-                      sx: {
-                        '& input::placeholder': {
-                          color: 'black !important', // Placeholder text color
-                        },
-                        '& .MuiInputBase-input': {
-                          height: '10px', // Adjust input height
-                          fontSize: 14, // Font size
-                          fontFamily: 'Roboto',
-                        },
-                      },
-                    },
-                  }}
-                />
-              </LocalizationProvider>
-            </FormControl>
-          </Grid> */}
-
-          {selectedMonth !== 13 && (
-            <Grid item xs={12} sm={3} md={1.4} sx={{ ml: 1, mt: 1.5, mb: 1 }}>
-              <FormControl fullWidth>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    views={['year']}
-                    minDate={new Date(2024, 0, 1)} // Start year
-                    maxDate={new Date(2050, 0, 1)} // End year
-                    value={selectedYear ? new Date(selectedYear, 0, 1) : new Date()} // Set current year as default
-                    onChange={handleYearChange}
-                    slotProps={{
-                      textField: {
-                        placeholder: 'Select Year', // Placeholder text
-                        sx: {
-                          '& input::placeholder': {
-                            color: 'black !important', // Placeholder text color
-                          },
-                          '& .MuiInputBase-input': {
-                            height: '10px', // Adjust input height
-                            fontSize: 14, // Font size
-                            fontFamily: 'Roboto',
-                            color: 'grey',
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </LocalizationProvider>
-              </FormControl>
-            </Grid>
-          )
-          }
-
-
-          <Grid item xs={12} sm={4} md={2} sx={{ ml: 1, mt: 1.5, mb: 1 }}>
+          <Grid item xs={12} sm={4} md={2} sx={{ ml: 1, mt: 1.5 }}>
             <FormControl fullWidth>
               <Select
                 id="serviceDropdown"
@@ -579,7 +419,7 @@ function Home() {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={4} md={2} sx={{ ml: 1, mt: 1.7, mb: 1 }}>
+          <Grid item xs={12} sm={4} md={2} sx={{ ml: 1, mt: 1.7}}>
             <div className="custom-dropdown">
               {/* Dropdown Header */}
               <div className="dropdown-header" onClick={toggleDropdown}>
@@ -637,7 +477,7 @@ function Home() {
           </Grid>
 
           {selectedCancellation === 2 && (
-            <Grid item xs={12} sm={4} md={2} sx={{ mt: 1.5, mb: 1 }}>
+            <Grid item xs={12} sm={4} md={2} sx={{ ml: 4, mt: 1.5 }}>
               <FormControl fullWidth>
                 <Select
                   id="profAlloc"
@@ -661,14 +501,13 @@ function Home() {
             </Grid>
           )}
 
-          <Button variant="outlined" sx={{ ml: 2, height: 40, mt: 2.8 }} onClick={handleReset}>Reset</Button>
+          <Button variant="outlined" sx={{ ml: 4, height: 40, mt: 2.8 }} onClick={handleReset}>Reset</Button>
 
         </Grid>
       </Box>
       {/* main content */}
 
-      <LeafletMap/>
-
+      <LeafletMap handleChangeReason={handleChangeReason} />
       <Footer />
     </>
   );
