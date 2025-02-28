@@ -44,6 +44,7 @@ from decimal import Decimal, InvalidOperation
 import jwt
 import googlemaps
 
+
 def whatsapp_sms(to_number,template_name,placeholders):
     base_url = "xl6mjq.api-in.infobip.com"
     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
