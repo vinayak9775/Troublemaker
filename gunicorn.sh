@@ -10,6 +10,8 @@ python3 manage.py migrate
 
 
 cd HHC_client
+echo "npm i"
+npm i
 echo "npm run build"
 npm run build
 cd ..
