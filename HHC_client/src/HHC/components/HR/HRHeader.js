@@ -66,7 +66,6 @@ import ExternalProf from './ExternalProfessional/ExternalProf';
 import Servicedetails from '../HrPartner/ServiceDetails/Servicedetails';
 import { useNavigate } from 'react-router-dom';
 import ClosureRevalidation from '../ADMIN/HCM/ClosureRevalidation/ClosureRevalidation';
-import Home from '../HHC_Analytics/Home';
 
 const HRHeader = () => {
     const accessToken = localStorage.getItem('token');
@@ -482,7 +481,6 @@ const HRHeader = () => {
                         <Route path="hhc/hr/our employees" element={<Employee />} />
                         <Route path="hhc/hr/attendance" element={<Attendence />} />
                         <Route path="hhc/hr/system user" element={<SystemUser />} />
-                        <Route path="hhc/gis analytics" element={<Home />} />
 
                         {/* ADMIN Routing */}
                         <Route path='/hhc/permission' element={<Permission />} />
@@ -507,7 +505,6 @@ const HRHeader = () => {
                         <Route path='/hhc/HCM/login employee' element={<LoginEmployees />} />
                         <Route path='/hhc/HCM/professional allocation' element={<AllocatedList />} />
                         <Route path='/hhc/HCM/professional details' element={<ProfessionalDetails />} />
-
                         {/* shubham code */}
                         <Route path='/hhc/HCM/closure revalidation' element={<ClosureRevalidation />} />
 
@@ -565,7 +562,6 @@ const HRHeader = () => {
                         <Route path="hhc/hr partner/Add professionals" element={<AddProfPartner />} />
                         <Route path="hhc/hr partner/service details" element={<Servicedetails />} />
                         <Route path="hhc/hr/external professionals" element={<ExternalProf />} />
-                        <Route path="hhc/gis analytics" element={<Home />} />
 
                     </Routes>
                 </Box>

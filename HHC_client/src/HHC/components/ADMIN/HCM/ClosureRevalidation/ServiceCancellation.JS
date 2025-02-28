@@ -462,7 +462,10 @@ const ServiceCancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime,
                 setOpenSnackbar(true);
                 setSnackbarMessage('Session Cancelled successfully!');
                 setSnackbarSeverity('success');
-                window.location.reload();
+                // window.location.reload();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
             }
             // onClose();
         } catch (error) {

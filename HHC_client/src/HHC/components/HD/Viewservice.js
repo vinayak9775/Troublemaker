@@ -2768,7 +2768,7 @@ const Viewservice = () => {
                                                   />
                                                 </Grid>
 
-                                                {serviceID === 12 && (
+                                                {serviceID === 10 && (
                                                   <Grid
                                                     item
                                                     lg={12}

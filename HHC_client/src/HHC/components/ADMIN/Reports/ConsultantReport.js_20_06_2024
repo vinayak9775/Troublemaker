@@ -1,0 +1,387 @@
+import React, { useEffect, useState } from 'react';
+import HRNavbar from '../../HR/HRNavbar';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import { TextField, Button, TablePagination } from '@mui/material';
+import MenuItem from '@mui/material/MenuItem';
+import InputBase from '@mui/material/InputBase';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import CardContent from '@mui/material/CardContent';
+import { styled } from '@mui/system';
+import Card from '@mui/material/Card';
+import Typography from "@mui/material/Typography";
+import CircularProgress from '@mui/material/CircularProgress';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import { TableCell } from '@mui/material';
+import Footer from '../../../Footer';
+
+const ConsultCard = styled(Card)({
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '10px',
+    marginRight: '10px',
+    backgroundColor: 'white',
+    boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)',
+    height: "43px",
+    borderRadius: '10px',
+    transition: '0.5s ease-in-out',
+    '&:hover': {
+        backgroundColor: '#F7F7F7',
+        cursor: 'pointer',
+    },
+    fontWeight: "200"
+});
+
+const ConsultantReport = () => {
+    const [consultantType, setConsultantType] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [reportData, setReportData] = useState([]);
+    const accessToken = localStorage.getItem('token');
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [consultantData, setConsultantData] = useState([])
+
+    const port = process.env.REACT_APP_API_KEY;
+
+    const handleViewReport = async () => {
+        setLoading(true); // Start loading
+        try {
+            let url = `${port}/hhc_repo/consultant_Report_all/?`;
+
+            if (startDate) {
+                url += `fromdate=${startDate}&`;
+            }
+            if (endDate) {
+                url += `todate=${endDate}&`;
+            }
+            if (consultantType) {
+                url += `select_report_type=${consultantType}&`;
+            }
+
+            const res = await fetch(url.slice(0, -1), {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log(res);
+            const data = await res.json();
+            setReportData(data);
+            setLoading(false);
+            console.log("Consultant Data", data);
+        } catch (error) {
+            console.error("Error fetching Consultant Report Data:", error);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const ConsultantReport = async () => {
+            try {
+                const res = await fetch(`${port}/web/agg_hhc_consultant_HD_api/`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                console.log(res);
+                const data = await res.json();
+                setConsultantData(data);
+                console.log("Data from Enquiry", data);
+            } catch (error) {
+                console.error("Error fetching Consultant Data:", error);
+            }
+        }
+        ConsultantReport();
+    }, [])
+
+    const handleDownloadExcel = async () => {
+        try {
+            let url = `${port}/hhc_repo/consultant_Report_all/?`;
+
+            if (startDate) {
+                url += `fromdate=${startDate}&`;
+            }
+            if (endDate) {
+                url += `todate=${endDate}&`;
+            }
+            if (consultantType) {
+                url += `select_report_type=${consultantType}&`;
+            }
+
+            const res = await fetch(url.slice(0, -1), {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await res.json();
+
+            // Rename column names
+            const renamedData = data.map(item => ({
+                'Event Number': item.event_code,
+                'Service Start Date': item?.event_plan_of_care?.[0]?.start_date || '',
+                'Service': item?.event_plan_of_care?.[0]?.srv_id?.service_title || '',
+                'Sub-Service': item?.event_plan_of_care?.[0]?.sub_srv_id?.recommomded_service || '',
+                'Patient Name': item?.agg_sp_pt_id?.name,
+                'Consultant Name': item?.agg_sp_pt_id?.doct_cons_id?.cons_fullname,
+                // 'Professional Name': item?.event_plan_of_care?.[0]?.det_prof_id?.srv_prof_id?.prof_fullname || '',
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(renamedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Consultant Report");
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+            saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `consultant_report.xlsx`);
+        } catch (error) {
+            console.error("Error fetching Enquiries Data:", error);
+            setLoading(false);
+        }
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    /////// date changes validation
+    const handleStartDateChange = (e) => {
+        setStartDate(e.target.value);
+        setEndDate(''); // Reset end date whenever start date changes
+    };
+
+    const handleEndDateChange = (e) => {
+        setEndDate(e.target.value);
+    };
+
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in 'YYYY-MM-DD' format
+
+    return (
+        <div>
+            <HRNavbar />
+            <Box sx={{ flexGrow: 1, ml: 1, mr: 1, mt: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'left' }}>
+                    <Stack direction="row" alignItems="center" spacing={1} style={{ overflowX: 'auto' }}>
+                        <Typography sx={{ fontSize: 16, fontWeight: 600, marginTop: "20px", marginLeft: "10px" }} color="text.secondary" gutterBottom>Consultant Report</Typography>
+
+                        <Box sx={{ mb: 1, width: 300, marginLeft: '1rem' }}>
+                            <TextField
+                                select
+                                label="Select Consultant Name"
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                    height: 39,
+                                    width: '100%',
+                                    backgroundColor: 'white',
+                                    boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)",
+                                    borderRadius: "7px"
+                                }}
+                                InputProps={{ style: { border: "none" } }}
+                                inputProps={{ 'aria-label': 'Select Group' }}
+                                value={consultantType}
+                                onChange={(e) => setConsultantType(e.target.value)}
+                                MenuProps={{
+                                    PaperProps: {
+                                        style: {
+                                            maxHeight: '100px',
+                                            overflowY: 'auto'
+                                        }
+                                    }
+                                }}
+                                SelectProps={{
+                                    MenuProps: {
+                                        PaperProps: {
+                                            style: {
+                                                maxHeight: '200px', // Set the maximum height to 200px
+                                                maxWidth: '200px'
+                                            },
+                                        },
+                                        MenuListProps: {
+                                            style: {
+                                                maxHeight: '200px', // Set the maximum height to 200px
+                                            },
+                                        },
+                                    },
+                                }}
+                            >
+                                {consultantData.map((item, index) => (
+                                    <MenuItem key={item.doct_cons_id} value={item.doct_cons_id}>
+                                        {item.cons_fullname}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        </Box>
+
+                        <Box
+                            component="form"
+                            sx={{ marginLeft: '2rem', p: "2px 4px", display: 'flex', alignItems: 'center', width: 300, height: '2.5rem', backgroundColor: "#ffffff", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "10px", border: "1px solid #C9C9C9" }}
+                        >
+                            <InputBase
+                                sx={{ ml: 1, mr: 1, flex: 1 }}
+                                type='date'
+                                placeholder="Start Date | DD/MM/YYYY"
+                                inputProps={{ 'aria-label': 'select date' }}
+                                value={startDate}
+                                onChange={handleStartDateChange}
+                            />
+                        </Box>
+
+                        <Box
+                            component="form"
+                            sx={{ marginLeft: '2rem', p: "2px 4px", display: 'flex', alignItems: 'center', width: 300, height: '2.5rem', backgroundColor: "#ffffff", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "10px", border: "1px solid #C9C9C9" }}
+                        >
+                            <InputBase
+                                sx={{ ml: 1, mr: 1, flex: 1 }}
+                                type='date'
+                                placeholder="End Date | DD/MM/YYYY"
+                                inputProps={{
+                                    'aria-label': 'select date',
+                                    min: startDate, // Set the minimum selectable date to the start date
+                                    max: today // Set the maximum selectable date to today
+                                }}
+                                value={endDate}
+                                onChange={handleEndDateChange}
+                                max={today}
+                            />
+                        </Box>
+
+                        <Button
+                            variant="contained"
+                            style={{ backgroundColor: '#69A5EB', color: 'white', textTransform: 'capitalize' }}
+                            onClick={handleViewReport}
+                        >
+                            View Report
+                        </Button>
+
+                        <FileDownloadOutlinedIcon
+                            onClick={() => {
+                                handleDownloadExcel();
+                            }}
+                        />
+                    </Stack>
+                </Box>
+
+                <TableContainer sx={{ ml: 1, mr: 1 }}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <ConsultCard style={{ background: "#69A5EB", color: "#FFFFFF", borderRadius: "8px 10px 0 0", height: '3rem' }}>
+                                    <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Sr No</Typography>
+                                    </CardContent>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Event Code</Typography>
+                                    </CardContent>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Service Start Date</Typography>
+                                    </CardContent>
+                                    {/* <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Consultant Name</Typography>
+                                    </CardContent> */}
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Service</Typography>
+                                    </CardContent>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Sub-Service</Typography>
+                                    </CardContent>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Patient Name</Typography>
+                                    </CardContent>
+                                </ConsultCard>
+                            </TableRow>
+                        </TableHead>
+
+                        <TableBody>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} align="center" style={{ height: '49vh' }}>
+                                        <CircularProgress />
+                                    </TableCell>
+                                </TableRow>
+                            ) : reportData.length === 0 ? (
+                                <TableRow style={{ height: '49vh' }}>
+                                    <CardContent colSpan={5} align="center">No data found</CardContent>
+                                </TableRow>
+                            ) : (
+                                reportData
+                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // Slicing the data for the current page
+                                    .map((consultantData, index) => (
+                                        <TableRow key={index}>
+                                            <ConsultCard style={{ height: '3rem', background: "white", color: "rgba(0, 0, 0, 0.87)", fontWeight: "100", borderRadius: "8px 10px 8px 8px" }}>
+                                                <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>{index + 1}</Typography>
+                                                </CardContent>
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>{consultantData.event_code || '-'}</Typography>
+                                                </CardContent>
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>
+                                                        {consultantData.added_date ? new Date(consultantData.added_date).toLocaleDateString('en-US', {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: '2-digit'
+                                                        }) : '-'}
+                                                    </Typography>
+                                                </CardContent>
+                                                {/* <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>
+                                                        {consultantData?.agg_sp_pt_id?.doct_cons_id?.cons_fullname ?? '-'}
+                                                    </Typography> */}
+                                                    {/* <Typography variant='subtitle2'>{consultantData.agg_sp_pt_id.doct_cons_id.cons_fullname || '-'}</Typography> */}
+                                                {/* </CardContent> */}
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>
+                                                        {consultantData.event_plan_of_care[0]?.srv_id.service_title || '-'}
+                                                    </Typography>
+                                                </CardContent>
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>
+                                                        {consultantData.event_plan_of_care[0]?.sub_srv_id.recommomded_service || '-'}
+                                                    </Typography>
+                                                </CardContent>
+                                                <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant='subtitle2'>
+                                                        {consultantData.agg_sp_pt_id?.name || '-'}
+                                                    </Typography>
+                                                </CardContent>
+                                            </ConsultCard>
+                                        </TableRow>
+                                    ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25, 30, 50]}
+                    component="div"
+                    count={reportData.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </Box>
+            <Footer />
+        </div>
+    );
+}
+
+export default ConsultantReport;

@@ -29,8 +29,9 @@ const ClosureEvents = ({ events, handleEvent, eid, handleSubmit }) => {
     const jobClosureDtl = events[0]?.job_closure_dtl || [];
     const hca_jc = (events[0]?.job_closure_dtl && events[0].job_closure_dtl[0]?.hca_jc) || [];
     const formNo = events[0]?.job_cl_fm_no[0] || [];
+    const allHcaJcData = jobClosureDtl.flatMap(detail => detail.hca_jc || []);
 
-    // console.log(hca_jc, 'hcaaaaaaaaaaaaa');
+    console.log(hca_jc,allHcaJcData, 'hcaaaaaaaaaaaaa');
     // console.log(formNo, 'formNo');
 
     // console.log(events, 'eeeeeeeevvvvvvv');
@@ -322,7 +323,6 @@ const ClosureEvents = ({ events, handleEvent, eid, handleSubmit }) => {
                             ):(
                             jobClosureDtl.map((detail, index) => (
                                 <Accordion key={index} sx={{ mb: 1 }}>
-                                    
                                     <AccordionSummary
                                         expandIcon={<ExpandMoreIcon />}
                                         aria-controls={`panel${index + 1}-content`}
@@ -380,7 +380,7 @@ const ClosureEvents = ({ events, handleEvent, eid, handleSubmit }) => {
                                             />}
 
                                             {events[0]?.job_cl_fm_no == 2 && <ClosureFormtwo
-                                                events={hca_jc}
+                                                events={detail.hca_jc}
                                                 evtId={dtlEvtId[index]}
                                                 formNo={events[0]?.job_cl_fm_no}
                                                 closureStatus={events[0]?.job_closure_dtl[0].is_job_closure_done}

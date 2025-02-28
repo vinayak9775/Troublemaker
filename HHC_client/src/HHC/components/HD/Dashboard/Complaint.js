@@ -56,9 +56,6 @@ const Complaint = ({ value }) => {
             dataLabels: {
                 enabled: false,
             },
-            stroke: {
-                show: false,
-            },
         },
     };
     return (

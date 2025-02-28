@@ -6,17 +6,21 @@ from hhc_reports.serializers import *
 from hhcweb.models import *
 from django.db.models import Q
 import json
+from hhcapp.views import whatsapp_sms
+
 from datetime import datetime, timedelta
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
-from hhcapp.views import whatsapp_sms
+
+from hhc_professional_app.views import send_otp
 # _________________ Amit Rasale _____________________
 from hhcweb.renders import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
+from django.db.models import Subquery, OuterRef
 from django.db.models import Count
 # _________________ End Amit Rasale _____________________
 
@@ -67,9 +71,10 @@ class EventReportView(APIView):
             # [print(info.eve_id.agg_sp_pt_id.preferred_hosp_id) for info in event_info]
 
         eve_repo_arr = []
+        previous_follow_up = ""
         for eve in event_info:
             flw_dtl = agg_hhc_enquiry_follow_up.objects.filter(event_id = eve.eve_id, follow_up=3).last()
-            if flw_dtl:
+            if flw_dtl:    
                 Follow_datetime = flw_dtl.added_date
                 previous_follow_up=flw_dtl.previous_follow_up_remark
                 Follow_by_HD = flw_dtl.added_by
@@ -88,7 +93,6 @@ class EventReportView(APIView):
             print("eve.start_date---", eve.start_date)
             print("eve.eve_id---",eve.eve_id.eve_id)
             data = {
-                # "Date":eve.start_date,
                 "Date":eve.start_date.strftime('%Y-%m-%d') if eve.start_date else None,
                 "Event_ID":eve.eve_id.eve_id,
                 "Customer_Name":eve.eve_id.caller_id.caller_fullname if hasattr(eve.eve_id.caller_id,'caller_fullname') else None,
@@ -96,7 +100,7 @@ class EventReportView(APIView):
                 "Email_ID":eve.eve_id.caller_id.email if hasattr(eve.eve_id.caller_id,'email') else None,
                 "Relationship_with_Patient": eve.eve_id.agg_sp_pt_id.caller_rel_id.relation if hasattr(eve.eve_id.agg_sp_pt_id.caller_rel_id,'relation') else None,
                 "Patient_Name":eve.eve_id.agg_sp_pt_id.name if hasattr(eve.eve_id.agg_sp_pt_id, 'name') else None,
-                "Patient_Approx Age":eve.eve_id.Age if hasattr(eve.eve_id, 'Age') else None,
+                "Patient_Approx_Age":eve.eve_id.Age if hasattr(eve.eve_id, 'Age') else None,
                 "Patient_Dignosis":eve.eve_id.agg_sp_pt_id.Suffered_from if hasattr(eve.eve_id.agg_sp_pt_id, 'Suffered_from') else None,
                 "Consultant_name":eve.eve_id.agg_sp_pt_id.doct_cons_id.cons_fullname if hasattr(eve.eve_id.agg_sp_pt_id.doct_cons_id,'cons_fullname') else None,
                 "preffered_professional":eve.prof_prefered if hasattr(eve, 'prof_prefered') else None,
@@ -105,21 +109,17 @@ class EventReportView(APIView):
                 "Patient_Zone":eve.eve_id.agg_sp_pt_id.prof_zone_id.Name if hasattr(eve.eve_id.agg_sp_pt_id.prof_zone_id, 'Name') else None,
                 "Service_Type":eve.srv_id.service_title if hasattr(eve.srv_id, 'service_title') else None,
                 "Sub_Service_Type":eve.sub_srv_id.recommomded_service if hasattr(eve.sub_srv_id, 'recommomded_service') else None,
-                # "Enquiry_Date_&_Time":eve.eve_id.added_date if hasattr(eve.eve_id, 'added_date') else None,
-                "Enquiry_Date_&_Time":eve.eve_id.added_date.strftime('%Y-%m-%d %H:%M:%S') if eve.eve_id.added_date else None,
-                "Mode_of_Enquiry":eve.eve_id.patient_service_status if hasattr(eve.eve_id, 'patient_service_status') else None,
-                "Enquiry_Added by":eve.eve_id.added_by if hasattr(eve.eve_id, 'added_by') else None,
+                "Enquiry_Date_&_Time":eve.eve_id.added_date.strftime('%Y-%m-%d %H:%M:%S') if eve.eve_id.added_date else None,                "Mode_of_Enquiry":eve.eve_id.patient_service_status if hasattr(eve.eve_id, 'patient_service_status') else None,
+                "Enquiry_Added_by":eve.eve_id.added_by if hasattr(eve.eve_id, 'added_by') else None,
                 "Type_of_Enquirer":'NAN',
                 "Discount_Type":eve.eve_id.discount_type if hasattr(eve.eve_id, 'discount_type') else None,
-                # "Follow_datetime" : Follow_datetime,
                 "Follow_datetime" : Follow_datetime.strftime('%Y-%m-%d %H:%M:%S') if Follow_datetime else None,
                 "Follw_Up_by_HD_Name" :Follow_by_HD,
                 "Follw_Up_Remarks":previous_follow_up,
-                # "Service_Created_Date_&_Time":service_time,
                 "Service_Created_Date_&_Time": service_time.strftime('%Y-%m-%d %H:%M:%S') if service_time else None,
                 "Service_Created_by_HD":service_by,
                 "start_date": eve.start_date.strftime('%Y-%m-%d %H:%M:%S') if service_time else None,
-                "end_date": eve.end_date.strftime('%Y-%m-%d %H:%M:%S') if service_time else None,
+                "end_date": eve.end_date.strftime('%Y-%m-%d %H:%M:%S') if service_time else None,               
                 "Cancelations_by_HD":'NAN',
                 # "Type of Cancelations":
             }
@@ -593,8 +593,8 @@ from django.contrib.auth.models import Permission
 # ____ Amit ______
 
 class hospital_patient_count_ReportAPIView(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
     def get(self, request):
         form_date_str = request.query_params.get('form_date')
         end_date_str = request.query_params.get('end_date')
@@ -738,7 +738,6 @@ class Session_Refound_Amount_api(APIView):
             service_start_date = event_plan.start_date
             service_end_date = event_plan.end_date
             datas = {
-                # 'event_id':data.eve_id,
                 'event_id':data.event_code,
                 'srvice':srv,
                 'sub_service':sub_srv,
@@ -763,6 +762,22 @@ class Session_Refound_Amount_api(APIView):
 #         return Response(manage_ser.data)
     
 
+
+
+import logging
+from .serializers import Consent_view_documents_sign_serializer
+logger = logging.getLogger(__name__)
+
+class ConsentViewImageSign(APIView):
+    def get(self, request, eveid):
+        consent = agg_hhc_concent_form_details.objects.filter(eve_id=eveid, status=1).order_by('eve_id', '-added_date').distinct('eve_id')
+        serialized = Consent_view_documents_sign_serializer(consent, many=True, context={'request': request})
+        logger.info(f"Serialized data: {serialized.data}")
+        return Response(serialized.data)
+
+
+
+
 class Test_APIView(APIView):
     def get(self, request):
         manages = agg_hhc_patients.objects.all()  # or .filter() with specific conditions
@@ -774,9 +789,6 @@ class Test_APIView(APIView):
         }
         return Response(data_with_count)
 
-
-
-
 from rest_framework.exceptions import ValidationError
 class Manage_enquiry_ReportAPIView(APIView):
     renderer_classes = [UserRenderer]
@@ -787,6 +799,8 @@ class Manage_enquiry_ReportAPIView(APIView):
         # fromdate = datetime.strptime(fromdate, '%Y-%m-%d').date()
         # todate = datetime.strptime(todate, '%Y-%m-%d').date()+timedelta(days=1)
         # select_report_type = request.query_params.get('select_report_type')
+
+
 
         fromdate = request.query_params.get('fromdate')
         todate = request.query_params.get('todate')
@@ -802,6 +816,8 @@ class Manage_enquiry_ReportAPIView(APIView):
         fromdate = datetime.strptime(fromdate, '%Y-%m-%d').date()
         todate = datetime.strptime(todate, '%Y-%m-%d').date() + timedelta(days=1)
 
+
+
         # manage = agg_hhc_enquiry_follow_up.objects.all()
         # if fromdate and todate:
         #     manage = manage.filter(
@@ -811,35 +827,46 @@ class Manage_enquiry_ReportAPIView(APIView):
 
         if select_report_type == '1':     # Cancle Enquery
             if fromdate and todate:
-                objects = agg_hhc_enquiry_follow_up.objects.filter(Q(added_date__range=(fromdate, todate)), follow_up='2', event_id__status=2)
+                objects = agg_hhc_enquiry_follow_up.objects.filter(Q(added_date__range=(fromdate, todate)),follow_up='2', event_id__status=2)
             else:
-                objects = agg_hhc_enquiry_follow_up.objects.filter(follow_up='2')
+                objects = agg_hhc_enquiry_follow_up.objects.filter(follow_up='2', event_id__status=1)
             serialized = Canceled_enquiry_serializer(objects, many=True)
         elif select_report_type == '2':     # Convert Into Service
-            objects =  agg_hhc_event_plan_of_care.objects.filter(Q(eve_id__added_date__range=(fromdate, todate)) & (Q(eve_id__enq_spero_srv_status=1)|Q(eve_id__enq_spero_srv_status=3)), status=1)
+            objects =  agg_hhc_event_plan_of_care.objects.filter(Q(eve_id__added_date__range=(fromdate, todate)) & (Q(eve_id__enq_spero_srv_status=1)|Q(eve_id__enq_spero_srv_status=3)),status=1)
             serialized = source_of_enquiry(objects, many=True)
+        # elif select_report_type == '4':     # Total Converted To Service
+        #     objects1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(added_date__range=(fromdate, todate)),(Q(eve_id__enq_spero_srv_status=1) & Q(eve_id__status=1)), status=1).distinct('eve_id')
+        #     d=[i.eve_poc_id.eve_poc_id for i in objects1]
+        #     objects=agg_hhc_event_plan_of_care.objects.filter(status=1,eve_poc_id__in=d)
+        #     serialized = enquiry_Convert_Into_Service(objects, many=True)
         elif select_report_type == '4':     # Total Converted To Service
             objects1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(added_date__range=(fromdate, todate)),(Q(eve_id__enq_spero_srv_status=1) & Q(eve_id__status=1)), status=1).distinct('eve_id')
-            # objects1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__added_date__range=(fromdate, todate)) & (Q(eve_id__enq_spero_srv_status=1) | Q(eve_id__status=1)), status=1)
             d=[i.eve_poc_id.eve_poc_id for i in objects1]
             objects=agg_hhc_event_plan_of_care.objects.filter(status=1,eve_poc_id__in=d)
-            serialized = enquiry_Convert_Into_Service(objects, many=True)
-
+            serialized = enquiry_Convert_Into_Service(objects, many=True)                                             
+        # elif select_report_type == '3':     # Enquery Withen 2 hr
+        #     eve_poc =  agg_hhc_event_plan_of_care.objects.filter(Q(eve_id__added_date__range=(fromdate, todate)) & (Q(eve_id__enq_spero_srv_status=1)| Q(eve_id__enq_spero_srv_status=2)) & Q(eve_id__status=1),status=1).order_by('eve_id')
+        #     events = [i.eve_id for i in eve_poc]
+        #     de_eve_poc_subquery  = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id__in = events).order_by('eve_id', 'agg_sp_dt_eve_poc_id').distinct('eve_id')
+        #     objects = []
+        #     two_hours = timedelta(hours=2)
+        #     for i in range(len(events)):
+        #         if (two_hours >= (eve_poc[i].added_date)-(de_eve_poc_subquery[i].added_date)):
+        #             objects.append(eve_poc[i])
+        #     serialized = enquiry_within_two_hr_serializer(objects,many=True)
         elif select_report_type == '3':     # Enquiry Within 2 hr
             eve_poc = agg_hhc_event_plan_of_care.objects.filter(Q(eve_id__added_date__range=(fromdate, todate)) & (Q(eve_id__enq_spero_srv_status=1) | Q(eve_id__enq_spero_srv_status=2)) & Q(eve_id__status=1), status=1).order_by('eve_id')
             events = [i.eve_id for i in eve_poc]
             de_eve_poc_subquery = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id__in=events).order_by('eve_id', 'agg_sp_dt_eve_poc_id').distinct('eve_id')
-
             objects = []
             two_hours = timedelta(hours=2)
             for i in range(min(len(eve_poc), len(de_eve_poc_subquery))):
                 if (two_hours >= (eve_poc[i].added_date) - (de_eve_poc_subquery[i].added_date)):
                     objects.append(eve_poc[i])
-            serialized = enquiry_within_two_hr_serializer(objects, many=True)        
+            serialized = enquiry_within_two_hr_serializer(objects, many=True)                                                                                      
         else:
             return Response({'error': 'enter valid choice'})
-        return Response(serialized.data)
-
+        return Response(serialized.data) 
 
 class Job_closure_report_api(APIView):
     renderer_classes = [UserRenderer]
@@ -858,7 +885,6 @@ class Job_closure_report_api(APIView):
         serializer= Job_closure_serializer(obj, many=True)
      
         return Response(serializer.data) 
- 
 
 
 
@@ -869,7 +895,79 @@ class Job_closure_report_api(APIView):
 
 
 
-from django.db.models import Subquery, OuterRef
+
+
+
+
+
+
+
+# class consultant_Report_APIView(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request):
+#         fromdate = request.query_params.get('fromdate')
+#         todate = request.query_params.get('todate')
+#         select_report_type = request.query_params.get('select_report_type')
+#         manage = agg_hhc_events.objects.all()
+
+#         if fromdate and todate:
+#             fromdate = datetime.strptime(fromdate, '%Y-%m-%d').date()
+#             todate = datetime.strptime(todate, '%Y-%m-%d').date()
+#             todate += timedelta(days=1)
+#             manage = manage.filter(
+#                 added_date__gte=fromdate,
+#                 last_modified_date__lt=todate
+#             )
+
+#         if select_report_type == '1':     # Cancel Enquiry
+#             manage = manage.filter(event_status='3', status='1')
+#             serialized = consultant_Report_serializers(
+#                 manage,
+#                 many=True,
+#                 context={'select_report_type': select_report_type}
+#             )
+#         elif select_report_type == '2':     # Cancel Enquiry
+#             manage = manage.filter(enq_spero_srv_status='3', status='1')
+#             serialized = consultant_Report_serializers(
+#                 manage,
+#                 many=True,
+#                 context={'select_report_type': select_report_type}
+#             )     
+#         elif select_report_type == '3':     # Cancel Enquiry
+#             manage = manage.filter(enq_spero_srv_status__in=['1', '2'], status='1')
+#             serialized = consultant_Report_serializers(
+#                 manage,
+#                 many=True,
+#                 context={'select_report_type': select_report_type}
+#             )    
+#         elif select_report_type == '4':     # Cancel Enquiry
+#             manage = manage.filter(status='1', agg_hhc_enquiry_follow_up__follow_up=2)
+#             serialized = consultant_Report_serializers(
+#                 manage,
+#                 many=True,
+#                 context={'select_report_type': select_report_type}
+#             )
+#         elif select_report_type == '5':     # Cancel Enquiry
+#             manage = manage.filter(status='1', agg_hhc_cancellation_history__cancellation_by__in=['1', '2'])
+#             serialized = consultant_Report_serializers(
+#                 manage,
+#                 many=True,
+#                 context={'select_report_type': select_report_type}
+#             )            
+#         else:
+#             serialized = consultant_Report_serializers(manage, many=True)
+
+#         # count = len(serialized.data)
+#         # data_with_count = {
+#         #     'data': serialized.data,
+#         #     'count': count
+#         # }
+#         return Response(serialized.data)
+
+
+
+
 class consultant_Report_APIView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -887,9 +985,7 @@ class consultant_Report_APIView(APIView):
             # manage = manage.filter(
             #     # added_date__gte=fromdate,
             #     # last_modified_date__lt=todate
-            #     # added_date__gte = fromdate,
-            #     # added_date__lt = todate 
-            #     agg_hhc_detailed_event_plan_of_care__start_date__range=(fromdate, todate)
+            #     added_date__range=(fromdate, todate)                 
             # )
             event_ids = agg_hhc_event_plan_of_care.objects.filter(
                 start_date__range=(fromdate, todate),
@@ -898,7 +994,7 @@ class consultant_Report_APIView(APIView):
 
             manage = manage.filter(
                 eve_id__in=Subquery(event_ids)
-            )            
+            )              
 
         if select_report_type == select_report_type:     # Cancel Enquiry
             manage = manage.filter(enq_spero_srv_status__in=['1', '2'], event_status__in = ['2', '3'], status='1', agg_sp_pt_id__doct_cons_id__doct_cons_id=select_report_type)
@@ -948,30 +1044,6 @@ class consultant_Report_APIView(APIView):
 
 
 
-# class consent_view_image_Sign (APIView):
-#     def get(self, request, eveid):
-#         consent = agg_hhc_concent_form_details.objects.filter(eve_id=eveid, status=1).order_by('eve_id', '-added_date').distinct('eve_id')
-#         serialized = Consent_view_documents_sign_serializer(consent, many=True)
-#         return Response(serialized.data)
-
-import logging
-from .serializers import Consent_view_documents_sign_serializer
-logger = logging.getLogger(__name__)
-
-class ConsentViewImageSign(APIView):
-    def get(self, request, eveid):
-        consent = agg_hhc_concent_form_details.objects.filter(eve_id=eveid, status=1).order_by('eve_id', '-added_date').distinct('eve_id')
-        serialized = Consent_view_documents_sign_serializer(consent, many=True, context={'request': request})
-        logger.info(f"Serialized data: {serialized.data}")
-        return Response(serialized.data)
-
-
-
-
-
-
-
-# ____ Amit ______
 
 class hospital_wise_session_count(APIView):
     def get(self,request):
@@ -1014,9 +1086,6 @@ class hospital_wise_session_count(APIView):
     
 
 
-from django.http import StreamingHttpResponse
-import csv
-
 class hospital_wise_session_count_excel(APIView):
     def get(self,request,start_date,end_date):
         service_count=[]
@@ -1030,6 +1099,8 @@ class hospital_wise_session_count_excel(APIView):
             details_event=agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_dates,end_dates),status=1)
         services=agg_hhc_services.objects.filter(status=1)
         for i in hospital:
+            if(i.hospital_name=="Test"):
+                continue
             new_dt=details_event.filter(eve_id__agg_sp_pt_id__preferred_hosp_id=i).count()
             if  new_dt >0 :
                 service_count.append(str(i.hospital_name))
@@ -1049,29 +1120,8 @@ class hospital_wise_session_count_excel(APIView):
                     service_count.append(new_str)
             service_count.append(str("Total "+i.hospital_name+" Services ="+str(ct)))
         return Response({"message":service_count})
-    #     csv_data = self.serialize_to_csv(service_count[0])
-    #     # Prepare response
-    #     response = StreamingHttpResponse(csv_data, content_type='text/csv')
-    #     response['Content-Disposition'] = 'attachment; filename="hhc_dayprint.csv"'
-    #     return response
-    #     # return Response(day_print.data) 
+    
 
-    # def serialize_to_csv(self, data):
-    #     header = ['pay_dt_id','hospital_name']  # Add other fields here #  CSV file header name of table fields names 
-    #     # Initialize the CSV writer
-    #     csv_stream = (self.generate_csv_row(data_row) for data_row in data)#        csv_stream = (self.generate_csv_row(header, data_row) for data_row in data)
-    #     # Yield header
-    #     # yield ','.join(header) + '\n'
-    #     # Yield data
-    #     for row in csv_stream:
-    #         yield row + '\n'
-
-    # def generate_csv_row(self, header, data_row):
-    #     # used to Generate a row of CSV data based on the serializer data
-    #     row = []
-    #     for field in header:
-    #         row.append(str(data_row.get(field, '')))
-    #     return ','.join(row)
 
 class service_count_temp(APIView):
     def get(self,request):
@@ -1085,7 +1135,7 @@ class service_count_temp(APIView):
             t+=count
             placeholders.append(count)
         placeholders[0]=t
-        phone_numbers=['919975063761','919960998794','918956193882','918097077998','919130029103','919552594108','919741805533','918888127149']#for test 
+        phone_numbers=['919975063761','917760997743','919960998794','918956193882','918097077998','919130029103','919552594108','919741805533','918888127149']#for test 
         for i in phone_numbers:
             whatsapp_sms(i,template_name,placeholders)
         return Response({'message':'message send sucessfully'})
@@ -1103,7 +1153,8 @@ class hospital_count_temp(APIView):
             t+=count
             placeholders.append(count)
         placeholders[0]=t
-        phone_numbers=['919975063761','919960998794','918956193882','918097077998','919130029103','919552594108','919741805533','918888127149']#for test 
+        phone_numbers=['919975063761','917760997743','919960998794','918956193882','918097077998','919130029103','919552594108','919741805533','918888127149']#for test 
+        # phone_numbers=['919834662802']#for test
         for i in phone_numbers:
             whatsapp_sms(i,template_name,placeholders)
         return Response({'message':'message send sucessfully'})

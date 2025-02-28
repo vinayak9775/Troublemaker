@@ -325,6 +325,7 @@ class consultant_Report_serializers(serializers.ModelSerializer):
     event_plan_of_care = serializers.SerializerMethodField()
     consultants_Report = serializers.SerializerMethodField()
     cancellation_history = serializers.SerializerMethodField()
+
     class Meta:
         model = agg_hhc_events
         fields = ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'srv_cancelled', 'event_plan_of_care', 'consultants_Report', 'cancellation_history']
@@ -372,151 +373,295 @@ class consultant_Report_serializers(serializers.ModelSerializer):
                     'doct_cons_id': patent_details.get('doct_cons_id', '')
                 }
             })
-        # if select_report_type == '2':
-        #     if instance.enq_spero_srv_status == '3':
-        #         return None
-        #     representation = {
-        #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
-        #     }
-
-        #     if isinstance(representation['agg_sp_pt_id'], dict):
-        #         patent_details = representation['agg_sp_pt_id']
-        #     else:
-        #         patent_details = {}
-                
-        #     del representation['agg_sp_pt_id']  # Remove the field from the representation
-        #     # Customize the fields to be returned for select_report_type 2
-        #     representation.update({
-        #         'agg_sp_pt_id': {
-        #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
-        #             'name': patent_details.get('name', ''),
-        #             'doct_cons_id': patent_details.get('doct_cons_id', '')
-        #         }
-        #     })     
-        # elif select_report_type == '3':
-        #     if instance.enq_spero_srv_status == '1':
-        #         return None
-        #     if instance.enq_spero_srv_status == '2':
-        #         return None
-        #     representation = {
-        #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
-        #     }
-
-        #     if isinstance(representation['agg_sp_pt_id'], dict):
-        #         patent_details = representation['agg_sp_pt_id']
-        #     else:
-        #         patent_details = {}
-                
-        #     del representation['agg_sp_pt_id']  # Remove the field from the representation
-        #     # Customize the fields to be returned for select_report_type 2
-        #     representation.update({
-        #         'agg_sp_pt_id': {
-        #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
-        #             'name': patent_details.get('name', ''),
-        #             'doct_cons_id': patent_details.get('doct_cons_id', '')
-        #         }
-        #     })      
-
-        # elif select_report_type == '4':
-        #     # if instance.event_status == '2':    
-        #     #     return None
-
-        #     representation = {
-        #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'consultants_Report']
-        #     }
-
-        #     if isinstance(representation['agg_sp_pt_id'], dict):
-        #         patent_details = representation['agg_sp_pt_id']
-        #     else:
-        #         patent_details = {}
-                
-        #     del representation['agg_sp_pt_id']  # Remove the field from the representation
-        #     # Customize the fields to be returned for select_report_type 2
-        #     representation.update({
-        #         'agg_sp_pt_id': {
-        #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
-        #             'name': patent_details.get('name', ''),
-        #             'doct_cons_id': patent_details.get('doct_cons_id', '')
-        #         }
-        #     })
-        # elif select_report_type == '5':
-        #     # if instance.event_status == '2':    
-        #     #     return None
-
-        #     representation = {
-        #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'cancellation_history']
-        #     }
-
-        #     if isinstance(representation['agg_sp_pt_id'], dict):
-        #         patent_details = representation['agg_sp_pt_id']
-        #     else:
-        #         patent_details = {}
-                
-        #     del representation['agg_sp_pt_id']  # Remove the field from the representation
-        #     # Customize the fields to be returned for select_report_type 2
-        #     representation.update({
-        #         'agg_sp_pt_id': {
-        #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
-        #             'name': patent_details.get('name', ''),
-        #             'doct_cons_id': patent_details.get('doct_cons_id', '')
-        #         }
-        #     })
-
         return representation   
 
 
 
-# __________ Consent View Documents Created By - Amit ______________________________
+        # if select_report_type == '1':
+        #     if instance.event_status == '3':
+        #         return None
+        #     representation = {
+        #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+        #     }
 
-# class consent_doc_serializer(serializers.ModelSerializer):
+        #     if isinstance(representation['agg_sp_pt_id'], dict):
+        #         patent_details = representation['agg_sp_pt_id']
+        #     else:
+        #         patent_details = {}
+                
+        #     del representation['agg_sp_pt_id']  # Remove the field from the representation
+        #     # Customize the fields to be returned for select_report_type 2
+        #     representation.update({
+        #         'agg_sp_pt_id': {
+        #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+        #             'name': patent_details.get('name', ''),
+        #             'doct_cons_id': patent_details.get('doct_cons_id', '')
+        #         }
+        #     })
+        # # if select_report_type == '2':
+        # #     if instance.enq_spero_srv_status == '3':
+        # #         return None
+        # #     representation = {
+        # #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+        # #     }
+
+        # #     if isinstance(representation['agg_sp_pt_id'], dict):
+        # #         patent_details = representation['agg_sp_pt_id']
+        # #     else:
+        # #         patent_details = {}
+                
+        # #     del representation['agg_sp_pt_id']  # Remove the field from the representation
+        # #     # Customize the fields to be returned for select_report_type 2
+        # #     representation.update({
+        # #         'agg_sp_pt_id': {
+        # #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+        # #             'name': patent_details.get('name', ''),
+        # #             'doct_cons_id': patent_details.get('doct_cons_id', '')
+        # #         }
+        # #     })     
+        # # elif select_report_type == '3':
+        # #     if instance.enq_spero_srv_status == '1':
+        # #         return None
+        # #     if instance.enq_spero_srv_status == '2':
+        # #         return None
+        # #     representation = {
+        # #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+        # #     }
+
+        # #     if isinstance(representation['agg_sp_pt_id'], dict):
+        # #         patent_details = representation['agg_sp_pt_id']
+        # #     else:
+        # #         patent_details = {}
+                
+        # #     del representation['agg_sp_pt_id']  # Remove the field from the representation
+        # #     # Customize the fields to be returned for select_report_type 2
+        # #     representation.update({
+        # #         'agg_sp_pt_id': {
+        # #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+        # #             'name': patent_details.get('name', ''),
+        # #             'doct_cons_id': patent_details.get('doct_cons_id', '')
+        # #         }
+        # #     })      
+
+        # # elif select_report_type == '4':
+        # #     # if instance.event_status == '2':    
+        # #     #     return None
+
+        # #     representation = {
+        # #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'consultants_Report']
+        # #     }
+
+        # #     if isinstance(representation['agg_sp_pt_id'], dict):
+        # #         patent_details = representation['agg_sp_pt_id']
+        # #     else:
+        # #         patent_details = {}
+                
+        # #     del representation['agg_sp_pt_id']  # Remove the field from the representation
+        # #     # Customize the fields to be returned for select_report_type 2
+        # #     representation.update({
+        # #         'agg_sp_pt_id': {
+        # #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+        # #             'name': patent_details.get('name', ''),
+        # #             'doct_cons_id': patent_details.get('doct_cons_id', '')
+        # #         }
+        # #     })
+        # # elif select_report_type == '5':
+        # #     # if instance.event_status == '2':    
+        # #     #     return None
+
+        # #     representation = {
+        # #         key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'cancellation_history']
+        # #     }
+
+        # #     if isinstance(representation['agg_sp_pt_id'], dict):
+        # #         patent_details = representation['agg_sp_pt_id']
+        # #     else:
+        # #         patent_details = {}
+                
+        # #     del representation['agg_sp_pt_id']  # Remove the field from the representation
+        # #     # Customize the fields to be returned for select_report_type 2
+        # #     representation.update({
+        # #         'agg_sp_pt_id': {
+        # #             'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+        # #             'name': patent_details.get('name', ''),
+        # #             'doct_cons_id': patent_details.get('doct_cons_id', '')
+        # #         }
+        # #     })
+
+        # return representation  
+
+
+
+
+
+# class Consultants_cancellation_historySerializer(serializers.ModelSerializer):
 #     class Meta:
-#         model = DischargeFile
-#         fields = ['ds_id', 'file', 'added_by', 'added_date']
+#         model = agg_hhc_cancellation_history
+#         fields = ['canc_his_id', 'event_id', 'cancellation_by', 'cancelled_date']
 
-# class Consent_view_documents_sign_serializer (serializers.ModelSerializer):
-#     Discharge_summ_docs = consent_doc_serializer(many=True)
+# class consultants_Report_serializers(serializers.ModelSerializer):
 #     class Meta:
-#         model = agg_hhc_concent_form_details
-#         fields = ['con_id', 'eve_id', 'sign', 'Discharge_summ_docs']
+#         model = agg_hhc_enquiry_follow_up
+#         fields = ['enq_follow_up_id', 'event_id', 'follow_up', 'cancel_by']
 
-import logging
+# class DoctorsConsultants_event_plan_of_care_Patients_name (serializers.ModelSerializer):
+#     class Meta:
+#         model = agg_hhc_event_plan_of_care
+#         fields = ['eve_poc_id', 'eve_id', 'start_date', 'srv_id', 'sub_srv_id', 'srv_prof_id']
 
-logger = logging.getLogger(__name__)
+# class DoctorsConsultantsSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = agg_hhc_doctors_consultants
+#         fields = ['doct_cons_id', 'cons_fullname']
 
-class consent_doc_serializer(serializers.ModelSerializer):
-    file = serializers.SerializerMethodField()
+# class ConsultantPatientsSerializer(serializers.ModelSerializer):
+#     doct_cons_id = DoctorsConsultantsSerializer()  # Nested Serializer field
+    
+#     class Meta:
+#         model = agg_hhc_patients
+#         fields = ['agg_sp_pt_id', 'name', 'doct_cons_id']
 
-    class Meta:
-        model = DischargeFile
-        fields = ['ds_id', 'file', 'added_by', 'added_date']
+# class consultant_Report_serializers(serializers.ModelSerializer):
+#     agg_sp_pt_id = ConsultantPatientsSerializer()
+#     event_plan_of_care = serializers.SerializerMethodField()
+#     consultants_Report = serializers.SerializerMethodField()
+#     cancellation_history = serializers.SerializerMethodField()
 
-    def get_file(self, obj):
-        request = self.context.get('request')
-        if request:
-            file_url = request.build_absolute_uri(obj.file.url)
-            logger.info(f"Generated file URL: {file_url}")
-            return file_url
-        logger.info(f"Relative file URL: {obj.file.url}")
-        return obj.file.url
+#     class Meta:
+#         model = agg_hhc_events
+#         fields = ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'consultants_Report', 'cancellation_history']
 
-class Consent_view_documents_sign_serializer(serializers.ModelSerializer):
-    sign = serializers.SerializerMethodField()
-    Discharge_summ_docs = consent_doc_serializer(many=True)
+#     def get_event_plan_of_care(self, obj):
+#         detailed_plan_records = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.eve_id)
+#         serialized_data = DoctorsConsultants_event_plan_of_care_Patients_name(detailed_plan_records, many=True).data
+#         return serialized_data 
+    
+#     def get_consultants_Report(self, obj):
+#         consultantsReport_records = agg_hhc_enquiry_follow_up.objects.filter(event_id=obj.eve_id, follow_up='2')  # Assuming 'follow_up' is the related_name
+#         serialized_data = consultants_Report_serializers(consultantsReport_records, many=True).data
+#         return serialized_data
+    
+#     def get_cancellation_history(self, obj):
+#         consultantsReport_records = agg_hhc_cancellation_history.objects.filter(event_id=obj.eve_id)  # Assuming 'follow_up' is the related_name
+#         serialized_data = Consultants_cancellation_historySerializer(consultantsReport_records, many=True).data
+#         return serialized_data
+        
+#     def to_representation(self, instance):
+#         representation = super().to_representation(instance)
+#         select_report_type = self.context.get('select_report_type')
 
-    class Meta:
-        model = agg_hhc_concent_form_details
-        fields = ['con_id', 'eve_id', 'sign', 'Discharge_summ_docs']
+#         if select_report_type == '1':
+#             if instance.event_status == '3':
+#                 return None
+#             representation = {
+#                 key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+#             }
 
-    def get_sign(self, obj):
-        request = self.context.get('request')
-        if request:
-            sign_url = request.build_absolute_uri(obj.sign.url)
-            logger.info(f"Generated sign URL: {sign_url}")
-            return sign_url
-        logger.info(f"Relative sign URL: {obj.sign.url}")
-        return obj.sign.url
+#             if isinstance(representation['agg_sp_pt_id'], dict):
+#                 patent_details = representation['agg_sp_pt_id']
+#             else:
+#                 patent_details = {}
+                
+#             del representation['agg_sp_pt_id']  # Remove the field from the representation
+#             # Customize the fields to be returned for select_report_type 2
+#             representation.update({
+#                 'agg_sp_pt_id': {
+#                     'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+#                     'name': patent_details.get('name', ''),
+#                     'doct_cons_id': patent_details.get('doct_cons_id', '')
+#                 }
+#             })
+#         if select_report_type == '2':
+#             if instance.enq_spero_srv_status == '3':
+#                 return None
+#             representation = {
+#                 key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+#             }
 
+#             if isinstance(representation['agg_sp_pt_id'], dict):
+#                 patent_details = representation['agg_sp_pt_id']
+#             else:
+#                 patent_details = {}
+                
+#             del representation['agg_sp_pt_id']  # Remove the field from the representation
+#             # Customize the fields to be returned for select_report_type 2
+#             representation.update({
+#                 'agg_sp_pt_id': {
+#                     'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+#                     'name': patent_details.get('name', ''),
+#                     'doct_cons_id': patent_details.get('doct_cons_id', '')
+#                 }
+#             })     
+#         elif select_report_type == '3':
+#             if instance.enq_spero_srv_status == '1':
+#                 return None
+#             if instance.enq_spero_srv_status == '2':
+#                 return None
+#             representation = {
+#                 key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care']
+#             }
 
+#             if isinstance(representation['agg_sp_pt_id'], dict):
+#                 patent_details = representation['agg_sp_pt_id']
+#             else:
+#                 patent_details = {}
+                
+#             del representation['agg_sp_pt_id']  # Remove the field from the representation
+#             # Customize the fields to be returned for select_report_type 2
+#             representation.update({
+#                 'agg_sp_pt_id': {
+#                     'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+#                     'name': patent_details.get('name', ''),
+#                     'doct_cons_id': patent_details.get('doct_cons_id', '')
+#                 }
+#             })      
+
+#         elif select_report_type == '4':
+#             # if instance.event_status == '2':    
+#             #     return None
+
+#             representation = {
+#                 key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'consultants_Report']
+#             }
+
+#             if isinstance(representation['agg_sp_pt_id'], dict):
+#                 patent_details = representation['agg_sp_pt_id']
+#             else:
+#                 patent_details = {}
+                
+#             del representation['agg_sp_pt_id']  # Remove the field from the representation
+#             # Customize the fields to be returned for select_report_type 2
+#             representation.update({
+#                 'agg_sp_pt_id': {
+#                     'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+#                     'name': patent_details.get('name', ''),
+#                     'doct_cons_id': patent_details.get('doct_cons_id', '')
+#                 }
+#             })
+#         elif select_report_type == '5':
+#             # if instance.event_status == '2':    
+#             #     return None
+
+#             representation = {
+#                 key: representation[key] for key in ['eve_id', 'event_code', 'agg_sp_pt_id', 'enq_spero_srv_status', 'event_status', 'added_date', 'last_modified_date', 'event_plan_of_care', 'cancellation_history']
+#             }
+
+#             if isinstance(representation['agg_sp_pt_id'], dict):
+#                 patent_details = representation['agg_sp_pt_id']
+#             else:
+#                 patent_details = {}
+                
+#             del representation['agg_sp_pt_id']  # Remove the field from the representation
+#             # Customize the fields to be returned for select_report_type 2
+#             representation.update({
+#                 'agg_sp_pt_id': {
+#                     'agg_sp_pt_id': patent_details.get('agg_sp_pt_id', ''),
+#                     'name': patent_details.get('name', ''),
+#                     'doct_cons_id': patent_details.get('doct_cons_id', '')
+#                 }
+#             })
+
+#         return representation   
 # ____________________ Amit Rasale _______________________
 
 
@@ -528,7 +673,7 @@ class Consent_view_documents_sign_serializer(serializers.ModelSerializer):
 # class Session_Refound_Amount_serializer(serializers.ModelSerializer):
 #     class Meta:
 #         fields=['total_sessions', 'cancelled_sessions', 'dates']
-            
+        
 class Session_Refound_Amount_serializer(serializers.Serializer):  
     event_id = serializers.IntegerField()
     total_sessions = serializers.IntegerField()
@@ -700,17 +845,16 @@ class Canceled_enquiry_serializer(serializers.ModelSerializer):
     service = serializers.SerializerMethodField()
     recomanded_service = serializers.SerializerMethodField()
     address = serializers.SerializerMethodField()
-    event_stert_date = serializers.SerializerMethodField()
+    event_stert_date = serializers.SerializerMethodField()    
     cancel_by = serializers.SerializerMethodField()
-    caller_no =  serializers.SerializerMethodField()
+    caller_no =  serializers.SerializerMethodField()     
     canclation_reason =  serializers.SerializerMethodField()
     class Meta:
         model = agg_hhc_enquiry_follow_up
+        # fields = ['enq_follow_up_id', 'event_code', 'patient_name', 'enquiry_added_date', 'enquiry_added_by', 'enquiry_last_modified_by','previous_follow_up_remark', 'service', 'recomanded_service', 'cancel_by', 'address']
         fields = ['enq_follow_up_id', 'event_code', 'event_id', 'patient_name', 'enquiry_added_date', 'enquiry_added_by', 'enquiry_last_modified_by', 
-                    'event_stert_date', #this is not in table 
+                    'event_stert_date', 
                     'previous_follow_up_remark', 'service', 'recomanded_service', 'cancel_by', 'caller_no', 'address', 'canclation_reason']
-
-
 
     def get_canclation_reason(self, obj):
         if hasattr(obj, 'canclation_reason'):
@@ -718,7 +862,7 @@ class Canceled_enquiry_serializer(serializers.ModelSerializer):
             if event:
                 return event.cancelation_reason
         return None
-    
+
     def get_caller_no(self, obj):
         if hasattr(obj, 'event_id'):
             event = obj.event_id
@@ -726,113 +870,105 @@ class Canceled_enquiry_serializer(serializers.ModelSerializer):
                 return event.caller_id.phone
         return None
     
-
-    def get_event_code(self, obj):
-        # data=obj.enq_follow_up_id.event_id.event_code
-        # if data:
-        #     return data
-        # return None
-
-        if hasattr(obj, 'event_id'):
-            event = obj.event_id
-            if event:
-                return event.event_code
-        return None
     
     def get_event_stert_date(self, obj):
-        # if hasattr(obj, 'event_id'):
-        #     event = obj.event_id
-        #     if event:
-        #         return event.actual_StartDate_Time
-        # return None
         if hasattr(obj, 'event_id'):
             event_id = obj.event_id
             event_plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=event_id).first()
             if event_plan_of_care:
-                return event_plan_of_care.start_date
+                return event_plan_of_care.start_date.strftime('%Y-%m-%d')
         return None
-
+    
+    def get_event_code(self, obj):
+        # data=obj.enq_follow_up_id.event_id.event_code 1 
+        # data=obj.event_id.event_code  2
+        # if data:
+        #     return data
+        # return None
+        if hasattr(obj, 'event_id'):   # 3
+            event = obj.event_id
+            if event:
+                return event.event_code
+        return None        
+    
     def get_patient_name(self, obj):
-        # data = obj.enq_follow_up_id.event_id.agg_hhc_eve_id
+        # data = obj.enq_follow_up_id.event_id.agg_hhc_eve_id   # 1
+        # data = obj.event_id.eve_id        2 
         # if data:
         #     return data
         # return data
-
-        if hasattr(obj, 'event_id'):
+        if hasattr(obj, 'event_id'):    # 3
             event = obj.event_id
             if event:
                 return event.agg_sp_pt_id.name
-            return None
+            return None        
 
     def get_enquiry_added_date(self, obj):
-        # data = obj.enq_follow_up_id.event_id.added_date
+        # data = str(obj.event_id.added_date)   1
         # if data:
         #     return data
         # return data
-        if hasattr(obj, 'enq_follow_up_id') and hasattr(obj.event_id, 'event_id'):
+        if hasattr(obj, 'enq_follow_up_id') and hasattr(obj.event_id, 'event_id'):      # 2 Amit
             added_date = obj.event_id.added_date
             if added_date:
-                return added_date.date()
-        return None        
+                return added_date.strftime('%Y-%m-%d')            
+        return None          
     
     def get_enquiry_added_by(self, obj):
-        # data = obj.enq_follow_up_id.event_id.added_by
+        # data = obj.event_id.added_by  1
         # if data:
         #     return data
         # return data
-        if hasattr(obj, 'added_by') and hasattr(obj.event_id, 'event_id'):
+        if hasattr(obj, 'added_by') and hasattr(obj.event_id, 'event_id'):  # 2     Amit 
             # return obj.event_id.added_by
             added_date = obj.event_id.added_by
             if added_date:
                 return added_date           
-        return None        
+        return None          
     
     def get_enquiry_last_modified_by(self, obj):
-        # data = obj.enq_follow_up_id.event_id.last_modified_by
+        # data = obj.enq_follow_up_id.event_id.last_modified_by     1 
         # if data:
         #     return data
         # return data
-        if hasattr(obj, 'last_modified_by') and hasattr(obj.event_id, 'event_id'):
+        if hasattr(obj, 'last_modified_by') and hasattr(obj.event_id, 'event_id'):      # 2 Amit
             last_modified_by = obj.event_id.last_modified_by
             if last_modified_by:
                 return last_modified_by             
-        return None
+        return None        
     
     def get_enquiry_last_modified_by(self, obj):
-        # data=agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().last_modified_by
+        # data=str(agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().start_date)   1 
         # if data:
         #     return data
         # return data
 
-        plan_of_care = agg_hhc_enquiry_follow_up.objects.filter(event_id=obj.event_id, follow_up_status=1).first()
+        plan_of_care = agg_hhc_enquiry_follow_up.objects.filter(event_id=obj.event_id, follow_up_status=1).first()      # 2 Amit
         if plan_of_care:
             return plan_of_care.last_modified_by
-        return None        
-
+        return None   
+        
     def get_service(self, obj):
-        # data = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().srv_id.service_title
+        # data=agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().srv_id.service_title    # 1
         # if data:
         #     return data
         # return data
-
-        plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first()
+    
+        plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first()     # 2 Amit
         if plan_of_care and plan_of_care.srv_id:
             return plan_of_care.srv_id.service_title
-        return None
+        return None    
 
     def get_recomanded_service(self, obj):
-        # data=agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().sub_srv_id.recommomded_service
+        # data=agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first().sub_srv_id.recommomded_service  1
         # if data:
         #     return data
         # return data
 
-        plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first()
+        plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.event_id, status=1).first()     # 2  Amit
         if plan_of_care and plan_of_care.sub_srv_id:
             return plan_of_care.sub_srv_id.recommomded_service
         return None
-
-
-            
         
     def get_cancel_by(self, obj):
         if obj.cancel_by=='1':
@@ -843,26 +979,27 @@ class Canceled_enquiry_serializer(serializers.ModelSerializer):
             return "Other"
         
     def get_address(self, obj):
-        # data =  obj.enq_follow_up_id.event_id.agg_sp_pt_id.address
+        # data =  obj.event_id.agg_sp_pt_id.address     1
         # if data:
         #     return data
         # return data
 
-        if hasattr(obj, 'event_id'):
+        if hasattr(obj, 'event_id'):        # 2 Amit
             event = obj.event_id
             if event:
                 return event.agg_sp_pt_id.address
-            return None        
+            return None         
 
 class enquiry_Convert_Into_Service(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     event_code = serializers.SerializerMethodField()
     srv_id = serializers.SerializerMethodField()
     sub_srv_id = serializers.SerializerMethodField()
-    caller_no = serializers.SerializerMethodField()
+    caller_no = serializers.SerializerMethodField()    
     class Meta:
         model = agg_hhc_event_plan_of_care
         fields = ['eve_poc_id', 'eve_id', 'start_date', 'end_date', 'srv_id', 'sub_srv_id','patient_name', 'event_code', 'caller_no']
+    
 
     def get_caller_no(self, obj):
         if hasattr(obj, 'eve_id'):
@@ -870,37 +1007,23 @@ class enquiry_Convert_Into_Service(serializers.ModelSerializer):
             if event:
                 return event.caller_id.phone
         return None
-
+        
     def get_sub_srv_id(self, obj):
-        return obj.sub_srv_id.recommomded_service if obj.sub_srv_id else None
-
-        # if obj.eve_poc_id:
-        #     return obj.eve_poc_id.sub_srv_id.recommonded_service
-        # return None
-        # if hasattr(obj, 'eve_poc_id'):
-        #     event = obj.eve_poc_id
-        #     if event:
-        #         return event.sub_srv_id.recommomded_service
-        #     return None
-
+        # return obj.sub_srv_id.recommomded_service
+        return obj.sub_srv_id.recommomded_service if obj.sub_srv_id else None   # Amit 20-05-24
+    
     def get_srv_id(self, obj):
-        return obj.srv_id.service_title if obj.srv_id else None
-        # if obj.srv_id:
-        #     return obj.srv_id.service_title
-        # return None
+        # return obj.srv_id.service_title
+        return obj.srv_id.service_title if obj.srv_id else None     # Amit 20-05-24
 
     def get_patient_name(self, obj):
         # event = agg_hhc_events.objects.filter(eve_id=obj.eve_id)
-        return obj.eve_id.agg_sp_pt_id.name if obj.eve_id else None
-        # if obj.eve_id:
-        #     return obj.eve_id.agg_sp_pt_id.name
-        # return None
+        # return obj.eve_id.agg_sp_pt_id.name
+        return obj.eve_id.agg_sp_pt_id.name if obj.eve_id else None         # Amit 20-05-24
 
     def get_event_code(self, obj):
-        return obj.eve_id.event_code if obj.eve_id else None
-        # if obj.eve_id:
-        #     return obj.eve_id.event_code
-        # return None
+        # return obj.eve_id.event_code
+        return obj.eve_id.event_code if obj.eve_id else None        # Amit 20-05-24
     
 class source_of_enquiry(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
@@ -909,44 +1032,43 @@ class source_of_enquiry(serializers.ModelSerializer):
     sub_srv_id = serializers.SerializerMethodField()
     source_of_enquity = serializers.SerializerMethodField()
     enquiry_status = serializers.SerializerMethodField()
-    caller_no = serializers.SerializerMethodField()
+    caller_no = serializers.SerializerMethodField()    
     class Meta:
         model = agg_hhc_event_plan_of_care
         fields = ['eve_poc_id', 'eve_id', 'srv_id', 'sub_srv_id','patient_name', 'event_code', 'source_of_enquity', 'enquiry_status', 'caller_no']
-
-
+        
     def get_caller_no(self, obj):
         if hasattr(obj, 'eve_id'):
             event = obj.eve_id
             if event:
                 return event.caller_id.phone
         return None
-    
+            
     def get_sub_srv_id(self, obj):
         # return obj.sub_srv_id.recommomded_service
-        if obj.sub_srv_id:
+        if obj.sub_srv_id:                              # Amit 20-05-24
             return obj.sub_srv_id.recommomded_service
-        return None
-
+        return None        
+    
     def get_srv_id(self, obj):
         # return obj.srv_id.service_title
-        if obj.srv_id:
+        if obj.srv_id:                                  # Amit 20-05-24
             return obj.srv_id.service_title
-        return None
+        return None        
 
     def get_patient_name(self, obj):
         # event = agg_hhc_events.objects.filter(eve_id=obj.eve_id)
         # return obj.eve_id.agg_sp_pt_id.name
-        if obj.eve_id:
+        if obj.eve_id:                                  # Amit 20-05-24
             return obj.eve_id.agg_sp_pt_id.name
         return None
-
+    
     def get_event_code(self, obj):
         # return obj.eve_id.event_code
-        if obj.eve_id:
+        if obj.eve_id:                                  # Amit 20-05-24
             return obj.eve_id.event_code
-        return None
-
+        return None    
+    
     def get_source_of_enquity(self, obj):
         data = obj.eve_id.patient_service_status
         print(data.value)
@@ -960,10 +1082,11 @@ class source_of_enquiry(serializers.ModelSerializer):
             return 'Calling'
         else:
             return 'Unknown'
-
+        
     def get_enquiry_status(self, obj):
         # try:return obj.eve_id.enq_spero_srv_status
         # except:return None
+        
         try:
             value = obj.eve_id.enq_spero_srv_status
             for enum_member in service_status_enum1:
@@ -971,7 +1094,7 @@ class source_of_enquiry(serializers.ModelSerializer):
                     return enum_member.name
         except:
             pass
-        return None    
+        return None 
 
 
 class source_of_enquiry_report_serializer(serializers.ModelSerializer):
@@ -996,16 +1119,16 @@ class source_of_enquiry_report_serializer(serializers.ModelSerializer):
         if poc:
             return poc[0].srv_id.service_title
         return None
-
+    
 class enquiry_within_two_hr_serializer(serializers.ModelSerializer):
     event_code = serializers.SerializerMethodField()
     service_added_date = serializers.SerializerMethodField()
     service = serializers.SerializerMethodField()
     sub_service = serializers.SerializerMethodField()
-    caller_no = serializers.SerializerMethodField()
+    caller_no = serializers.SerializerMethodField()    
     class Meta:
         model = agg_hhc_event_plan_of_care
-        fields = ['eve_poc_id', 'event_code', 'start_date', 'end_date',  'added_date', 'service_added_date', 'service', 'sub_service', 'caller_no']
+        fields = ['eve_poc_id', 'event_code', 'start_date', 'end_date', 'added_date', 'service_added_date', 'service', 'sub_service', 'caller_no']
 
 
     def get_caller_no(self, obj):
@@ -1017,32 +1140,76 @@ class enquiry_within_two_hr_serializer(serializers.ModelSerializer):
     
     def get_event_code(self, obj):
         # return obj.eve_id.event_code
-        if obj.eve_id:
+        if obj.eve_id:                                  # Amit 20-05-24
             return obj.eve_id.event_code
-        return None
+        return None        
     
     def get_service_added_date(self, obj):
         # dt_eve = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id = obj.eve_id).order_by('eve_id', 'agg_sp_dt_eve_poc_id').distinct('eve_id').first()
         # if dt_eve:
         #     return str(dt_eve.added_date)
-        dt_eve = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id).order_by('eve_id', 'agg_sp_dt_eve_poc_id').distinct('eve_id').first()
+        dt_eve = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id).order_by('eve_id', 'agg_sp_dt_eve_poc_id').distinct('eve_id').first()                                  # Amit 20-05-24        
         if dt_eve:
             return str(dt_eve.added_date.date())
         return None
-        
+            
     def get_service(self, obj):
         # return obj.srv_id.service_title
-        if obj.srv_id:
+        if obj.srv_id:                                  # Amit 20-05-24
             return obj.srv_id.service_title
-        return None
+        return None        
     
     def get_sub_service(self, obj):
         # return obj.sub_srv_id.recommomded_service
-        if obj.sub_srv_id:
+        if obj.sub_srv_id:                                    # Amit 20-05-24
             return obj.sub_srv_id.recommomded_service
-        return None
-
+        return None        
     
+
+
+
+#  Amit 
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class consent_doc_serializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DischargeFile
+        fields = ['ds_id', 'file', 'added_by', 'added_date']
+
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if request:
+            file_url = request.build_absolute_uri(obj.file.url)
+            logger.info(f"Generated file URL: {file_url}")
+            return file_url
+        logger.info(f"Relative file URL: {obj.file.url}")
+        return obj.file.url
+
+class Consent_view_documents_sign_serializer(serializers.ModelSerializer):
+    sign = serializers.SerializerMethodField()
+    Discharge_summ_docs = consent_doc_serializer(many=True)
+
+    class Meta:
+        model = agg_hhc_concent_form_details
+        fields = ['con_id', 'eve_id', 'sign', 'Discharge_summ_docs']
+
+    def get_sign(self, obj):
+        request = self.context.get('request')
+        if request:
+            sign_url = request.build_absolute_uri(obj.sign.url)
+            logger.info(f"Generated sign URL: {sign_url}")
+            return sign_url
+        logger.info(f"Relative sign URL: {obj.sign.url}")
+        return obj.sign.url
+
+
+
+
 
 class Job_closure_serializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
@@ -1111,4 +1278,10 @@ class Job_closure_serializer(serializers.ModelSerializer):
         # print(professional, ';;;;;;;;sdfa')
         return professional
     
+
+
+
+
+
+
 

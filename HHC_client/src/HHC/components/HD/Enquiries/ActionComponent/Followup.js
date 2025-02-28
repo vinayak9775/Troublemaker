@@ -6,7 +6,6 @@ import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import { useNavigate } from "react-router-dom";
 import { getCurrentDateString } from "../../../Utils/ValidationUtils";
-import { getCurrentDateTimeString } from "../../../Utils/ValidationUtils";
 
 const followup = [
     {
@@ -49,7 +48,6 @@ const Followup = ({ sendData, enqData, onClose, flag }) => {
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
     const addedby = localStorage.getItem('clg_id');
-    console.log("hiiiiiiii", flag);
 
     const navigate = useNavigate();
 
@@ -226,7 +224,6 @@ const Followup = ({ sendData, enqData, onClose, flag }) => {
             setErrors({ followRemark: 'Remark must be at least 15 characters long.' });
             return;
         }
-
         const requestData = {
             flag_id: flag,
             event_id: enqData,
@@ -504,8 +501,8 @@ const Followup = ({ sendData, enqData, onClose, flag }) => {
                                             },
                                         }}
                                         inputProps={{
-                                            min: getCurrentDateTimeString(),
-                                            // min: getCurrentDateString(),
+                                            // min: getCurrentDateTimeString(),
+                                            min: getCurrentDateString(),
                                         }}
                                         InputLabelProps={{
                                             shrink: true,

@@ -273,47 +273,22 @@ const EventDetails = ({ eveID, onClose }) => {
                                                                 {/* {professional.end_date} | {professional.end_time} */}
                                                             </Typography>
                                                         </CardContent>
-                                                        {/* <CardContent style={{ width: "10%" }}>
+                                                        <CardContent style={{ width: "10%" }}>
                                                             <Typography variant="body2">
-                                                                ₹{professional.amount},
+                                                                ₹{professional.amount}
                                                             </Typography>
-                                                        </CardContent> */}
-                                                        {row.service_name === 'Medical transportation' ? (
-                                                            <CardContent style={{ width: "10%" }}>
-                                                                <Typography variant='body2'>
-                                                                    ₹{row.sessions ? (row.Total_amount / row.sessions) : professional.amount}
-                                                                </Typography>
-                                                            </CardContent>
-                                                        ) : (
-                                                            <CardContent style={{ width: "10%" }}>
-                                                                <Typography variant='body2'>₹{professional.amount}</Typography>
-                                                            </CardContent>
-                                                        )}
+                                                        </CardContent>
                                                         <CardContent style={{ width: "10%" }}>
                                                             <Typography variant="body2">
                                                                 {/* ₹{professional.convinance ? professional.convinance : '0'} */}
                                                                 ₹{professional.conv_charges ? professional.conv_charges : '0'}
                                                             </Typography>
                                                         </CardContent>
-                                                        {/* <CardContent style={{ width: "10%" }}>
+                                                        <CardContent style={{ width: "10%" }}>
                                                             <Typography variant="body2">
                                                                 ₹{professional.prof_tot_amt ? professional.prof_tot_amt : '0'}
                                                             </Typography>
-                                                        </CardContent> */}
-
-                                                        {row.service_name === 'Medical transportation' ? (
-                                                            <CardContent style={{ width: "10%" }}>
-                                                                <Typography variant='body2'>
-                                                                    ₹{row.sessions ? (((row.Total_amount / row.sessions) + professional.conv_charges )*professional.sessions) : professional.amount}
-                                                                </Typography>
-                                                            </CardContent>
-                                                        ) : (
-                                                            <CardContent style={{ width: "10%" }}>
-                                                                <Typography variant="body2">
-                                                                    ₹{professional.prof_tot_amt ? professional.prof_tot_amt : '0'}
-                                                                </Typography>
-                                                            </CardContent>
-                                                        )}
+                                                        </CardContent>
                                                         {/* <CardContent style={{ width: "5%" }}>
                                                             <RemoveRedEyeOutlinedIcon sx={{ fontSize: "20px", color: "#606467" }} onClick={handleOpenSessions} />
                                                         </CardContent> */}
@@ -323,10 +298,10 @@ const EventDetails = ({ eveID, onClose }) => {
                                                             aria-labelledby="parent-modal-title"
                                                             aria-describedby="parent-modal-description"
                                                         >
-                                                            <Box sx={{ ...style, width: 650, borderRadius: "10px", border: "none" }}>
+                                                            <Box sx={{ ...style, width: 550, borderRadius: "10px", border: "none" }}>
                                                                 <div style={{ display: "flex" }}>
                                                                     <Typography align="center" style={{ fontSize: "16px", fontWeight: 600, color: "gray", marginTop: "10px" }}>SESSION DETAILS</Typography>
-                                                                    <Button onClick={handleCloseSessions} sx={{ marginLeft: "450px", color: "gray", marginTop: "2px", }}><CloseIcon /></Button>
+                                                                    <Button onClick={handleCloseSessions} sx={{ marginLeft: "330px", color: "gray", marginTop: "2px", }}><CloseIcon /></Button>
                                                                 </div>
 
                                                                 <TableContainer sx={{ mt: 1, maxHeight: sesDetails.length >= 8 ? '450px' : 'auto', overflowY: sesDetails.length >= 8 ? 'scroll' : 'visible' }}>
@@ -337,16 +312,10 @@ const EventDetails = ({ eveID, onClose }) => {
                                                                                     <CardContent style={{ width: "30%" }}>
                                                                                         <Typography variant='subtitle2'>Professional Name</Typography>
                                                                                     </CardContent>
-                                                                                    {details[0]?.service_name === 'Medical transportation' &&
-                                                                                        (
-                                                                                            <CardContent style={{ width: "20%" }}>
-                                                                                                <Typography variant='subtitle2'>Ambulance No</Typography>
-                                                                                            </CardContent>
-                                                                                        )}
-                                                                                    <CardContent style={{ width: "25%" }}>
+                                                                                    <CardContent style={{ width: "20%" }}>
                                                                                         <Typography variant='subtitle2'>Start Date Time</Typography>
                                                                                     </CardContent>
-                                                                                    <CardContent style={{ width: "25%" }}>
+                                                                                    <CardContent style={{ width: "20%" }}>
                                                                                         <Typography variant='subtitle2'>End Date Time</Typography>
                                                                                     </CardContent>
                                                                                 </DetailsCard>
@@ -371,19 +340,12 @@ const EventDetails = ({ eveID, onClose }) => {
                                                                                                         {professional.professional_name}
                                                                                                     </Typography>
                                                                                                 </CardContent>
-
-                                                                                                {details[0]?.service_name === 'Medical transportation' &&
-                                                                                                    (
-                                                                                                        <CardContent style={{ width: "20%" }}>
-                                                                                                            <Typography variant='body2'>{professional.ambs}</Typography>
-                                                                                                        </CardContent>
-                                                                                                    )}
-                                                                                                <CardContent style={{ width: "25%" }}>
+                                                                                                <CardContent style={{ width: "30%" }}>
                                                                                                     <Typography variant="body2" >
                                                                                                         {professional.start_date} | {professional.start_time}
                                                                                                     </Typography>
                                                                                                 </CardContent>
-                                                                                                <CardContent style={{ width: "25%" }}>
+                                                                                                <CardContent style={{ width: "30%" }}>
                                                                                                     <Typography variant="body2">
                                                                                                         {professional.end_date} | {professional.end_time}
                                                                                                     </Typography>

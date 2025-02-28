@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import { Snackbar, Alert, TextField, Typography, Checkbox, FormControlLabel, Box, Card, CardContent, Grid, Button, MenuItem } from '@mui/material';
 import Footer from '../../../Footer';
 import HRNavbar from '../HRNavbar';
 import MuiAlert from "@mui/material/Alert";
 import DownloadIcon from '@mui/icons-material/Download';
+import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 
 const role = [
   {
@@ -47,6 +48,8 @@ const jobType = [
   }
 ];
 
+const libraries = ['places'];
+
 function AddProfessional() {
 
   const [refId, setRefId] = useState(null);
@@ -56,6 +59,51 @@ function AddProfessional() {
     setClgId(id);
     setRefId(ref_id);
   }, []);
+
+  ///GIS
+  const [gisAddress, setGisAddress] = useState('');
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    libraries: libraries,
+  });
+
+  const addressRef = useRef();
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [lat, setLat] = useState(null);
+  console.log(lat, 'fetchedlat');
+
+  const [long, setLong] = useState(null);
+  console.log(long, 'fetchedlong');
+
+  const validateLong = (value) => {
+    const longValue = parseFloat(value);
+    if (isNaN(longValue) || longValue < -180 || longValue > 180) {
+      return 'Invalid longitude';
+    }
+    return '';
+  };
+
+  const handlePlaceChanged = () => {
+    console.log("place select function hitting...");
+    if (addressRef.current) {
+      const place = addressRef.current.getPlace();
+      setSelectedPlace(place);
+      console.log("place select...", place.formatted_address);
+      const { lat, lng } = place.geometry.location;
+
+      const formattedLat = parseFloat(lat().toFixed(6));
+      const formattedLng = parseFloat(lng().toFixed(6));
+      setGisAddress(place.formatted_address);
+
+      setLat(formattedLat);
+      setLong(formattedLng);
+      console.log('Latitude:', formattedLat);
+      console.log('Longitude:', formattedLng);
+    }
+  };
+  ///GIS
+
   const navigate = useNavigate();
   const location = useLocation();
   const [clgId, setClgId] = useState(null);
@@ -93,8 +141,6 @@ function AddProfessional() {
   const [selectedQualification, setSelectedQualification] = useState('');
   const [specialization, setSpecialization] = useState([]);
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
-  console.log(selectedSpecialization, 'selectedSpecialization');
-
   const [certificateRegNo, setCertificateRegNo] = useState('');
   const [intAvail, setIntAvail] = useState('');
   useEffect(() => {
@@ -139,7 +185,7 @@ function AddProfessional() {
   const [emeContactError, setEmeContactError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [relation, setRelation] = useState([]);
-  const [googleAddress, setGoogleAddress] = useState('');
+  // const [gisAddress, setGisAddress] = useState('');
   const [manualAddress, setManualAddress] = useState('');
   const [cvFile, setCvFile] = useState("");
 
@@ -177,7 +223,6 @@ function AddProfessional() {
     selectedSubService: '',
     selectedJobType: '',
     certificateRegNo: '',
-    selectedQualification: '',
 
     contact: '',
     email: '',
@@ -186,10 +231,11 @@ function AddProfessional() {
     selectedState: '',
     selectedCity: '',
     selectedZone: '',
-    googleAddress: '',
     manualAddress: '',
-
-    cv: ''
+    cv: '',
+    gisAddress: '',
+    lat: '',
+    long: '',
   });
 
   const handleEmptyField = () => {
@@ -240,9 +286,6 @@ function AddProfessional() {
     if (!selectedZone) {
       newErrors.selectedZone = 'Required';
     }
-    if (!selectedQualification) {
-      newErrors.selectedQualification = 'Required';
-    }
     // if (!cv) {
     //   newErrors.cv = 'Required';
     // }
@@ -255,11 +298,17 @@ function AddProfessional() {
     if (!certificateRegNo) {
       newErrors.certificateRegNo = 'Required';
     }
-    if (!googleAddress) {
-      newErrors.googleAddress = 'Required';
-    }
     if (!manualAddress) {
       newErrors.manualAddress = 'Required';
+    }
+    if (!gisAddress) {
+      newErrors.gisAddress = 'Required';
+    }
+    if (!lat) {
+      newErrors.lat = 'Lattitude is required';
+    }
+    if (!long) {
+      newErrors.long = 'Longitude is required';
     }
 
     setErrors(newErrors);
@@ -357,24 +406,6 @@ function AddProfessional() {
     }
   };
 
-  // const handleEmailChange = (e) => {
-  //   const input = e.target.value;
-  //   setEmail(e.target.value);
-
-  //   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-
-  //   if (!input) {
-  //     setEmailError('Email is required');
-  //     setErrors({ ...errors, email: 'Email is required' });
-  //   } else if (!emailPattern.test(input)) {
-  //     setEmailError('Please enter a valid email');
-  //     setErrors({ ...errors, email: 'Please enter a valid email' });
-  //   } else {
-  //     setEmailError('');
-  //     setErrors({ ...errors, email: '' });
-  //   }
-  // };
-
   const handleEmailChange = (e) => {
     const input = e.target.value;
     setEmail(input);
@@ -417,7 +448,6 @@ function AddProfessional() {
   const handleDropdownQualifictn = (event) => {
     const selectedQualifi = event.target.value;
     setSelectedQualification(selectedQualifi);
-    setSelectedSpecialization('')
   };
 
   const handleDropdownSpeclization = (event) => {
@@ -429,7 +459,6 @@ function AddProfessional() {
     const selectedService = event.target.value;
     console.log("Selected Service...", selectedService)
     setSelectedService(selectedService);
-    setSelectedSubService([]);
   };
 
   const handleDropdownJobType = (event) => {
@@ -539,9 +568,9 @@ function AddProfessional() {
 
   useEffect(() => {
     const getSubService = async () => {
-      console.log("Selected service ID", selectedService);
+      console.log("selct service Id", selectedService);
       if (selectedService) {
-        console.log("Fetching sub-services for service ID", selectedService);
+        console.log("service Id", selectedService);
         try {
           const res = await fetch(`${port}/web/agg_hhc_sub_services_api/${selectedService}`, {
             headers: {
@@ -551,45 +580,16 @@ function AddProfessional() {
           });
           const data = await res.json();
           console.log("Sub Service Data", data);
-
           setSubService(data);
-
-          // Optional: If no sub-services are returned, ensure selectedSubService is cleared
-          if (data.length === 0) {
-            setSelectedSubService([]);
-          }
         } catch (error) {
           console.error("Error fetching sub service data:", error);
         }
+      } else {
+        setSubService([]);
       }
     };
     getSubService();
   }, [selectedService]);
-
-  // useEffect(() => {
-  //   const getSubService = async () => {
-  //     console.log("selct service Id", selectedService);
-  //     if (selectedService) {
-  //       console.log("service Id", selectedService);
-  //       try {
-  //         const res = await fetch(`${port}/web/agg_hhc_sub_services_api/${selectedService}`, {
-  //           headers: {
-  //             'Authorization': `Bearer ${accessToken}`,
-  //             'Content-Type': 'application/json',
-  //           },
-  //         });
-  //         const data = await res.json();
-  //         console.log("Sub Service Data", data);
-  //         setSubService(data);
-  //       } catch (error) {
-  //         console.error("Error fetching sub service data:", error);
-  //       }
-  //     } else {
-  //       setSubService([]);
-  //     }
-  //   };
-  //   getSubService();
-  // }, [selectedService]);
 
   const handleCheckboxChange = (event) => {
     const checkedId = parseInt(event.target.name);
@@ -706,6 +706,8 @@ function AddProfessional() {
 
           //________________Professional Details
           setSelectedTitle(data.service_professional?.title);
+          setLat(data.service_professional?.lattitude)
+          setLong(data.service_professional?.langitude)
           const fullName = data.service_professional?.prof_fullname;
           const nameParts = fullName.split(' ');
           const firstName = nameParts.slice(1, nameParts.length - 1).join(' ');
@@ -725,7 +727,7 @@ function AddProfessional() {
           setEmeContact(data.service_professional?.eme_contact_no);
           setSelectedRelation(data.service_professional?.eme_contact_relation);
           setEmeName(data.service_professional?.eme_conact_person_name);
-          setGoogleAddress(data.service_professional?.google_home_location);
+          setGisAddress(data.service_professional?.google_home_location);
           setManualAddress(data.service_professional?.prof_address);
 
           // Address and Location Data
@@ -771,30 +773,6 @@ function AddProfessional() {
   async function handleAddProf(event) {
     event.preventDefault();
     const hasEmptyFields = handleEmptyField();
-
-    if (!/^\d{10}$/.test(contact)) {
-      setContactError('Please enter a valid 10-digit contact number.');
-      setOpenSnackbar(true);
-      setSnackbarMessage('Please enter a valid 10-digit contact number.');
-      setSnackbarSeverity('error');
-      return;
-    }
-
-    if (!/^\d{10}$/.test(altrContact)) {
-      setContactError('Please enter a valid 10-digit number.');
-      setOpenSnackbar(true);
-      setSnackbarMessage('Please enter a valid 10-digit number.');
-      setSnackbarSeverity('error');
-      return;
-    }
-
-    if (!/^\d{10}$/.test(emeContact)) {
-      setContactError('Please enter a valid 10-digit number.');
-      setOpenSnackbar(true);
-      setSnackbarMessage('Please enter a valid 10-digit number.');
-      setSnackbarSeverity('error');
-      return;
-    }
     if (hasEmptyFields) {
       setOpenSnackbar(true);
       setSnackbarMessage('Please fill all required details.');
@@ -843,8 +821,11 @@ function AddProfessional() {
     formData.append('city', selectedCity);
     formData.append('prof_zone', selectedZone ? [selectedZone] : []);
     formData.append('pincode', pinCode);
-    formData.append('google_home_location', googleAddress);
+    formData.append('last_modified_by', clgId);
     formData.append('address', manualAddress);
+    formData.append('google_home_location', gisAddress);
+    formData.append('langitude', long);
+    formData.append('lattitude', lat);
     formData.append('added_by', refId);
     formData.append('last_modified_by', refId);
     console.log("POST API Hitting......", formData);
@@ -884,12 +865,7 @@ function AddProfessional() {
         setSnackbarSeverity('success');
         setOpenSnackbar(true);
         await new Promise(resolve => setTimeout(resolve, 1500));
-        // navigate('/hr/manage profiles');
-        if (professionalId) {
-          navigate('/hr/manage profiles');
-        } else if (srv_prof_id) {
-          navigate('/hr/our employees');
-        }
+        navigate('/hr/manage profiles');
       }
       else if (response.status === 400) {
         const errorResult = await response.json();
@@ -1177,8 +1153,6 @@ function AddProfessional() {
                           fontSize: '14px',
                         },
                       }}
-                      error={!!errors.selectedQualification}
-                      helperText={errors.selectedQualification}
                     >
                       {qualification.map((option) => (
                         <MenuItem key={option.quali_id} value={option.quali_id}
@@ -1223,7 +1197,7 @@ function AddProfessional() {
                           label="Specialization"
                           size="small"
                           fullWidth
-                          value={selectedSpecialization || ""}
+                          value={selectedSpecialization}
                           onChange={handleDropdownSpeclization}
                           sx={{
                             textAlign: "left",
@@ -1240,7 +1214,6 @@ function AddProfessional() {
                           ))}
                         </TextField>
                       </Grid>
-
                       <Grid item lg={4} sm={4} xs={12}>
                         <TextField
                           label="Interview Availability"
@@ -1769,7 +1742,7 @@ function AddProfessional() {
                     </Grid>
 
                     <Grid item xs={6}>
-                      <TextField
+                      {/* <TextField
                         label="Google Address"
                         id="outlined-size-small"
                         name='google_home_location'
@@ -1781,11 +1754,37 @@ function AddProfessional() {
                             fontSize: '14px',
                           },
                         }}
-                        value={googleAddress}
-                        onChange={(e) => setGoogleAddress(e.target.value)}
-                        error={!!errors.googleAddress}
-                        helperText={errors.googleAddress}
-                      />
+                        value={gisAddress}
+                        onChange={(e) => setGisAddress(e.target.value)}
+                        error={!!errors.gisAddress}
+                        helperText={errors.gisAddress}
+                      /> */}
+                      {isLoaded && (
+                        <Autocomplete
+                          onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                          onPlaceChanged={handlePlaceChanged}
+                        >
+                          <TextField
+                            required
+                            label="GIS Address"
+                            id="google_address"
+                            name="google_address"
+                            placeholder='Search Address..'
+                            size="small"
+                            fullWidth
+                            value={gisAddress}
+                            onChange={(e) => setGisAddress(e.target.value)}
+                            ref={addressRef}
+                            error={!!errors.gisAddress}
+                            helperText={errors.gisAddress}
+                            sx={{
+                              '& input': {
+                                fontSize: '14px',
+                              },
+                            }}
+                          />
+                        </Autocomplete>
+                      )}
                     </Grid>
 
                     <Grid item xs={6}>

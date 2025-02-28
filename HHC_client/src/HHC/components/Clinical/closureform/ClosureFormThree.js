@@ -200,7 +200,7 @@ const ClosureFormThree = ({handleEvent,eid,dtlEventID,evtId, formNo, closureStat
                     </Grid>
                 </Grid>
 
-                <Grid item xs={12} sm={12} lg={12} sx={{ mt: 6, mb:4 }}>
+                <Grid item xs={12} sm={12} lg={12} sx={{ mt: 2, }}>
                     <Button variant="contained" sx={{ width: '20ch', borderRadius: "12px", ml: "20rem", textTransform: "capitalize" }}
                         onClick={handleClosureThreeSubmit}
                     >Submit</Button>

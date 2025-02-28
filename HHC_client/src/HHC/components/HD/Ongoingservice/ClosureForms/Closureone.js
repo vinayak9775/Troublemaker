@@ -189,6 +189,7 @@ const Closureone = ({ formNo, evePlanID, profSD, profST, profED, profET, session
         }
         const requestData = {
             form_number: formNo,
+            Baseline: baseline,
             Airway: airway,
             Breathing: breathing,
             Circulation: circ,

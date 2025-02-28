@@ -72,7 +72,6 @@ const AllocatedList = () => {
 
     useEffect(() => {
         fetchAllocatedProfessionals();
-        setPage(0);
     }, [searchInput, selectedService]);
 
     const handleSearch = () => {

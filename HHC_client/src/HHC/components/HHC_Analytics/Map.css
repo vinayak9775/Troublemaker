@@ -8,6 +8,7 @@
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
   }
   
+  
   .legend i {
     width: 18px;
     height: 18px;
@@ -25,3 +26,8 @@
     font-weight: bold;
     text-align: center;
   }
+
+  /* Custom styles for LayerControl */
+
+
+  

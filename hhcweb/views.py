@@ -1,4 +1,3 @@
-import calendar
 from datetime import datetime
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -6,12 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from hhcweb.serializers import *
 from hhcweb.models import *
-import pandas as pd
+# import pandas as pd
 import json
-from hhc_professional_app.views import get_prof,wallet_calculate_fun,Add_payment_id_in_wallet
+import math
+from hhc_professional_app.views import get_prof
 from hhc_professional_app.serializer import *
 from collections import Counter
-from django.db.models import Q,F
+from django.db.models import Q
 from rest_framework import status,permissions
 from django.utils import timezone
 # from hhcweb.serializers import UserRegistrationSerializer,UserLoginSerializer
@@ -33,7 +33,6 @@ from django.http import JsonResponse  # mayank
 from urllib.parse import quote # mayank
 import requests as Req #mayank
 # from django.views.decorators.cache import cache_page #mayank
-
 from rest_framework.exceptions import NotFound
 # import math
 from math import radians, sin, cos, sqrt, atan2, ceil
@@ -43,20 +42,117 @@ from itertools import chain
 from django.conf import settings
 from decimal import Decimal, InvalidOperation
 import jwt
-from django.test import RequestFactory
-import pytz
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import messaging
-from firebase_admin.exceptions import FirebaseError
-# from hhcspero.settings import da
+import googlemaps
 
+import pytz
+
+
+# @api_view(['POST'])
+# def create_payment_url_sms_new(request):
+#     url = "https://api.cashfree.com/pg/links"
+
+#     # Auto-generate the order ID date-wise
+#     order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
+#     phone_no = request.data['customerPhone'][-10:]
+#     amount = request.data['orderAmount']
+#     name = request.data['customerName']
+#     email = request.data['customeremail']
+#     remaining = request.data['Remaining_amount']
+
+#     eve_id = request.data.get('eve_id')
+#     mode = 3
+#     payment_status = 3
+#     total_amount = request.data.get('total_amount')
+    
+#     ist = pytz.timezone('Asia/Kolkata')
+#     current_time = timezone.now().astimezone(ist)
+
+#     # Add 24 hours to the current time
+#     expiry_time = current_time + timedelta(hours=24)
+
+#     # Format the time to match the required format (YYYY-MM-DDTHH:MM:SS+05:30)
+#     expiry_time_with_tz = expiry_time.strftime('%Y-%m-%dT%H:%M:%S%z')
+
+#     # Add colon between hours and minutes in the timezone
+#     expiry_time_with_tz = expiry_time_with_tz[:-2] + ':' + expiry_time_with_tz[-2:]
+
+#     # Construct the headers as required by the Cashfree API
+#     headers = {
+#         'accept': 'application/json',
+#         'content-type': 'application/json',
+#         'x-api-version': '2023-08-01',
+#         'x-client-id': "20453165a737ebd97e430fcabc135402",
+#         'x-client-secret': "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215"
+#     }
+
+#     # Construct the payload as per the Cashfree documentation
+#     payload = {
+#         "customer_details": {
+#             "customer_phone": phone_no,
+#             "customer_email": email,
+#             "customer_name": name
+#         },
+#         # "link_notify": {
+#         #     "send_sms": True
+#         # },
+#         "link_id": order_id,
+#         "link_amount": amount,
+#         "link_currency": "INR",
+#         "link_purpose": "Payment for Healthcare Services",
+#         "link_auto_reminders": True,
+#         "link_expiry_time": expiry_time_with_tz
+#     }
+
+#     # Send the request to Cashfree
+#     response = requests.post(url, headers=headers, json=payload)
+
+#     # Parse the response
+#     try:
+#         response_data = response.json()
+#     except json.JSONDecodeError:
+#         return Response({"error": "Invalid response from Cashfree"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#     # Extract the payment link from the response
+#     payment_link = response_data.get('link_url')
+
+#     # Send payment link via WhatsApp (if needed)
+#     if payment_link:
+#         api_key = "c27d7fa6-292c-4534-8dc4-a0dd28e7d7e3"
+#         msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {amount}. Click on this link to pay: {payment_link}"
+#         encoded_msg = quote(msg)
+#         whatsapp_url = f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={api_key}&phone={phone_no}&content={encoded_msg}&contentType=1"
+
+#         try:
+#             whatsapp_response = requests.get(whatsapp_url)
+#             whatsapp_response.raise_for_status()
+#         except requests.exceptions.RequestException as e:
+#             print("Error occurred while sending WhatsApp message:", e)
+
+#     # Save payment record to the database
+#     event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
+#     agg_hhc_cashfree_online_payment.objects.create(
+#         order_id=order_id,
+#         amount_paid=amount,
+#         amount_remaining=remaining,
+#         Total_cost=total_amount,
+#         order_currency="INR",
+#         order_note="Payment for Healthcare Services",
+#         paid_by=name,
+#         customer_email=email,
+#         customer_phone=phone_no,
+#         eve_id=event_instance,
+#         mode=mode,
+#         payment_status=payment_status,
+#     )
+
+#     # Return the payment link in the API response
+#     return Response({'payment_link': payment_link})
 
 def whatsapp_sms(to_number,template_name,placeholders):
     base_url = "xl6mjq.api-in.infobip.com"
     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
     from_number = "918956193883"
-    to_number = 919075299695
+    to_number = f'91{to_number}'
     template_name = template_name
     placeholders = placeholders
     # order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
@@ -122,9 +218,9 @@ def whatsapp_sms(to_number,template_name,placeholders):
     conn.close()
 
     if res.status == 200:
-        return {"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}
+        return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))})
     else:
-        return {"error": data.decode("utf-8")}
+        return Response({"error": data.decode("utf-8")})
 
 
 def send_payment_sms(number, smstmp):
@@ -178,12 +274,10 @@ def send_payment_sms(number, smstmp):
             # return Response({'error': response.text}, status=500)
     except Exception as e:
         print("msg not send",str(e))
-
-
-
 # Create your views here.
 
 def get_prof(request):
+    # print("Hiee==1")
     pro = ""
     clg_id = ""
     caller_id = ""
@@ -193,6 +287,7 @@ def get_prof(request):
     decoded_token = jwt.decode(token, key='django-insecure-gelhauh(a&-!e01zl$_ic4l07frx!1qx^h(zjitk(c57w(n6ry', algorithms=['HS256'])
 
     clg_id = decoded_token.get('user_id')
+    print("CLG_ID______________ ", clg_id)
     clg_ref = agg_com_colleague.objects.get(id=clg_id)
 
     try:
@@ -285,10 +380,10 @@ class UserRegistrationView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             token = get_tokens_for_user(user)
+            # print(token)
             return Response({'token':token,'msg':'Registration Successful'},status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-from django.utils.timezone import now, timedelta
 
 class UserLoginView(APIView):
     renderer_classes = [UserRenderer]
@@ -297,12 +392,12 @@ class UserLoginView(APIView):
         if serializer.is_valid(raise_exception=True):
             clg_ref_id = serializer.data.get('clg_ref_id')
             password = serializer.data.get('password')
+            # print(clg_ref_id, password)
             user = authenticate(clg_ref_id=clg_ref_id, password=password)
             if user is not None:
                 clg = agg_com_colleague.objects.get(clg_ref_id=user.clg_ref_id)
-                if clg.clg_is_login == False: 
+                if clg.clg_is_login == False:
                     clg.clg_is_login = True
-                    clg.updated_at = now()
                     clg.save()
                     token = get_tokens_for_user(user)
                     return Response({'token':token,'msg':'Logged in Successfully'},status=status.HTTP_200_OK)
@@ -312,22 +407,6 @@ class UserLoginView(APIView):
                 return Response({'errors':{'non_field_errors':['UserId or Password is not valid']}},status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ForceLogoutView(APIView):
-    def post(self, request):
-        eight_hours_ago = now() - timedelta(hours=8)
-        
-        # Find users logged in for more than 8 hours
-        users_to_logout = agg_com_colleague.objects.filter(
-            clg_is_login=True,
-            updated_at__lte=eight_hours_ago
-        )
-
-        # Log out those users
-        users_to_logout.update(clg_is_login=False, updated_at=None)
-
-        return Response({
-            'msg': f'{users_to_logout.count()} users logged out successfully.'
-        }, status=status.HTTP_200_OK)
 
 class UserProfileView(APIView):
     renderer_classes = [UserRenderer]
@@ -363,6 +442,7 @@ class agg_hhc_services_api(APIView):
         return Response(serializer.data)
 
 class agg_hhc_services_api_web_form(APIView):
+
     def get(self,request):
         call= agg_hhc_services.objects.filter(status=1).order_by('service_title')
         serializer=get_service_name(call,many=True)
@@ -372,9 +452,10 @@ class agg_hhc_sub_services_api(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get(self,request,pk,format=None):
-        # print(datetime.today().date())
-        # print(datetime(2025, 1, 1).date())
-        if (datetime.today().date())<=(datetime(2025, 1, 1).date()):
+        # sub_service= agg_hhc_sub_services.objects.filter(srv_id=pk,status=1).order_by('recommomded_service')
+        # serializer= agg_hhc_sub_services_serializer(sub_service,many=True)
+        # return Response(serializer.data)
+        if (datetime.today().date())<=(datetime(2024, 12, 30).date()):
             sub_service= agg_hhc_sub_services.objects.filter(srv_id=pk,status=1,Entry__in=[1,3]).order_by('recommomded_service')
             serializer= agg_hhc_sub_services_serializer(sub_service,many=True)
             return Response(serializer.data)
@@ -414,16 +495,24 @@ class agg_hhc_patients_api(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request):
         clgref_id = get_prof(request)[3]
+        
         request.data['last_modified_by'] = clgref_id
+        
+
         phone = request.data.get('phone_no')
+        # print("this is my phone_no",phone)
         old_patient= agg_hhc_patients.objects.filter(phone_no=phone).first()
+        # print("this is old patients",old_patient)
         if(old_patient is None):
             serializer= agg_hhc_patients_serializer(data=request.data)
             if serializer.is_valid():
+                
                 serializer.save()
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
         else:
+            # print(" patient is not available ")
+            #print("old patient hhc_no",old_patient.hhc_code)
             # agg_hhc_patients.objects.create(phonehhc_code=old_patient.hhc_code,name=request.data.get('name'),first_name=request.data.get('first_name'),middle_name=request.data.get('middle_name'),Age=request.data.get('Age'),Gender=request.data.get('Gender'),email_id=request.data.get('email_id')otp_expire_time=datetime.now()+timedelta(minutes=2))
             se= agg_hhc_patients_serializer(data=request.data)
             if(se.is_valid()):
@@ -553,9 +642,948 @@ class agg_hhc_srv_req_prof_allocate(APIView):
         return Response({'Event_ID':pk,'caller_details':callerserializer.data,'patient_details':patientserializer.data,'POC':plan_of_care_serializer.data})
 
 from django.db import connection
+# class agg_hhc_add_service_details_api(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+    
+#     def get_event(self,pk):
+#         try:
+#             event = agg_hhc_events.objects.get(eve_id=pk)
+#             return event
+#         except agg_hhc_events.DoesNotExist:
+#             return Response('please enter valid event id',status.HTTP_404_NOT_FOUND)
+        
+        
+#     def get_caller(self,phone):
+#         try:
+#             return agg_hhc_callers.objects.get(phone=phone)
+#         except agg_hhc_callers.DoesNotExist:
+#             return Response('please enter valid event id',status.HTTP_404_NOT_FOUND)
+
+#     def get_patient(self,agg_sp_pt_id):
+#         try:
+#             return agg_hhc_patients.objects.get(agg_sp_pt_id=agg_sp_pt_id)
+#         except agg_hhc_patients.DoesNotExist:
+#             return Response('please enter valid event id',status.HTTP_404_NOT_FOUND)
+
+#     def get(self, request, pk):
+#         event = self.get_event(pk)
+#         # enquiry_from = is_web_form
+#         if not event:
+#             return Response({'not found'},status.HTTP_404_NOT_FOUND)
+#         # if enquiry_from:
+#             # patient_details = patient_data_serializer_form(event)
+#         # else: 
+#         patient_details = patient_data_serializer(event)
+#         return Response(patient_details.data)
+
+#     # def get(self,request,pk):
+#     #     event = self.get_event(pk)
+#     #     if not event:
+#     #         return Response({'no data'},status.HTTP_404_NOT_FOUND)
+#     #     print(event.caller_id,'dddddddddddd')
+#     #     print(event.eve_id)
+    
+#     #     callerserializer = add_service_get_caller_serializer(event.caller_id)
+#     #     patientserializer = add_service_get_patient_serializer(event.pt_id)
+#     #     plan_of_care = agg_hhc_event_plan_of_care.objects.filter(eve_id=pk)
+#     #     plan_of_care_serializer = add_service_get_POC_serializer(plan_of_care,many=True)
+#     #     query_count = len(connection.queries)
+#     #     return Response({'caller_details':callerserializer.data,'patient_details':patientserializer.data,'POC':plan_of_care_serializer.data[-1]})
+#     # #     return Response({'patient_data':patient_data.data})
+
+#     # def post(self, request):
+#     #     create_service = create_service_serializer(data=request.data)
+#     #     if create_service.is_valid():
+#     #         create_service.save()
+#     #         return Response(create_service.data)
+#     #     else:
+#     #         return Response(create_service.errors)
+#     def strings_to_dates(self,date_strings):
+#         date_objects = []
+#         for date_string in date_strings:
+#             try:
+#                 date_object = datetime.strptime(date_string, '%Y-%m-%d')
+#                 date_objects.append(date_object)
+#             except ValueError as e:
+#                 return {"error": "Please check if the date format is proper."}
+
+#         sorted_dates = sorted(date_objects)
+#         check_date = sorted_dates[0]
+#         off_days = []
+
+#         while check_date < sorted_dates[-1]:
+#             check_date += timedelta(days=1)
+#             if check_date not in sorted_dates:
+#                 # off_days.append(check_date.strftime('%Y-%m-%d'))
+#                 off_days.append(check_date)
+
+#         # return [date.strftime('%Y-%m-%d') for date in sorted_dates], off_days
+#         return [sorted_dates, off_days]
+#     def post(self,request): 
+#         clgref_id = get_prof(request)[3]
+#         request.data['last_modified_by'] = clgref_id
+#         should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance', 'jb_cl_que']
+#         for key, value in request.data.items():
+#             if key not in should_null:
+#                 if not value :
+#                     print(key, 'asd;fglhk')
+#                     # return Response({'error':f'"{key}" this field should not to be empty'})
+#                     return Response({'error':'fill all required fields'})
+#         patientID=None  
+#         # print(';;demo;;')
+        
+#         caller = agg_hhc_callers.objects.filter(phone=request.data['phone'],status=1).first()
+#         if caller:
+#             callerSerializer= agg_hhc_callers_serializer(caller,data= request.data)
+#             if callerSerializer.is_valid():
+#                 callerID=callerSerializer.save()
+#                 callerID=callerID.caller_id
+#                 # print('2')
+#             else:
+#                 return Response(callerSerializer.errors)
+#             # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+#             # callerID = caller.first().caller_id 
+#         else:  
+#             callers= agg_hhc_callers_serializer(data= request.data)
+#             if callers.is_valid():
+#                 # callers.validated_data['caller_status']=3
+#                 callerID=callers.save().caller_id
+#                 # print('3')
+#             else:
+#                 return Response([callers.errors])
+#         # print(callerID,'llllsecond')
+#         if request.data['purp_call_id']==1:
+#             # print('4')
+#             request.data['enq_spero_srv_status']=2
+#         else: request.data['enq_spero_srv_status']=3
+#         request.data['event_status']=1 
+#         # patient= agg_hhc_patients.objects.filter(phone_no=request.data['phone_no']).first()  
+#         patient = request.data['agg_sp_pt_id']
+#         if patient:
+#             patient= agg_hhc_patients.objects.get(agg_sp_pt_id=request.data['agg_sp_pt_id']) 
+#             # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#             # patientID=patient.first().agg_sp_pt_id 
+#             request.data['caller_id']=callerID
+#             patientSerializer = agg_hhc_patients_serializer(patient,data=request.data)
+#             if patientSerializer.is_valid():
+#                 # patientSerializer.validated_data['caller_id']=callerID
+#                 patientID=patientSerializer.save().agg_sp_pt_id
+#             else: return Response(patientSerializer.errors)
+#         else:
+#             Patient = agg_hhc_patients_serializer(data=request.data)
+            
+#             request.data['caller_id']=callerID
+#             if Patient.is_valid():
+#                 # print(patient,'pppppppppppppp')
+#                 patientID=Patient.save().agg_sp_pt_id
+#                 # Patient.save()
+#                 # print(patient.data)
+#                 # patientID=patientID.agg_sp_pt_id
+#             else:
+#                 return Response([Patient.errors])
+#                 # print('4.6')   
+#         # elif request.data['purp_call_id']==2:
+#         #     patient= agg_hhc_patient_list_enquiry.objects.filter(phone_no=request.data['phone_no']).first()
+#         #     request.data['caller_id']=callerID
+#         #     if patient:
+#         #         # print(patient,'7')
+#         #         patientSerializer = agg_hhc_patient_list_serializer(patient,data=request.data)
+#         #         if patientSerializer.is_valid():
+#         #             # patientSerializer.validated_data['caller_id']=callerID
+#         #             # print(patientSerializer)
+#         #             # print('pppppppppppppppppppppppppp')
+#         #             patientID=patientSerializer.save().pt_id
+#         #             # for items in patientID:
+
+#         #             # print(patientID.eve_id)
+#         #             #     items.pt_id
+#         #             # patientID=patientID.pt_id
+
+#         #             # saved_patients = []
+#         #             # for patient_instance in patientSerializer.save():
+#         #             #     saved_patients.append(patient_instance)
+#         #         else:
+#         #             # print(';;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;')
+#         #             return Response(patientSerializer.errors)
+#         #         # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#         #         # patientID=patient.first().pt_id 
+#         #     else:
+#         #         request.data['caller_id']=callerID
+#         #         patient = agg_hhc_patient_list_serializer(data=request.data)
+#         #         # print('9')
+#         #         if patient.is_valid():
+#         #             patientID=patient.save()
+#         #             patientID=patientID.pt_id
+#         #             # print('10')
+#         #         else:
+#         #             return Response([patient.errors])
+
+#         # else:
+#         #     patient=models.agg_hhc_patient_list_enquiry.objects.filter(phone_no=request.data['phone_no'])
+#         # # if patient:
+#         # #     patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID )
+#         # #     patientID=patient.first().agg_sp_pt_id 
+#         # else:
+#         #     patient = serializers.agg_hhc_patients_serializer(data=request.data)
+#         #         # patient = serializers.agg_hhc_patient_list_serializer(data=request.data)
+#         #     if patient.is_valid():
+#         #         # patient.validated_data['caller_id']=callerID
+#         #         # print(patient.validated_data['caller_id'],';;;;;;;;;;;;;;;;;;;;;;;;')
+#         #         patientID=patient.save()
+#         #         patientID=patientID.agg_sp_pt_id
+
+#         #     else:
+#         #         return Response(patient.errors)
+#         # print(callerID,'ll;;;l')
+#         # print(patientID,'ll;;;l')
+#         # request.data['event_status']=1
+#         event= agg_hhc_event_serializer(data=request.data)
+#         if event.is_valid():
+#             eventID=event.save().eve_id
+#         else:
+#             return Response([event.errors])
+#         event= agg_hhc_events.objects.filter(eve_id=eventID,status=1)
+#         # if request.data['purp_call_id']==1:
+#             # print('spero service')
+#         event.update(agg_sp_pt_id=patientID,caller_id=callerID,patient_service_status=3)
+#         # elif request.data['purp_call_id']==2:
+#         #     # print('enquiry')
+#         #     event.update(pt_id=patientID,caller_id=callerID,patient_service_status=3)
+#         # data=request.data['sub_srv_id']
+#         # dates = datetime.strptime(str(request.data['dates']), '%Y-%m-%d')
+#         # dates=request.data['dates']
+#         # dates = self.strings_to_dates(dates)
+        
+#         # start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d')
+#         # end_date = datetime.strptime(request.data['end_date'], '%Y-%m-%d')
+#         # start_date = dates[0][0]
+#         # end_date = dates[0][-1]
+#         # print(start_date, end_date)
+
+
+
+#         # diff = ((end_date.date() - start_date.date()).days)
+#         # # diff =len(dates[0])
+#         # # print(diff, 'difference')
+#         # a=[request.data['sub_srv_id']]
+#         # # for sub_srv in request.data['sub_srv_id']:    for multiple sub services
+#         # event_plane_of_care=[]
+#         # for sub_srv in a:
+#         #     request.data['sub_srv_id']=sub_srv 
+#         #     request.data['initail_final_amount']=request.data['final_amount'] 
+#         #     # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+#         #     # strdates=",".join(datess)
+#         #     # request.data['No_session_dates']=strdates
+#         #     # request.data['start_date']=start_date.date()
+#         #     # print(start_date.date(),end_date.date())
+#         #     # request.data['end_date']=end_date.date()
+#         #     if request.data['preferred_hosp_id']:
+#         #         request.data['hosp_id']=request.data['preferred_hosp_id']
+#         #     add_service= agg_hhc_create_service_serializer(data=request.data)
+#         #     if add_service.is_valid():
+#         #         service=add_service.save().eve_poc_id
+#         #         # print(service)
+#         #     else:
+#         #         return Response([add_service.errors])
+#         #     # print('demo')
+#         #     plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+#         #     plan_O_C.update(eve_id=eventID)
+#         #     event_plane_of_care.append(service)
+#         #     if request.data['purp_call_id']==1:
+#         #         # for i in range(0,(diff)):
+#         #         for i in range(0,(diff+1)):
+#         #             start_date_string=(start_date+timedelta(days=i))
+#         #             # d=dates[0][i]
+#         #             # print(start_date_string)
+#         #             # request.data['actual_StartDate_Time']=(d.date())
+#         #             # request.data['actual_EndDate_Time']=(d.date())
+#         #             request.data['actual_StartDate_Time']=start_date_string.date()
+#         #             # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+#         #             request.data['actual_EndDate_Time']=start_date_string.date()
+#         #             detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+#         #             if detailPlaneofcare.is_valid():
+#         #                 # detailPlaneofcare.eve_poc_id=service
+#         #                 # detailPlaneofcare.eve_id=eventID
+#         #                 # detailPlaneofcare.index_of_Session=(i+1)
+#         #                 detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+#         #             else:
+#         #                 return Response([detailPlaneofcare.errors])
+#         #             data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+#         #             data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+
+        
+#         # Input array
+#         # date_ranges = [['2024-05-18, 2024-05-20'], ['2024-05-23, 2024-05-24'], ['2024-05-27, 2024-05-27']]
+#         # date_ranges = request.data.get('date_ranges', [])
+
+#         # def get_dates_between(start_date, end_date):
+#         #     dates = []
+#         #     current_date = start_date
+#         #     while current_date <= end_date:
+#         #         dates.append(current_date.strftime('%Y-%m-%d'))
+#         #         current_date += timedelta(days=1)
+#         #     return dates
+
+#         # all_dates = []
+
+#         # for date_range in date_ranges:
+#         #     start_str, end_str = date_range[0].split(', ')
+#         #     start_date = datetime.strptime(start_str, '%Y-%m-%d')
+#         #     end_date = datetime.strptime(end_str, '%Y-%m-%d')
+#         #     all_dates.extend(get_dates_between(start_date, end_date))
+
+#         # print(all_dates,"all_dates")
+#         # print(len(all_dates))
+
+#         date_ranges = request.data.get('date_ranges', [])
+
+#         def get_dates_between(start_date, end_date):
+#             dates = []
+#             current_date = start_date
+#             while current_date <= end_date:
+#                 dates.append(current_date.strftime('%Y-%m-%d'))
+#                 current_date += timedelta(days=1)
+#             return dates
+
+#         all_dates = []
+
+#         for date_range in date_ranges:
+#             start_str, end_str = date_range  # Adjusting to unpack list of two date strings
+#             start_date = datetime.strptime(start_str, '%Y-%m-%d')
+#             end_date = datetime.strptime(end_str, '%Y-%m-%d')
+#             all_dates.extend(get_dates_between(start_date, end_date))
+
+#         print(all_dates, "all_dates")
+#         print(len(all_dates))
+
+
+
+
+
+
+#         diff = ((end_date.date() - start_date.date()).days)
+#         # diff =len(dates[0])
+#         # print(diff, 'difference')
+#         a=[request.data['sub_srv_id']]
+#         # for sub_srv in request.data['sub_srv_id']:    for multiple sub services
+#         event_plane_of_care=[]
+#         request.data['start_date']= all_dates[0] if all_dates else None
+#         request.data['end_date']= all_dates[-1] if all_dates else None
+#         for sub_srv in a:
+#             request.data['sub_srv_id']=sub_srv 
+#             request.data['initail_final_amount']=request.data['final_amount'] 
+#             # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+#             # strdates=",".join(datess)
+#             # request.data['No_session_dates']=strdates
+#             # request.data['start_date']=start_date.date()
+#             # print(start_date.date(),end_date.date())
+#             # request.data['end_date']=end_date.date()
+#             if request.data['preferred_hosp_id']:
+#                 request.data['hosp_id']=request.data['preferred_hosp_id']
+#             add_service= agg_hhc_create_service_serializer(data=request.data)
+#             if add_service.is_valid():
+#                 service=add_service.save().eve_poc_id
+#                 # print(service)
+#             else:
+#                 return Response([add_service.errors])
+#             # print('demo')
+#             plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+#             plan_O_C.update(eve_id=eventID)
+#             event_plane_of_care.append(service)
+#             if request.data['purp_call_id']==1:
+#                 # for i in range(0,(diff)):
+#                 # for i in range(0,(diff+1)):
+#                 #     start_date_string=(start_date+timedelta(days=i))
+#                 #     # d=dates[0][i]
+#                 #     # print(start_date_string)
+#                 #     # request.data['actual_StartDate_Time']=(d.date())
+#                 #     # request.data['actual_EndDate_Time']=(d.date())
+#                 #     request.data['actual_StartDate_Time']=start_date_string.date()
+#                 #     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+#                 #     request.data['actual_EndDate_Time']=start_date_string.date()
+#                 #     # print(request.data,"dtl ",i)
+                    
+#                 #     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+#                 #     if detailPlaneofcare.is_valid():
+#                 #         # detailPlaneofcare.eve_poc_id=service
+#                 #         # detailPlaneofcare.eve_id=eventID
+#                 #         # detailPlaneofcare.index_of_Session=(i+1)
+#                 #         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+#                 #     else:
+#                 #         return Response([detailPlaneofcare.errors])
+#                 #     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+#                 #     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+
+#                 for i in range(0,(len(all_dates))):
+#                     # start_date_string=(start_date+timedelta(days=i))
+#                     start_date_string = all_dates[i]
+#                     print(start_date_string,"start_date_string")
+#                     # d=dates[0][i]
+#                     # print(start_date_string)
+#                     # request.data['actual_StartDate_Time']=(d.date())
+#                     # request.data['actual_EndDate_Time']=(d.date())
+#                     # request.data['actual_StartDate_Time']=start_date_string.date()
+#                     request.data['actual_StartDate_Time']=start_date_string
+#                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+#                     request.data['actual_EndDate_Time']=start_date_string
+#                     # print(request.data,"dtl ",i)
+                    
+#                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+#                     if detailPlaneofcare.is_valid():
+#                         # detailPlaneofcare.eve_poc_id=service
+#                         # detailPlaneofcare.eve_id=eventID
+#                         # detailPlaneofcare.index_of_Session=(i+1)
+#                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+#                     else:
+#                         return Response([detailPlaneofcare.errors])
+#                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+#                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+
+
+
+#         jb_cl_que = request.data.get('jb_cl_que', [])  
+#         r_srv_id = request.data.get('srv_id')
+
+#         get_enq_que = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eventID, is_srv_enq_q = 2, status = 1)
+#         get_enq_que.update(status=2)
+         
+#         if jb_cl_que:
+#             print(jb_cl_que,'jb_cl_que')
+#             r_srv_id = request.data.get('srv_id')
+#             print(r_srv_id,'r_srv_id')
+#             for q_id in jb_cl_que:
+#                 print(q_id,'q_id')
+#                 inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+#                 print(inst, 'inst')
+#                 data = {
+#                         'eve_id':eventID,
+#                         'srv_id':r_srv_id,
+#                         'jcq_id':inst.jcq_id,
+#                         'is_srv_enq_q':1
+#                     }
+                    
+#                 serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+#                 if serializer_val.is_valid():
+#                     serializer_val.save()
+#                     print(serializer_val.data,'serializer_val')
+#                 else:
+#                     print('serializer_val not')
+
+
+#         if request.data['purp_call_id']==1: 
+#             # return Response({"Service Created Event Code":[eventID,eventID.agg_sp_pt_id]})
+#             event=agg_hhc_events.objects.get(eve_id=eventID)
+#             events=agg_hhc_event_response_serializer(event)
+            
+            
+#             # jb_cl_que = request.data.get('jb_cl_que', [])  
+#             # r_srv_id = request.data.get('srv_id')
+         
+#             # if jb_cl_que:
+#             #     print(jb_cl_que,'jb_cl_que')
+#             #     r_srv_id = request.data.get('srv_id')
+#             #     print(r_srv_id,'r_srv_id')
+#             #     for q_id in jb_cl_que:
+#             #         print(q_id,'q_id')
+#             #         inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+#             #         print(inst, 'inst')
+#             #         data = {
+#             #             'eve_id':eventID,
+#             #             'srv_id':r_srv_id,
+#             #             'jcq_id':inst.jcq_id
+#             #         }
+#             #         serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+#             #         if serializer_val.is_valid():
+#             #             serializer_val.save()
+#             #             print(serializer_val.data,'serializer_val')
+#             #         else:
+#             #             print('serializer_val not')
+                                
+
+#                     # abc = agg_hhc_events_wise_jc_question.objects.create(
+#                     #     srv_id_id=r_srv_id,
+#                     #     jcq_id=inst  # Assign the instance directly, not its jcq_id attribute
+#                     # )
+
+#             return Response({"Service Created Event Code":[{"event_id":eventID},events.data,{"event_plan_of_care_id":event_plane_of_care}]})
+
+#         # else:
+#         elif request.data['purp_call_id']==2:
+#             request.data['event_id']=eventID
+#             request.data['follow_up']=4
+
+#             create_follow_up= agg_hhc_enquiry_create_follow_up_serializer(data= request.data)
+#             if create_follow_up.is_valid():
+#                 # callers.validated_data['caller_status']=3
+#                 create_follow_up.save()
+#             else:               
+#                 return Response([create_follow_up.errors])
+            
+            
+            
+            
+#             # jb_cl_que = request.data.get('jb_cl_que', [])  
+#             # r_srv_id = request.data.get('srv_id')
+         
+#             # if jb_cl_que:
+#             #     print(jb_cl_que,'jb_cl_que')
+#             #     r_srv_id = request.data.get('srv_id')
+#             #     print(r_srv_id,'r_srv_id')
+#             #     for q_id in jb_cl_que:
+#             #         print(q_id,'q_id')
+#             #         inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+#             #         print(inst, 'inst')
+#             #         data = {
+#             #             'eve_id':eventID,
+#             #             'srv_id':r_srv_id,
+#             #             'jcq_id':inst.jcq_id
+#             #         }
+#             #         serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+#             #         if serializer_val.is_valid():
+#             #             serializer_val.save()
+#             #             print(serializer_val.data,'serializer_val')
+#             #         else:
+#             #             print('serializer_val not')
+
+#             return Response({"Service Created Event Code":eventID})
+#         else:
+#             return Response('something went wrong')
+        
+#     # def put(self,request,pk):    
+#     #     clgref_id = get_prof(request)[3]
+#     #     request.data['last_modified_by'] = clgref_id
+#     #     # event=self.get_event(pk)
+#     #     should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance','jb_cl_que']
+#     #     for key, value in request.data.items():
+#     #         # print(f'"{key}", values are {value}')
+#     #         if key not in should_null:
+#     #             if not value :
+#     #                 print({'error':f'"{key}" this field should not to be empty'})
+#     #                 # return Response({'error':f'"{key}" this field should not to be empty'})
+#     #                 return Response({'error':'fill all required fields'})
+#     #     request.data['purp_call_id']=1
+#     #     caller = self.get_caller(phone=request.data['phone'])
+#     #     # print(caller.__dict__.items(),'llklll')
+        
+#     #     print(';')
+#     #     if caller:
+#     #         # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+#     #         # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+#     #         # callerID = caller.first().caller_id 
+#     #         callerSerializer= agg_hhc_callers_serializer(caller,data= request.data)
+#     #         if callerSerializer.is_valid():
+#     #             # print(';;;;;;;;;;;')
+#     #             callerID=callerSerializer.save().caller_id
+#     #         else:
+#     #             return Response(callerSerializer.errors)
+#     #     else:  
+#     #         callers= agg_hhc_callers_serializer(data= request.data)
+#     #         if callers.is_valid():
+#     #             # callers.validated_data['caller_status']=3
+#     #             callerID=callers.save().caller_id
+#     #         else:
+#     #             return Response([callers.errors])       
+#     #     # # print(callerID,'llllsecond')
+#     #     # if request.data['purp_call_id']==1:
+#     #     # print('l')
+#     #     patient=request.data['agg_sp_pt_id']
+#     #     if patient:
+#     #         patient=self.get_patient(agg_sp_pt_id=patient)
+
+#     #         # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#     #         # patientID=patient.first().agg_sp_pt_id 
+#     #         patientSerializer= agg_hhc_patients_serializer(patient,data=request.data)
+#     #         if patientSerializer.is_valid():
+#     #             patientID=patientSerializer.save().agg_sp_pt_id
+#     #             # print(patientID,';;;;;;;;;;;;;;;;;;')
+#     #             # return Response(patientSerializer.data)
+#     #         else:
+#     #             return Response(patientSerializer.errors)
+#     #     else:
+#     #         patient = agg_hhc_patients_serializer(data=request.data)
+#     #         try:
+#     #             caller_id = agg_hhc_callers.objects.get(caller_id=callerID)
+#     #         except agg_hhc_callers.DoesNotExist:
+#     #             return Response({'error':'caller not fount'})
+#     #         if patient.is_valid():
+#     #             patient.validated_data['caller_id']=caller_id
+#     #             patientID=patient.save()
+#     #             patientID=patientID.agg_sp_pt_id
+#     #         else:
+#     #             return Response([patient.errors])
+#     #     # else:
+#     #     #     patient=models.agg_hhc_patient_list_enquiry.objects.filter(Q(phone_no=request.data['phone_no'])|Q())
+#     #     #     if patient:
+#     #     #         patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#     #     #         patientID=patient.first().pt_id 
+#     #     #     else:
+#     #     #         patient = serializers.agg_hhc_patient_list_serializer(data=request.data)
+#     #     #         if patient.is_valid():
+#     #     #             patientID=patient.save()
+#     #     #             patientID=patientID.pt_id
+#     #     #         else:
+#     #     #             return Response([patient.errors,'7'])
+
+#     #     # if event.is_valid():
+#     #     #     eventID=event.save().eve_id
+#     #     # else:
+#     #     #     return Response([event.errors,'8'])
+#     #     # print(pk,'llllllllllll')
+#     #     if request.data['preferred_hosp_id']:
+#     #         request.data['hosp_id']=request.data['preferred_hosp_id']
+#     #     event=self.get_event(pk)
+#     #     # if request.data['purp_call_id']==1:
+#     #     eventSerializer= agg_hhc_updateID_event_serializer(event,data=request.data)
+#     #     if eventSerializer.is_valid():
+#     #         eventID=eventSerializer.save().eve_id
+#     #     else:
+#     #         return Response(eventSerializer.errors)
+#     #     data={'agg_sp_pt_id':patientID,'caller_id':callerID,'status':1,'enq_spero_srv_status':1,'last_modified_by':clgref_id,'added_by':clgref_id}
+#     #     eventSerializer= agg_hhc_updateIDs_event_serializer(event,data=data)
+#     #     if eventSerializer.is_valid():
+#     #         eventID=eventSerializer.save().eve_id
+#     #         # print(eventSerializer.validated_data)
+#     #         # eventSerializer.save()
+#     #     else:
+#     #         return Response(eventSerializer.errors)
+
+#     #     # event.update(agg_sp_pt_id=patientID,caller_id=callerID)
+#     #     # eventID=event.first().eve_id
+#     #     # print(eventID)
+#     #     # print(callerID)
+#     #     # else:
+#     #     #     event.update(pt_id=patientID,caller_id=callerID)
+#     #     # dates=request.data['dates']
+#     #     # dates = self.strings_to_dates(dates)
+        
+#     #     # start_date = dates[0][0]
+#     #     # end_date = dates[0][-1]
+#     #     start_date = datetime.strptime(str(request.data['start_date']), '%Y-%m-%d')
+#     #     end_date = datetime.strptime(str(request.data['end_date']), '%Y-%m-%d')
+#     #     diff = ((end_date.date() - start_date.date()).days)
+#     #     # diff =len(dates[0])
+#     #     a=[request.data['sub_srv_id']]
+#     #     event_plane_of_care=[]
+#     #     for sub_srv in a:
+#     #         print(eventID,'id')
+#     #         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_id=eventID,status=1).last()
+#     #         print(plan_O_C,'demo')
+#     #         request.data['sub_srv_id']=sub_srv 
+#     #         request.data['initail_final_amount']=request.data['final_amount'] 
+#     #         # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+#     #         # strdates=",".join(datess)
+#     #         # request.data['No_session_dates']=strdates
+            
+#     #         add_service= agg_hhc_create_service_serializer(plan_O_C,data=request.data)
+#     #         if add_service.is_valid():
+#     #             print(start_date)
+#     #             print(end_date)
+#     #             # add_service.validated_data['start_date']=start_date.date()
+#     #             # add_service.validated_data['end_date']=end_date.date()
+#     #             service=add_service.save().eve_poc_id
+#     #         else:
+#     #             return Response([add_service.errors])
+#     #         # plan_O_C.update(eve_id=eventID)
+#     #         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+#     #         plan_O_C.update(eve_id=eventID)
+#     #         event_plane_of_care.append(service)
+#     #         if request.data['purp_call_id']==1:
+#     #             # for i in range(0,(diff)):
+#     #             for i in range(0,(diff+1)):
+#     #                 # start_date_string=start_date+timedelta(days=i)
+#     #                 # d=dates[0][i]
+#     #                 # request.data['actual_StartDate_Time']=(d.date())
+#     #                 # request.data['actual_EndDate_Time']=(d.date())
+#     #                 start_date_string=start_date+timedelta(days=i)
+#     #                 # request.data['actual_StartDate_Time']=start_date_string
+#     #                 # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+#     #                 request.data['actual_StartDate_Time']=start_date_string.date()
+#     #                 request.data['actual_EndDate_Time']=start_date_string.date()
+#     #                 detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+#     #                 if detailPlaneofcare.is_valid():
+#     #                     detailPlaneofcare.eve_poc_id=service
+#     #                     detailPlaneofcare.eve_id=eventID
+#     #                     detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+#     #                 else:
+#     #                     return Response([detailPlaneofcare.errors,'000'])
+#     #                 data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+#     #                 data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))                
+#     #     # return Response({"Service Created Event Code"})
+        
+#     #     jb_cl_que = request.data.get('jb_cl_que', [])  
+#     #     r_srv_id = request.data.get('srv_id')
+
+#     #     get_enq_que = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eventID, status = 1)
+#     #     # get_enq_que.update(status=2)
+#     #     for eves in get_enq_que:
+#     #         eves.status = 2
+#     #         eves.save()
+         
+#     #     if jb_cl_que:
+#     #         print(jb_cl_que,'jb_cl_que')
+#     #         r_srv_id = request.data.get('srv_id')
+#     #         print(r_srv_id,'r_srv_id')
+#     #         for q_id in jb_cl_que:
+#     #             print(q_id,'q_id')
+#     #             inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+#     #             print(inst, 'inst')
+#     #             data = {
+#     #                     'eve_id':eventID,
+#     #                     'srv_id':r_srv_id,
+#     #                     'jcq_id':inst.jcq_id,
+#     #                     'is_srv_enq_q':1
+#     #                 }
+                    
+#     #             serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+#     #             if serializer_val.is_valid():
+#     #                 serializer_val.save()
+#     #                 print(serializer_val.data,'serializer_val')
+#     #             else:
+#     #                 print('serializer_val not')
+
+
+#     #     if request.data['purp_call_id']==1: 
+#     #         event=agg_hhc_events.objects.get(eve_id=eventID)
+#     #         events=agg_hhc_event_response_serializer(event)
+
+            
+#     #         return Response({"Service Created Event Code":[{"event_id":eventID},events.data,{"event_plan_of_care_id":event_plane_of_care}]})
+#     #     else:
+#     #         # agg_hhc_enquiry_create_follow_up_serializer
+#     #         return Response({"Service Created Event Code":eventID})
+
+#     def put(self,request,pk):    
+#         clgref_id = get_prof(request)[3]
+#         request.data['last_modified_by'] = clgref_id
+#         # event=self.get_event(pk)
+#         should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance','jb_cl_que']
+#         for key, value in request.data.items():
+#             # print(f'"{key}", values are {value}')
+#             if key not in should_null:
+#                 if not value :
+#                     print({'error':f'"{key}" this field should not to be empty'})
+#                     # return Response({'error':f'"{key}" this field should not to be empty'})
+#                     return Response({'error':'fill all required fields'})
+#         request.data['purp_call_id']=1
+#         caller = self.get_caller(phone=request.data['phone'])
+#         # print(caller.__dict__.items(),'llklll')
+        
+#         print(';')
+#         if caller:
+#             # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+#             # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+#             # callerID = caller.first().caller_id 
+#             callerSerializer= agg_hhc_callers_serializer(caller,data= request.data)
+#             if callerSerializer.is_valid():
+#                 # print(';;;;;;;;;;;')
+#                 callerID=callerSerializer.save().caller_id
+#             else:
+#                 return Response(callerSerializer.errors)
+#         else:  
+#             callers= agg_hhc_callers_serializer(data= request.data)
+#             if callers.is_valid():
+#                 # callers.validated_data['caller_status']=3
+#                 callerID=callers.save().caller_id
+#             else:
+#                 return Response([callers.errors])       
+#         # # print(callerID,'llllsecond')
+#         # if request.data['purp_call_id']==1:
+#         # print('l')
+#         patient=request.data['agg_sp_pt_id']
+#         if patient:
+#             patient=self.get_patient(agg_sp_pt_id=patient)
+
+#             # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#             # patientID=patient.first().agg_sp_pt_id 
+#             patientSerializer= agg_hhc_patients_serializer(patient,data=request.data)
+#             if patientSerializer.is_valid():
+#                 patientID=patientSerializer.save().agg_sp_pt_id
+#                 # print(patientID,';;;;;;;;;;;;;;;;;;')
+#                 # return Response(patientSerializer.data)
+#             else:
+#                 return Response(patientSerializer.errors)
+#         else:
+#             patient = agg_hhc_patients_serializer(data=request.data)
+#             try:
+#                 caller_id = agg_hhc_callers.objects.get(caller_id=callerID)
+#             except agg_hhc_callers.DoesNotExist:
+#                 return Response({'error':'caller not fount'})
+#             if patient.is_valid():
+#                 patient.validated_data['caller_id']=caller_id
+#                 patientID=patient.save()
+#                 patientID=patientID.agg_sp_pt_id
+#             else:
+#                 return Response([patient.errors])
+#         # else:
+#         #     patient=models.agg_hhc_patient_list_enquiry.objects.filter(Q(phone_no=request.data['phone_no'])|Q())
+#         #     if patient:
+#         #         patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+#         #         patientID=patient.first().pt_id 
+#         #     else:
+#         #         patient = serializers.agg_hhc_patient_list_serializer(data=request.data)
+#         #         if patient.is_valid():
+#         #             patientID=patient.save()
+#         #             patientID=patientID.pt_id
+#         #         else:
+#         #             return Response([patient.errors,'7'])
+
+#         # if event.is_valid():
+#         #     eventID=event.save().eve_id
+#         # else:
+#         #     return Response([event.errors,'8'])
+#         # print(pk,'llllllllllll')
+#         if request.data['preferred_hosp_id']:
+#             request.data['hosp_id']=request.data['preferred_hosp_id']
+#         event=self.get_event(pk)
+#         # if request.data['purp_call_id']==1:
+#         eventSerializer= agg_hhc_updateID_event_serializer(event,data=request.data)
+#         if eventSerializer.is_valid():
+#             eventID=eventSerializer.save().eve_id
+#         else:
+#             return Response(eventSerializer.errors)
+#         data={'agg_sp_pt_id':patientID,'caller_id':callerID,'status':1,'enq_spero_srv_status':1,'last_modified_by':clgref_id,'added_by':clgref_id}
+#         eventSerializer= agg_hhc_updateIDs_event_serializer(event,data=data)
+#         if eventSerializer.is_valid():
+#             eventID=eventSerializer.save().eve_id
+#             # print(eventSerializer.validated_data)
+#             # eventSerializer.save()
+#         else:
+#             return Response(eventSerializer.errors)
+
+#         # event.update(agg_sp_pt_id=patientID,caller_id=callerID)
+#         # eventID=event.first().eve_id
+#         # print(eventID)
+#         # print(callerID)
+#         # else:
+#         #     event.update(pt_id=patientID,caller_id=callerID)
+#         # dates=request.data['dates']
+#         # dates = self.strings_to_dates(dates)
+        
+#         # start_date = dates[0][0]
+#         # end_date = dates[0][-1]
+
+#         date_ranges = request.data.get('date_ranges', [])
+
+#         all_dates = []
+
+#         for date_range in date_ranges:
+#             start_str, end_str = date_range[0].split(', ')
+#             start_date = datetime.strptime(start_str, '%Y-%m-%d')
+#             end_date = datetime.strptime(end_str, '%Y-%m-%d')
+#             all_dates.extend(self.get_dates_between(start_date, end_date))
+
+#         print(all_dates,"all_dates")
+#         print(len(all_dates))
+
+
+#         # start_date = datetime.strptime(str(request.data['start_date']), '%Y-%m-%d')
+#         # end_date = datetime.strptime(str(request.data['end_date']), '%Y-%m-%d')
+#         # diff = ((end_date.date() - start_date.date()).days)
+#         # diff =len(dates[0])
+#         a=[request.data['sub_srv_id']]
+#         event_plane_of_care=[]
+
+#         request.data['start_date']= all_dates[0] if all_dates else None
+#         request.data['end_date']= all_dates[-1] if all_dates else None
+
+#         for sub_srv in a:
+#             print(eventID,'id')
+#             plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_id=eventID,status=1).last()
+#             print(plan_O_C,'demo')
+#             request.data['sub_srv_id']=sub_srv 
+#             request.data['initail_final_amount']=request.data['final_amount'] 
+#             # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+#             # strdates=",".join(datess)
+#             # request.data['No_session_dates']=strdates
+            
+#             add_service= agg_hhc_create_service_serializer(plan_O_C,data=request.data)
+#             if add_service.is_valid():
+#                 print(start_date)
+#                 print(end_date)
+#                 # add_service.validated_data['start_date']=start_date.date()
+#                 # add_service.validated_data['end_date']=end_date.date()
+#                 service=add_service.save().eve_poc_id
+#             else:
+#                 return Response([add_service.errors])
+#             # plan_O_C.update(eve_id=eventID)
+#             plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+#             plan_O_C.update(eve_id=eventID)
+#             event_plane_of_care.append(service)
+#             if request.data['purp_call_id']==1:
+#                 # for i in range(0,(diff)):
+#                 # for i in range(0,(diff+1)):
+#                 for i in range(0,(len(all_dates))):
+#                     # start_date_string=start_date+timedelta(days=i)
+#                     # d=dates[0][i]
+#                     # request.data['actual_StartDate_Time']=(d.date())
+#                     # request.data['actual_EndDate_Time']=(d.date())
+#                     # start_date_string=start_date+timedelta(days=i)
+#                     start_date_string = all_dates[i]
+#                     # request.data['actual_StartDate_Time']=start_date_string
+#                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+#                     # request.data['actual_StartDate_Time']=start_date_string.date()
+#                     request.data['actual_StartDate_Time']=start_date_string
+#                     # request.data['actual_EndDate_Time']=start_date_string.date()
+#                     request.data['actual_EndDate_Time']=start_date_string
+#                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+#                     if detailPlaneofcare.is_valid():
+#                         detailPlaneofcare.eve_poc_id=service
+#                         detailPlaneofcare.eve_id=eventID
+#                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+#                     else:
+#                         return Response([detailPlaneofcare.errors,'000'])
+#                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+#                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))                
+#         # return Response({"Service Created Event Code"})
+        
+#         jb_cl_que = request.data.get('jb_cl_que', [])  
+#         r_srv_id = request.data.get('srv_id')
+
+#         get_enq_que = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eventID, status = 1)
+#         # get_enq_que.update(status=2)
+#         for eves in get_enq_que:
+#             eves.status = 2
+#             eves.save()
+         
+#         if jb_cl_que:
+#             print(jb_cl_que,'jb_cl_que')
+#             r_srv_id = request.data.get('srv_id')
+#             print(r_srv_id,'r_srv_id')
+#             for q_id in jb_cl_que:
+#                 print(q_id,'q_id')
+#                 inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+#                 print(inst, 'inst')
+#                 data = {
+#                         'eve_id':eventID,
+#                         'srv_id':r_srv_id,
+#                         'jcq_id':inst.jcq_id,
+#                         'is_srv_enq_q':1
+#                     }
+                    
+#                 serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+#                 if serializer_val.is_valid():
+#                     serializer_val.save()
+#                     print(serializer_val.data,'serializer_val')
+#                 else:
+#                     print('serializer_val not')
+
+
+#         if request.data['purp_call_id']==1: 
+#             event=agg_hhc_events.objects.get(eve_id=eventID)
+#             events=agg_hhc_event_response_serializer(event)
+
+            
+#             return Response({"Service Created Event Code":[{"event_id":eventID},events.data,{"event_plan_of_care_id":event_plane_of_care}]})
+#         else:
+#             # agg_hhc_enquiry_create_follow_up_serializer
+#             return Response({"Service Created Event Code":eventID})
+
+
+
 class agg_hhc_add_service_details_api(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     
     def get_event(self,pk):
         try:
@@ -632,8 +1660,6 @@ class agg_hhc_add_service_details_api(APIView):
         # return [date.strftime('%Y-%m-%d') for date in sorted_dates], off_days
         return [sorted_dates, off_days]
     
-   
-    
     def post(self,request): 
         clgref_id = get_prof(request)[3]
         request.data['last_modified_by'] = clgref_id
@@ -641,10 +1667,8 @@ class agg_hhc_add_service_details_api(APIView):
         for key, value in request.data.items():
             if key not in should_null:
                 if not value :
-                    # print(key, 'asd;fglhk')
-                    datas=['lattitude', 'langitude']
-                    if key in datas:
-                        return Response({'error':'"lat and long" this field should not to be empty'})
+                    print(key, 'asd;fglhk')
+                    # return Response({'error':f'"{key}" this field should not to be empty'})
                     return Response({'error':'fill all required fields'})
         patientID=None  
         # print(';;demo;;')
@@ -886,7 +1910,10 @@ class agg_hhc_add_service_details_api(APIView):
         # for sub_srv in request.data['sub_srv_id']:    for multiple sub services
         event_plane_of_care=[]
         request.data['start_date']= all_dates[0] if all_dates else None
-        request.data['end_date']= all_dates[-1] if all_dates else None
+        # if request.data['srv_id'] != 11:
+        #     request.data['end_date']= (datetime.strptime(all_dates[0], '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')  if all_dates else None
+        # else:
+        request.data['end_date'] = all_dates[-1] if all_dates else None
         for sub_srv in a:
             request.data['sub_srv_id']=sub_srv 
             request.data['initail_final_amount']=request.data['final_amount'] 
@@ -944,7 +1971,7 @@ class agg_hhc_add_service_details_api(APIView):
                         # request.data['actual_StartDate_Time']=start_date_string.date()
                         request.data['actual_StartDate_Time']=start_date_string
                         # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
-                        request.data['actual_EndDate_Time']=start_date_string+ timedelta(days=30)
+                        request.data['actual_EndDate_Time']=start_date_string
                         # print(request.data,"dtl ",i)
                         
                         detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
@@ -968,7 +1995,7 @@ class agg_hhc_add_service_details_api(APIView):
                         # request.data['actual_StartDate_Time']=start_date_string.date()
                         request.data['actual_StartDate_Time']=all_dates[0]
                         # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
-                        request.data['actual_EndDate_Time']=all_dates[0]+ timedelta(days=30)
+                        request.data['actual_EndDate_Time']=all_dates[0]
                         # print(request.data,"dtl ",i)
                         
                         detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
@@ -980,7 +2007,7 @@ class agg_hhc_add_service_details_api(APIView):
                         else:
                             return Response([detailPlaneofcare.errors])
                         data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
-                        data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+                        data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(1))
 
 
         jb_cl_que = request.data.get('jb_cl_que', [])  
@@ -1015,7 +2042,6 @@ class agg_hhc_add_service_details_api(APIView):
 
         get_epoc_dt = agg_hhc_event_plan_of_care.objects.get(eve_poc_id = event_plane_of_care[0])
         get_epoc_dt.serivce_dates = all_dates
-        # get_epoc_dt.initail_discount_value =  request.data.get('discount_value')
         get_epoc_dt.save()
         if request.data['purp_call_id']==1: 
             # return Response({"Service Created Event Code":[eventID,eventID.agg_sp_pt_id]})
@@ -1260,7 +2286,6 @@ class agg_hhc_add_service_details_api(APIView):
                 return Response([add_service.errors])
             # plan_O_C.update(eve_id=eventID)
             plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
-            plan_O_C.update(initail_discount_value =  request.data.get('discount_value'))
             plan_O_C.update(eve_id=eventID)
             event_plane_of_care.append(service)
             if request.data['purp_call_id']==1:
@@ -1278,7 +2303,7 @@ class agg_hhc_add_service_details_api(APIView):
                         # request.data['actual_StartDate_Time']=start_date_string.date()
                         request.data['actual_StartDate_Time']=start_date_string
                         # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
-                        request.data['actual_EndDate_Time']=start_date_string+ timedelta(days=30)
+                        request.data['actual_EndDate_Time']=start_date_string
                         # print(request.data,"dtl ",i)
                         
                         detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
@@ -1302,7 +2327,7 @@ class agg_hhc_add_service_details_api(APIView):
                         # request.data['actual_StartDate_Time']=start_date_string.date()
                         request.data['actual_StartDate_Time']=all_dates[0]
                         # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
-                        request.data['actual_EndDate_Time']=all_dates[0]+ timedelta(days=30)
+                        request.data['actual_EndDate_Time']=all_dates[0]
                         # print(request.data,"dtl ",i)
                         
                         detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
@@ -1314,7 +2339,7 @@ class agg_hhc_add_service_details_api(APIView):
                         else:
                             return Response([detailPlaneofcare.errors])
                         data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
-                        data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+                        data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(1))
         # return Response({"Service Created Event Code"})
         
         jb_cl_que = request.data.get('jb_cl_que', [])  
@@ -1351,10 +2376,6 @@ class agg_hhc_add_service_details_api(APIView):
         get_epoc_dt = agg_hhc_event_plan_of_care.objects.get(eve_poc_id = event_plane_of_care[0])
         get_epoc_dt.serivce_dates = all_dates
         get_epoc_dt.save()
-        enquiry=agg_hhc_enquiry_follow_up.objects.filter(eve_id=eventID).last()
-        if enquiry:
-            enquiry.follow_up_status=1
-            enquiry.save()
         if request.data['purp_call_id']==1: 
             event=agg_hhc_events.objects.get(eve_id=eventID)
             events=agg_hhc_event_response_serializer(event)
@@ -1366,14 +2387,761 @@ class agg_hhc_add_service_details_api(APIView):
             # agg_hhc_enquiry_create_follow_up_serializer
             return Response({"Service Created Event Code":eventID})
 
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # def post(self,request): 
+    #     clgref_id = get_prof(request)[3]
+    #     request.data['last_modified_by'] = clgref_id
+    #     should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance', 'jb_cl_que','coupon_id']
+    #     for key, value in request.data.items():
+    #         if key not in should_null:
+    #             if not value :
+    #                 print(key, 'asd;fglhk')
+    #                 # return Response({'error':f'"{key}" this field should not to be empty'})
+    #                 return Response({'error':'fill all required fields'})
+    #     patientID=None  
+    #     # print(';;demo;;')
+        
+    #     caller = agg_hhc_callers.objects.filter(phone=request.data['phone'],status=1).first()
+    #     if caller:
+    #         callerSerializer= agg_hhc_callers_serializer(caller,data= request.data)
+    #         if callerSerializer.is_valid():
+    #             callerID=callerSerializer.save()
+    #             callerID=callerID.caller_id
+    #             # print('2')
+    #         else:
+    #             return Response(callerSerializer.errors)
+    #         # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+    #         # callerID = caller.first().caller_id 
+    #     else:  
+    #         callers= agg_hhc_callers_serializer(data= request.data)
+    #         if callers.is_valid():
+    #             # callers.validated_data['caller_status']=3
+    #             callerID=callers.save().caller_id
+    #             # print('3')
+    #         else:
+    #             return Response([callers.errors])
+    #     # print(callerID,'llllsecond')
+    #     if request.data['purp_call_id']==1:
+    #         # print('4')
+    #         request.data['enq_spero_srv_status']=2
+    #     else: request.data['enq_spero_srv_status']=3
+    #     request.data['event_status']=1 
+    #     # patient= agg_hhc_patients.objects.filter(phone_no=request.data['phone_no']).first()  
+    #     patient = request.data['agg_sp_pt_id']
+    #     if patient:
+    #         patient= agg_hhc_patients.objects.get(agg_sp_pt_id=request.data['agg_sp_pt_id']) 
+    #         # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+    #         # patientID=patient.first().agg_sp_pt_id 
+    #         request.data['caller_id']=callerID
+    #         patientSerializer = agg_hhc_patients_serializer(patient,data=request.data)
+    #         if patientSerializer.is_valid():
+    #             # patientSerializer.validated_data['caller_id']=callerID
+    #             patientID=patientSerializer.save().agg_sp_pt_id
+    #         else: return Response(patientSerializer.errors)
+    #     else:
+    #         Patient = agg_hhc_patients_serializer(data=request.data)
+            
+    #         request.data['caller_id']=callerID
+    #         if Patient.is_valid():
+    #             # print(patient,'pppppppppppppp')
+    #             patientID=Patient.save().agg_sp_pt_id
+    #             # Patient.save()
+    #             # print(patient.data)
+    #             # patientID=patientID.agg_sp_pt_id
+    #         else:
+    #             return Response([Patient.errors])
+    #             # print('4.6')   
+    #     # elif request.data['purp_call_id']==2:
+    #     #     patient= agg_hhc_patient_list_enquiry.objects.filter(phone_no=request.data['phone_no']).first()
+    #     #     request.data['caller_id']=callerID
+    #     #     if patient:
+    #     #         # print(patient,'7')
+    #     #         patientSerializer = agg_hhc_patient_list_serializer(patient,data=request.data)
+    #     #         if patientSerializer.is_valid():
+    #     #             # patientSerializer.validated_data['caller_id']=callerID
+    #     #             # print(patientSerializer)
+    #     #             # print('pppppppppppppppppppppppppp')
+    #     #             patientID=patientSerializer.save().pt_id
+    #     #             # for items in patientID:
+
+    #     #             # print(patientID.eve_id)
+    #     #             #     items.pt_id
+    #     #             # patientID=patientID.pt_id
+
+    #     #             # saved_patients = []
+    #     #             # for patient_instance in patientSerializer.save():
+    #     #             #     saved_patients.append(patient_instance)
+    #     #         else:
+    #     #             # print(';;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;')
+    #     #             return Response(patientSerializer.errors)
+    #     #         # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+    #     #         # patientID=patient.first().pt_id 
+    #     #     else:
+    #     #         request.data['caller_id']=callerID
+    #     #         patient = agg_hhc_patient_list_serializer(data=request.data)
+    #     #         # print('9')
+    #     #         if patient.is_valid():
+    #     #             patientID=patient.save()
+    #     #             patientID=patientID.pt_id
+    #     #             # print('10')
+    #     #         else:
+    #     #             return Response([patient.errors])
+
+    #     # else:
+    #     #     patient=models.agg_hhc_patient_list_enquiry.objects.filter(phone_no=request.data['phone_no'])
+    #     # # if patient:
+    #     # #     patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID )
+    #     # #     patientID=patient.first().agg_sp_pt_id 
+    #     # else:
+    #     #     patient = serializers.agg_hhc_patients_serializer(data=request.data)
+    #     #         # patient = serializers.agg_hhc_patient_list_serializer(data=request.data)
+    #     #     if patient.is_valid():
+    #     #         # patient.validated_data['caller_id']=callerID
+    #     #         # print(patient.validated_data['caller_id'],';;;;;;;;;;;;;;;;;;;;;;;;')
+    #     #         patientID=patient.save()
+    #     #         patientID=patientID.agg_sp_pt_id
+
+    #     #     else:
+    #     #         return Response(patient.errors)
+    #     # print(callerID,'ll;;;l')
+    #     # print(patientID,'ll;;;l')
+    #     # request.data['event_status']=1
+    #     event= agg_hhc_event_serializer(data=request.data)
+    #     if event.is_valid():
+    #         eventID=event.save().eve_id
+    #     else:
+    #         return Response([event.errors])
+    #     event= agg_hhc_events.objects.filter(eve_id=eventID,status=1)
+    #     # if request.data['purp_call_id']==1:
+    #         # print('spero service')
+    #     event.update(agg_sp_pt_id=patientID,caller_id=callerID,patient_service_status=3)
+    #     # elif request.data['purp_call_id']==2:
+    #     #     # print('enquiry')
+    #     #     event.update(pt_id=patientID,caller_id=callerID,patient_service_status=3)
+    #     # data=request.data['sub_srv_id']
+    #     # dates = datetime.strptime(str(request.data['dates']), '%Y-%m-%d')
+    #     # dates=request.data['dates']
+    #     # dates = self.strings_to_dates(dates)
+        
+    #     # start_date = datetime.strptime(request.data['start_date'], '%Y-%m-%d')
+    #     # end_date = datetime.strptime(request.data['end_date'], '%Y-%m-%d')
+    #     # start_date = dates[0][0]
+    #     # end_date = dates[0][-1]
+    #     # print(start_date, end_date)
+
+
+
+    #     # diff = ((end_date.date() - start_date.date()).days)
+    #     # # diff =len(dates[0])
+    #     # # print(diff, 'difference')
+    #     # a=[request.data['sub_srv_id']]
+    #     # # for sub_srv in request.data['sub_srv_id']:    for multiple sub services
+    #     # event_plane_of_care=[]
+    #     # for sub_srv in a:
+    #     #     request.data['sub_srv_id']=sub_srv 
+    #     #     request.data['initail_final_amount']=request.data['final_amount'] 
+    #     #     # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+    #     #     # strdates=",".join(datess)
+    #     #     # request.data['No_session_dates']=strdates
+    #     #     # request.data['start_date']=start_date.date()
+    #     #     # print(start_date.date(),end_date.date())
+    #     #     # request.data['end_date']=end_date.date()
+    #     #     if request.data['preferred_hosp_id']:
+    #     #         request.data['hosp_id']=request.data['preferred_hosp_id']
+    #     #     add_service= agg_hhc_create_service_serializer(data=request.data)
+    #     #     if add_service.is_valid():
+    #     #         service=add_service.save().eve_poc_id
+    #     #         # print(service)
+    #     #     else:
+    #     #         return Response([add_service.errors])
+    #     #     # print('demo')
+    #     #     plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+    #     #     plan_O_C.update(eve_id=eventID)
+    #     #     event_plane_of_care.append(service)
+    #     #     if request.data['purp_call_id']==1:
+    #     #         # for i in range(0,(diff)):
+    #     #         for i in range(0,(diff+1)):
+    #     #             start_date_string=(start_date+timedelta(days=i))
+    #     #             # d=dates[0][i]
+    #     #             # print(start_date_string)
+    #     #             # request.data['actual_StartDate_Time']=(d.date())
+    #     #             # request.data['actual_EndDate_Time']=(d.date())
+    #     #             request.data['actual_StartDate_Time']=start_date_string.date()
+    #     #             # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #     #             request.data['actual_EndDate_Time']=start_date_string.date()
+    #     #             detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #     #             if detailPlaneofcare.is_valid():
+    #     #                 # detailPlaneofcare.eve_poc_id=service
+    #     #                 # detailPlaneofcare.eve_id=eventID
+    #     #                 # detailPlaneofcare.index_of_Session=(i+1)
+    #     #                 detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #     #             else:
+    #     #                 return Response([detailPlaneofcare.errors])
+    #     #             data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #     #             data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+
+        
+    #     # Input array
+    #     # date_ranges = [['2024-05-18, 2024-05-20'], ['2024-05-23, 2024-05-24'], ['2024-05-27, 2024-05-27']]
+    #     # date_ranges = request.data.get('date_ranges', [])
+
+    #     # def get_dates_between(start_date, end_date):
+    #     #     dates = []
+    #     #     current_date = start_date
+    #     #     while current_date <= end_date:
+    #     #         dates.append(current_date.strftime('%Y-%m-%d'))
+    #     #         current_date += timedelta(days=1)
+    #     #     return dates
+
+    #     # all_dates = []
+
+    #     # for date_range in date_ranges:
+    #     #     start_str, end_str = date_range[0].split(', ')
+    #     #     start_date = datetime.strptime(start_str, '%Y-%m-%d')
+    #     #     end_date = datetime.strptime(end_str, '%Y-%m-%d')
+    #     #     all_dates.extend(get_dates_between(start_date, end_date))
+
+    #     # print(all_dates,"all_dates")
+    #     # print(len(all_dates))
+
+    #     date_ranges = request.data.get('date_ranges', [])
+
+    #     def get_dates_between(start_date, end_date):
+    #         dates = []
+    #         current_date = start_date
+    #         while current_date <= end_date:
+    #             dates.append(current_date.strftime('%Y-%m-%d'))
+    #             current_date += timedelta(days=1)
+    #         return dates
+
+    #     all_dates = []
+
+    #     for date_range in date_ranges:
+    #         start_str, end_str = date_range  # Adjusting to unpack list of two date strings
+    #         start_date = datetime.strptime(start_str, '%Y-%m-%d')
+    #         end_date = datetime.strptime(end_str, '%Y-%m-%d')
+    #         all_dates.extend(get_dates_between(start_date, end_date))
+    #         all_dates=sorted(all_dates)
+
+    #     print(all_dates, "all_dates")
+    #     print(len(all_dates))
+
+
+
+
+
+
+    #     diff = ((end_date.date() - start_date.date()).days)
+    #     # diff =len(dates[0])
+    #     # print(diff, 'difference')
+    #     a=[request.data['sub_srv_id']]
+    #     # for sub_srv in request.data['sub_srv_id']:    for multiple sub services
+    #     event_plane_of_care=[]
+    #     request.data['start_date']= all_dates[0] if all_dates else None
+    #     # if request.data['srv_id'] != 11:
+    #     #     request.data['end_date']= (datetime.strptime(all_dates[0], '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')  if all_dates else None
+    #     # else:
+    #     request.data['end_date'] = all_dates[-1] if all_dates else None
+    #     for sub_srv in a:
+    #         request.data['sub_srv_id']=sub_srv 
+    #         request.data['initail_final_amount']=request.data['final_amount'] 
+    #         # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+    #         # strdates=",".join(datess)
+    #         # request.data['No_session_dates']=strdates
+    #         # request.data['start_date']=start_date.date()
+    #         # print(start_date.date(),end_date.date())
+    #         # request.data['end_date']=end_date.date()
+    #         if request.data['preferred_hosp_id']:
+    #             request.data['hosp_id']=request.data['preferred_hosp_id']
+    #         add_service= agg_hhc_create_service_serializer(data=request.data)
+    #         if add_service.is_valid():
+    #             service=add_service.save().eve_poc_id
+    #             # print(service)
+    #         else:
+    #             return Response([add_service.errors])
+    #         # print('demo')
+    #         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+    #         plan_O_C.update(initail_discount_value =  request.data.get('discount_value'))
+    #         plan_O_C.update(eve_id=eventID)
+    #         event_plane_of_care.append(service)
+    #         if request.data['purp_call_id']==1:
+    #             # for i in range(0,(diff)):
+    #             # for i in range(0,(diff+1)):
+    #             #     start_date_string=(start_date+timedelta(days=i))
+    #             #     # d=dates[0][i]
+    #             #     # print(start_date_string)
+    #             #     # request.data['actual_StartDate_Time']=(d.date())
+    #             #     # request.data['actual_EndDate_Time']=(d.date())
+    #             #     request.data['actual_StartDate_Time']=start_date_string.date()
+    #             #     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #             #     request.data['actual_EndDate_Time']=start_date_string.date()
+    #             #     # print(request.data,"dtl ",i)
+                    
+    #             #     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #             #     if detailPlaneofcare.is_valid():
+    #             #         # detailPlaneofcare.eve_poc_id=service
+    #             #         # detailPlaneofcare.eve_id=eventID
+    #             #         # detailPlaneofcare.index_of_Session=(i+1)
+    #             #         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #             #     else:
+    #             #         return Response([detailPlaneofcare.errors])
+    #             #     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #             #     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+    #             if request.data['srv_id'] != 11:
+    #                 for i in range(0,(len(all_dates))):
+    #                     # start_date_string=(start_date+timedelta(days=i))
+    #                     start_date_string = all_dates[i]
+    #                     print(start_date_string,"start_date_string")
+    #                     # d=dates[0][i]
+    #                     # print(start_date_string)
+    #                     # request.data['actual_StartDate_Time']=(d.date())
+    #                     # request.data['actual_EndDate_Time']=(d.date())
+    #                     # request.data['actual_StartDate_Time']=start_date_string.date()
+    #                     request.data['actual_StartDate_Time']=start_date_string
+    #                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #                     request.data['actual_EndDate_Time']=start_date_string
+    #                     # print(request.data,"dtl ",i)
+                        
+    #                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #                     if detailPlaneofcare.is_valid():
+    #                         # detailPlaneofcare.eve_poc_id=service
+    #                         # detailPlaneofcare.eve_id=eventID
+    #                         # detailPlaneofcare.index_of_Session=(i+1)
+    #                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #                     else:
+    #                         return Response([detailPlaneofcare.errors])
+    #                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+    #             else:
+    #                     # start_date_string=(start_date+timedelta(days=i))
+    #                     # start_date_string = all_dates[i]
+    #                     # print(start_date_string,"start_date_string")
+    #                     # d=dates[0][i]
+    #                     # print(start_date_string)
+    #                     # request.data['actual_StartDate_Time']=(d.date())
+    #                     # request.data['actual_EndDate_Time']=(d.date())
+    #                     # request.data['actual_StartDate_Time']=start_date_string.date()
+    #                     request.data['actual_StartDate_Time']=all_dates[0]
+    #                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #                     request.data['actual_EndDate_Time']=all_dates[0]
+    #                     # print(request.data,"dtl ",i)
+                        
+    #                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #                     if detailPlaneofcare.is_valid():
+    #                         # detailPlaneofcare.eve_poc_id=service
+    #                         # detailPlaneofcare.eve_id=eventID
+    #                         # detailPlaneofcare.index_of_Session=(i+1)
+    #                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #                     else:
+    #                         return Response([detailPlaneofcare.errors])
+    #                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(1))
+
+
+    #     jb_cl_que = request.data.get('jb_cl_que', [])  
+    #     r_srv_id = request.data.get('srv_id')
+
+    #     get_enq_que = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eventID, is_srv_enq_q = 2, status = 1)
+    #     get_enq_que.update(status=2)
+         
+    #     if jb_cl_que:
+    #         print(jb_cl_que,'jb_cl_que')
+    #         r_srv_id = request.data.get('srv_id')
+    #         print(r_srv_id,'r_srv_id')
+    #         for q_id in jb_cl_que:
+    #             print(q_id,'q_id')
+    #             inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+    #             print(inst, 'inst')
+    #             data = {
+    #                     'eve_id':eventID,
+    #                     'srv_id':r_srv_id,
+    #                     'jcq_id':inst.jcq_id,
+    #                     'is_srv_enq_q':1
+    #                 }
+                    
+    #             serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+    #             if serializer_val.is_valid():
+    #                 serializer_val.save()
+    #                 print(serializer_val.data,'serializer_val')
+    #             else:
+    #                 print('serializer_val not')
+
+    #     print(event_plane_of_care,"event_plane_of_care")
+
+    #     get_epoc_dt = agg_hhc_event_plan_of_care.objects.get(eve_poc_id = event_plane_of_care[0])
+    #     get_epoc_dt.serivce_dates = all_dates
+    #     get_epoc_dt.save()
+    #     if request.data['purp_call_id']==1: 
+    #         # return Response({"Service Created Event Code":[eventID,eventID.agg_sp_pt_id]})
+    #         event=agg_hhc_events.objects.get(eve_id=eventID)
+    #         events=agg_hhc_event_response_serializer(event)
+            
+            
+    #         # jb_cl_que = request.data.get('jb_cl_que', [])  
+    #         # r_srv_id = request.data.get('srv_id')
+         
+    #         # if jb_cl_que:
+    #         #     print(jb_cl_que,'jb_cl_que')
+    #         #     r_srv_id = request.data.get('srv_id')
+    #         #     print(r_srv_id,'r_srv_id')
+    #         #     for q_id in jb_cl_que:
+    #         #         print(q_id,'q_id')
+    #         #         inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+    #         #         print(inst, 'inst')
+    #         #         data = {
+    #         #             'eve_id':eventID,
+    #         #             'srv_id':r_srv_id,
+    #         #             'jcq_id':inst.jcq_id
+    #         #         }
+    #         #         serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+    #         #         if serializer_val.is_valid():
+    #         #             serializer_val.save()
+    #         #             print(serializer_val.data,'serializer_val')
+    #         #         else:
+    #         #             print('serializer_val not')
+                                
+
+    #                 # abc = agg_hhc_events_wise_jc_question.objects.create(
+    #                 #     srv_id_id=r_srv_id,
+    #                 #     jcq_id=inst  # Assign the instance directly, not its jcq_id attribute
+    #                 # )
+
+    #         return Response({"Service Created Event Code":[{"event_id":eventID},events.data,{"event_plan_of_care_id":event_plane_of_care}]})
+
+    #     # else:
+    #     elif request.data['purp_call_id']==2:
+    #         request.data['event_id']=eventID
+    #         request.data['follow_up']=4
+
+    #         create_follow_up= agg_hhc_enquiry_create_follow_up_serializer(data= request.data)
+    #         if create_follow_up.is_valid():
+    #             # callers.validated_data['caller_status']=3
+    #             create_follow_up.save()
+    #         else:               
+    #             return Response([create_follow_up.errors])
+            
+            
+            
+            
+    #         # jb_cl_que = request.data.get('jb_cl_que', [])  
+    #         # r_srv_id = request.data.get('srv_id')
+         
+    #         # if jb_cl_que:
+    #         #     print(jb_cl_que,'jb_cl_que')
+    #         #     r_srv_id = request.data.get('srv_id')
+    #         #     print(r_srv_id,'r_srv_id')
+    #         #     for q_id in jb_cl_que:
+    #         #         print(q_id,'q_id')
+    #         #         inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+    #         #         print(inst, 'inst')
+    #         #         data = {
+    #         #             'eve_id':eventID,
+    #         #             'srv_id':r_srv_id,
+    #         #             'jcq_id':inst.jcq_id
+    #         #         }
+    #         #         serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+    #         #         if serializer_val.is_valid():
+    #         #             serializer_val.save()
+    #         #             print(serializer_val.data,'serializer_val')
+    #         #         else:
+    #         #             print('serializer_val not')
+
+    #         return Response({"Service Created Event Code":eventID})
+    #     else:
+    #         return Response('something went wrong')
+        
+    # def put(self,request,pk):    
+    #     clgref_id = get_prof(request)[3]
+    #     request.data['last_modified_by'] = clgref_id
+    #     # event=self.get_event(pk)
+    #     should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance','jb_cl_que','coupon_id']
+    #     for key, value in request.data.items():
+    #         # print(f'"{key}", values are {value}')
+    #         if key not in should_null:
+    #             if not value :
+    #                 # print({'error':f'"{key}" this field should not to be empty'})
+    #                 # return Response({'error':f'"{key}" this field should not to be empty'})
+    #                 return Response({'error':'fill all required fields'})
+    #     request.data['purp_call_id']=1
+    #     caller = self.get_caller(phone=request.data['phone'])
+    #     # print(caller.__dict__.items(),'llklll')
+        
+    #     print(';')
+    #     if caller:
+    #         # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+    #         # caller.update(caller_fullname=request.data['caller_fullname'], caller_rel_id=request.data['caller_rel_id'], purp_call_id=request.data['purp_call_id'], caller_status=3)
+    #         # callerID = caller.first().caller_id 
+    #         callerSerializer= agg_hhc_callers_serializer(caller,data= request.data)
+    #         if callerSerializer.is_valid():
+    #             # print(';;;;;;;;;;;')
+    #             callerID=callerSerializer.save().caller_id
+    #         else:
+    #             return Response(callerSerializer.errors)
+    #     else:  
+    #         callers= agg_hhc_callers_serializer(data= request.data)
+    #         if callers.is_valid():
+    #             # callers.validated_data['caller_status']=3
+    #             callerID=callers.save().caller_id
+    #         else:
+    #             return Response([callers.errors])       
+    #     # # print(callerID,'llllsecond')
+    #     # if request.data['purp_call_id']==1:
+    #     # print('l')
+    #     patient=request.data['agg_sp_pt_id']
+    #     if patient:
+    #         patient=self.get_patient(agg_sp_pt_id=patient)
+
+    #         # patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+    #         # patientID=patient.first().agg_sp_pt_id 
+    #         patientSerializer= agg_hhc_patients_serializer(patient,data=request.data)
+    #         if patientSerializer.is_valid():
+    #             patientID=patientSerializer.save().agg_sp_pt_id
+    #             # print(patientID,';;;;;;;;;;;;;;;;;;')
+    #             # return Response(patientSerializer.data)
+    #         else:
+    #             return Response(patientSerializer.errors)
+    #     else:
+    #         patient = agg_hhc_patients_serializer(data=request.data)
+    #         try:
+    #             caller_id = agg_hhc_callers.objects.get(caller_id=callerID)
+    #         except agg_hhc_callers.DoesNotExist:
+    #             return Response({'error':'caller not fount'})
+    #         if patient.is_valid():
+    #             patient.validated_data['caller_id']=caller_id
+    #             patientID=patient.save()
+    #             patientID=patientID.agg_sp_pt_id
+    #         else:
+    #             return Response([patient.errors])
+    #     # else:
+    #     #     patient=models.agg_hhc_patient_list_enquiry.objects.filter(Q(phone_no=request.data['phone_no'])|Q())
+    #     #     if patient:
+    #     #         patient.update(name=request.data['name'], phone_no=request.data['phone_no'],caller_id=callerID,Age=request.data['Age'] )
+    #     #         patientID=patient.first().pt_id 
+    #     #     else:
+    #     #         patient = serializers.agg_hhc_patient_list_serializer(data=request.data)
+    #     #         if patient.is_valid():
+    #     #             patientID=patient.save()
+    #     #             patientID=patientID.pt_id
+    #     #         else:
+    #     #             return Response([patient.errors,'7'])
+
+    #     # if event.is_valid():
+    #     #     eventID=event.save().eve_id
+    #     # else:
+    #     #     return Response([event.errors,'8'])
+    #     # print(pk,'llllllllllll')
+    #     if request.data['preferred_hosp_id']:
+    #         request.data['hosp_id']=request.data['preferred_hosp_id']
+    #     event=self.get_event(pk)
+    #     # if request.data['purp_call_id']==1:
+    #     eventSerializer= agg_hhc_updateID_event_serializer(event,data=request.data)
+    #     if eventSerializer.is_valid():
+    #         eventID=eventSerializer.save().eve_id
+    #     else:
+    #         return Response(eventSerializer.errors)
+    #     data={'agg_sp_pt_id':patientID,'caller_id':callerID,'status':1,'enq_spero_srv_status':1,'last_modified_by':clgref_id,'added_by':clgref_id}
+    #     eventSerializer= agg_hhc_updateIDs_event_serializer(event,data=data)
+    #     if eventSerializer.is_valid():
+    #         eventID=eventSerializer.save().eve_id
+    #         # print(eventSerializer.validated_data)
+    #         # eventSerializer.save()
+    #     else:
+    #         return Response(eventSerializer.errors)
+
+    #     # event.update(agg_sp_pt_id=patientID,caller_id=callerID)
+    #     # eventID=event.first().eve_id
+    #     # print(eventID)
+    #     # print(callerID)
+    #     # else:
+    #     #     event.update(pt_id=patientID,caller_id=callerID)
+    #     # dates=request.data['dates']
+    #     # dates = self.strings_to_dates(dates)
+        
+    #     # start_date = dates[0][0]
+    #     # end_date = dates[0][-1]
+
+    #     date_ranges = request.data.get('date_ranges', [])
+
+    #     def get_dates_between(start_date, end_date):
+    #         dates = []
+    #         current_date = start_date
+    #         while current_date <= end_date:
+    #             dates.append(current_date.strftime('%Y-%m-%d'))
+    #             current_date += timedelta(days=1)
+    #         return dates
+
+    #     all_dates = []
+
+    #     for date_range in date_ranges:
+    #         start_str, end_str = date_range  # Adjusting to unpack list of two date strings
+    #         start_date = datetime.strptime(start_str, '%Y-%m-%d')
+    #         end_date = datetime.strptime(end_str, '%Y-%m-%d')
+    #         all_dates.extend(get_dates_between(start_date, end_date))
+    #         all_dates=sorted(all_dates)
+
+    #     print(all_dates, "all_dates")
+    #     print(len(all_dates))
+
+
+    #     # start_date = datetime.strptime(str(request.data['start_date']), '%Y-%m-%d')
+    #     # end_date = datetime.strptime(str(request.data['end_date']), '%Y-%m-%d')
+    #     # diff = ((end_date.date() - start_date.date()).days)
+    #     # diff =len(dates[0])
+    #     a=[request.data['sub_srv_id']]
+    #     event_plane_of_care=[]
+
+    #     request.data['start_date']= all_dates[0] if all_dates else None
+    #     request.data['end_date']= all_dates[-1] if all_dates else None
+
+    #     for sub_srv in a:
+    #         print(eventID,'id')
+    #         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_id=eventID,status=1).last()
+    #         print(plan_O_C,'demo')
+    #         request.data['sub_srv_id']=sub_srv 
+    #         request.data['initail_final_amount']=request.data['final_amount'] 
+    #         # datess=[date.strftime('%Y-%m-%d') for date in dates[1]]
+    #         # strdates=",".join(datess)
+    #         # request.data['No_session_dates']=strdates
+            
+    #         add_service= agg_hhc_create_service_serializer(plan_O_C,data=request.data)
+    #         if add_service.is_valid():
+    #             print(start_date)
+    #             print(end_date)
+    #             # add_service.validated_data['start_date']=start_date.date()
+    #             # add_service.validated_data['end_date']=end_date.date()
+    #             service=add_service.save().eve_poc_id
+    #         else:
+    #             return Response([add_service.errors])
+    #         # plan_O_C.update(eve_id=eventID)
+    #         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+    #         plan_O_C.update(initail_discount_value =  request.data.get('discount_value'))
+    #         plan_O_C.update(eve_id=eventID)
+    #         event_plane_of_care.append(service)
+    #         if request.data['purp_call_id']==1:
+    #             # for i in range(0,(diff)):
+    #             # for i in range(0,(diff+1)):
+    #             if request.data['srv_id'] != 11:
+    #                 for i in range(0,(len(all_dates))):
+    #                     # start_date_string=(start_date+timedelta(days=i))
+    #                     start_date_string = all_dates[i]
+    #                     print(start_date_string,"start_date_string")
+    #                     # d=dates[0][i]
+    #                     # print(start_date_string)
+    #                     # request.data['actual_StartDate_Time']=(d.date())
+    #                     # request.data['actual_EndDate_Time']=(d.date())
+    #                     # request.data['actual_StartDate_Time']=start_date_string.date()
+    #                     request.data['actual_StartDate_Time']=start_date_string
+    #                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #                     request.data['actual_EndDate_Time']=start_date_string
+    #                     # print(request.data,"dtl ",i)
+                        
+    #                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #                     if detailPlaneofcare.is_valid():
+    #                         # detailPlaneofcare.eve_poc_id=service
+    #                         # detailPlaneofcare.eve_id=eventID
+    #                         # detailPlaneofcare.index_of_Session=(i+1)
+    #                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #                     else:
+    #                         return Response([detailPlaneofcare.errors])
+    #                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(1))
+    #             else:
+    #                     # start_date_string=(start_date+timedelta(days=i))
+    #                     # start_date_string = all_dates[i]
+    #                     # print(start_date_string,"start_date_string")
+    #                     # d=dates[0][i]
+    #                     # print(start_date_string)
+    #                     # request.data['actual_StartDate_Time']=(d.date())
+    #                     # request.data['actual_EndDate_Time']=(d.date())
+    #                     # request.data['actual_StartDate_Time']=start_date_string.date()
+    #                     request.data['actual_StartDate_Time']=all_dates[0]
+    #                     # request.data['actual_EndDate_Time']=datetime.combine(start_date_string.date(),end_date.time())
+    #                     request.data['actual_EndDate_Time']=all_dates[0]
+    #                     # print(request.data,"dtl ",i)
+                        
+    #                     detailPlaneofcare= agg_hhc_add_detail_service_serializer(data=request.data)
+    #                     if detailPlaneofcare.is_valid():
+    #                         # detailPlaneofcare.eve_poc_id=service
+    #                         # detailPlaneofcare.eve_id=eventID
+    #                         # detailPlaneofcare.index_of_Session=(i+1)
+    #                         detail_plan=detailPlaneofcare.save().agg_sp_dt_eve_poc_id
+    #                     else:
+    #                         return Response([detailPlaneofcare.errors])
+    #                     data1= agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=detail_plan,status=1)
+    #                     data1.update(eve_poc_id=service,eve_id=eventID,index_of_Session=(i+1))
+    #     # return Response({"Service Created Event Code"})
+        
+    #     jb_cl_que = request.data.get('jb_cl_que', [])  
+    #     r_srv_id = request.data.get('srv_id')
+
+    #     get_enq_que = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eventID, status = 1)
+    #     # get_enq_que.update(status=2)
+    #     for eves in get_enq_que:
+    #         eves.status = 2
+    #         eves.save()
+         
+    #     if jb_cl_que:
+    #         print(jb_cl_que,'jb_cl_que')
+    #         r_srv_id = request.data.get('srv_id')
+    #         print(r_srv_id,'r_srv_id')
+    #         for q_id in jb_cl_que:
+    #             print(q_id,'q_id')
+    #             inst = agg_hhc_job_closure_questions.objects.get(jcq_id=int(q_id))
+    #             print(inst, 'inst')
+    #             data = {
+    #                     'eve_id':eventID,
+    #                     'srv_id':r_srv_id,
+    #                     'jcq_id':inst.jcq_id,
+    #                     'is_srv_enq_q':1
+    #                 }
+                    
+    #             serializer_val = agg_hhc_job_cl_questions_eventwise(data=data)
+    #             if serializer_val.is_valid():
+    #                 serializer_val.save()
+    #                 print(serializer_val.data,'serializer_val')
+    #             else:
+    #                 print('serializer_val not')
+
+    #     get_epoc_dt = agg_hhc_event_plan_of_care.objects.get(eve_poc_id = event_plane_of_care[0])
+    #     get_epoc_dt.serivce_dates = all_dates
+    #     get_epoc_dt.save()
+    #     if request.data['purp_call_id']==1: 
+    #         event=agg_hhc_events.objects.get(eve_id=eventID)
+    #         events=agg_hhc_event_response_serializer(event)
+
+            
+    #         return Response({"Service Created Event Code":[{"event_id":eventID},events.data,{"event_plan_of_care_id":event_plane_of_care}]})
+    #     else:
+
+    #         # agg_hhc_enquiry_create_follow_up_serializer
+    #         return Response({"Service Created Event Code":eventID})
+
 
 
 
 # =================================================================================================================
 # @csrf_exempt
 class agg_hhc_add_service_form_api(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
     # renderer_classes = [UserRenderer]
     # permission_classes = [IsAuthenticated]
 
@@ -1395,6 +3163,87 @@ class agg_hhc_add_service_form_api(APIView):
         # patient_details = patient_data_serializer(event)
         return Response(patient_details.data)
     
+    # def post(self,request):  
+    #     # clgref_id = get_prof(request)[3]
+    #     # request.data['last_modified_by'] = clgref_id
+    #     # should_null=['caller_rel_id','agg_sp_pt_id','pincode','prof_prefered','remark','discount_type','discount_value','final_amount','discount_value','day_convinance','total_convinance', 'preferred_hosp_id','doct_cons_id']
+    #     # should_null=['agg_sp_pt_id','doct_cons_id']
+    #     # for key, value in request.data.items():
+    #     #     if key not in should_null:
+    #     #         if not value :
+    #     #             # return Response({'error':f'"{key}" this field should not to be empty'})
+    #     #             return Response({'error':'fill all required fields'})
+    #     request.data['serivce_dates']= [request.data['start_date']]
+    #     patientID=None  
+    #     caller = agg_hhc_callers.objects.filter(phone=request.data['phone'],status=1).first()
+    #     request.data['purp_call_id']=2
+    #     if caller:
+    #         callerSerializer= add_caller_by_form_serializer(caller,data= request.data)
+    #         if callerSerializer.is_valid():
+    #             callerID=callerSerializer.save()
+    #             callerID=callerID.caller_id
+    #         else:
+    #             return Response(callerSerializer.errors)
+    #     else:  
+    #         callers= add_caller_by_form_serializer(data= request.data)
+    #         if callers.is_valid():
+    #             callerID=callers.save().caller_id
+    #         else:
+    #             return Response([callers.errors])
+    #     patient= agg_hhc_patients.objects.filter(agg_sp_pt_id=request.data['agg_sp_pt_id']).first()
+    #     request.data['caller_id']=callerID
+    #     if patient:
+    #         patientSerializer = add_enquiry_patient_by_form_serializer(patient,data=request.data)
+    #         if patientSerializer.is_valid():
+    #             # patientID=patientSerializer.save().pt_id
+    #             patientID=patientSerializer.save().agg_sp_pt_id 
+    #         else:
+    #             return Response(patientSerializer.errors)
+    #     else:
+    #         request.data['caller_id']=callerID
+    #         # print(request.data)
+    #         patient = add_enquiry_patient_by_form_serializer(data=request.data)
+    #         if patient.is_valid():
+    #             patientID=patient.save()
+    #             patientID=patientID.agg_sp_pt_id
+    #         else:
+    #             return Response([patient.errors])
+            
+    #     request.data['event_status']=1
+    #     request.data['enq_spero_srv_status']=3
+    #     event= agg_hhc_event_serializer(data=request.data)
+         
+    #     if event.is_valid():
+    #         eventID=event.save().eve_id
+    #         eventID
+    #         # request.data.pop('event_status')
+    #     else:
+    #         return Response([event.errors])
+    #     event= agg_hhc_events.objects.filter(eve_id=eventID,status=1) 
+    #     event.update(agg_sp_pt_id=patientID,caller_id=callerID,patient_service_status=2)
+    #     # start_date = datetime.strptime(str(request.data['start_date']), '%Y-%m-%d %H:%M:%S')
+    #     # end_date = datetime.strptime(str(request.data['end_date']), '%Y-%m-%d %H:%M:%S')
+    #     # diff = ((end_date.date() - start_date.date()).days)
+    #     # a=[request.data['sub_srv_id']]
+    #     if request.data['preferred_hosp_id']:
+    #         request.data['hosp_id']=request.data['preferred_hosp_id']
+    #     add_service= create_plane_of_care_serializer(data=request.data)
+    #     if add_service.is_valid():
+    #     #     print('121121')
+    #         service=add_service.save().eve_poc_id
+    #     else:
+    #         return Response([add_service.errors])
+    #     request.data['event_id']=eventID
+    #     request.data['follow_up']=4
+
+    #     create_follow_up= agg_hhc_enquiry_create_follow_up_serializer(data= request.data)
+    #     if create_follow_up.is_valid():
+    #         # callers.validated_data['caller_status']=3
+    #         create_follow_up.save()
+    #     plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
+    #     plan_O_C.update(eve_id=eventID)
+    #     return Response({"Service Created Event Code":eventID})
+
     def post(self,request):  
         # clgref_id = get_prof(request)[3]
         # request.data['last_modified_by'] = clgref_id
@@ -1471,7 +3320,6 @@ class agg_hhc_add_service_form_api(APIView):
             # callers.validated_data['caller_status']=3
             create_follow_up.save()
         plan_O_C= agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=service,status=1)
-        plan_O_C.update(initail_discount_value =  request.data.get('discount_value'))
         plan_O_C.update(eve_id=eventID)
 
 
@@ -1524,8 +3372,8 @@ class agg_hhc_city_api(APIView):
         return Response(serializer.data)
 
 class agg_hhc_consultant_api(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
     def get(self,request):
         consultant= agg_hhc_doctors_consultants.objects.filter(status=1).order_by('cons_fullname')
         consultantSerializer= agg_hhc_doctors_consultants_serializer(consultant,many=True)
@@ -1579,6 +3427,7 @@ class agg_hhc_service_professional_details(APIView):
         return Response(serializer.data)
     
 #--------------------------get all patients from caller id -----------------------------
+
 class agg_hhc_callers_phone_no_web_form(APIView):
     def get_object(self, pk):
         try:
@@ -1587,6 +3436,7 @@ class agg_hhc_callers_phone_no_web_form(APIView):
             return query_id
         except agg_hhc_callers.DoesNotExist:
             raise Http404("Caller record not found for the given phone number")
+
 
 
 class agg_hhc_callers_phone_no(APIView):
@@ -1604,9 +3454,11 @@ class agg_hhc_callers_phone_no(APIView):
         try:
             snippet = self.get_object(pk)
             caller_record = agg_hhc_callers.objects.get(pk=snippet)
-            record = agg_hhc_patients.objects.filter(caller_id=snippet).order_by('name')
+            record = agg_hhc_patients.objects.filter(caller_id=snippet, status=1).order_by('name')
             serialized_caller = agg_hhc_callers_details_serializer(caller_record)
             serialized = agg_hhc_app_patient_by_caller_phone_no(record, many=True)
+            # for i in serialized.data:
+            #     print(i)
             return Response({"caller": serialized_caller.data, "patients": serialized.data,'user':'New'})
         except Http404 as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -1630,6 +3482,8 @@ class agg_hhc_callers_form_phone_no(APIView):
             record = agg_hhc_patients.objects.filter(caller_id=snippet).order_by('name')
             serialized_caller = agg_hhc_form_callers_details_serializer(caller_record)
             serialized = agg_hhc_app_patient_by_caller_phone_no(record, many=True)
+            # for i in serialized.data:
+            #     print(i)
             return Response({"caller": serialized_caller.data, "patients": serialized.data,'user':'New'})
         except Http404 as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -1709,38 +3563,6 @@ class agg_hhc_pincode_from_city_api(APIView):
         serialized= agg_hhc_pincode_serializer(pincode_obj,many=True)
         
         return Response(serialized.data)
-    
-# class Caller_details_api(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def get_object(self,pk):
-#         return  agg_hhc_callers.objects.get(caller_id=pk)
-             
-#     def get(self,request,pk):  
-#         caller = self.get_object(pk)
-#         if caller:
-#             serializer =  Caller_details_serializer(caller)
-#             # relation=(self.get_relation(serializer.data['caller_rel_id']))
-#             # relations= relation_serializer(relation)
-#             return Response({"caller":serializer.data})
-#         else:
-#             return Response({"error": 'user not found'})
-        
-#     def put(self,request,pk):
-#         clgref_id = get_prof(request)[3]
-#         request.data['last_modified_by'] = clgref_id
-
-#         caller = self.get_object(pk)
-#         callerSerializer =  Update_Caller_details_serializer(caller,data = request.data)
-#         if callerSerializer.is_valid():
-#             callerSerializer.validated_data['last_modified_date']=timezone.now()
-#             callerSerializer.save()
-#             return Response(callerSerializer.data)
-#         return Response(callerSerializer.errors)
-
-
-
-
 class Caller_details_api(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1796,52 +3618,6 @@ class Caller_details_api(APIView):
             return Response({"error": "Caller not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-
-# class update_cl_eve(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def put(self,request,eve_id,cl_id):
-        
-#         existing_caller = agg_hhc_callers.objects.get(caller_id=cl_id)
-#         eve = agg_hhc_events.objects.get(eve_id=eve_id)
-#         eve.caller_id=existing_caller
-#         eve.save()
-#         return Response({"msg":"done .. new caller id updated"})
-
-
-class update_cl_eve(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-
-    def put(self, request, eve_id, cl_id):
-        clgref_id = get_prof(request)[3]
-        caller = agg_hhc_callers.objects.get(caller_id=cl_id)
-        eve = agg_hhc_events.objects.get(eve_id=eve_id)
-        eve.caller_id = caller
-        caller.remark = request.data.get('remark', caller.remark)  
-        # caller.caller_fullname=request.data.get('caller_fullname',caller.caller_fullname)
-        caller.last_modified_by = clgref_id
-        caller.save()
-        eve.save()
-
-        response_data = {
-            "updated_caller": {
-                "caller_id": caller.caller_id,
-                "remark": caller.remark,
-                "caller_fullname": caller.caller_fullname,
-                "last_modified_by": caller.last_modified_by,
-            }
-        }
-        
-        return Response(response_data)
-           
-
-
-
-
-
-
     
 class patient_detail_info_api(APIView):
     renderer_classes = [UserRenderer]
@@ -1921,8 +3697,7 @@ class calculate_discount_api(APIView):
 
 # ------------------------------------------------------------------------------------------------------
 
-import googlemaps
-# from datetime import datetime 
+
 class calculate_total_amount(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1965,9 +3740,36 @@ class calculate_total_amount(APIView):
             return service
         except  agg_hhc_patients.DoesNotExist:
             return None       
+    # def get(self,request,cost=0,start_date=None,end_date=None):
+      
+    #     # p_lat=float(request.GET.get('latitude'))
+    #     # p_long=float(request.GET.get('longitude'))
+    #     # print(type(p_lat),';;;;')
+    #     # h_lat=18.502230
+    #     # h_long=73.831780
+    #     # distance=ceil(self.calculate_distance(p_lat,p_long,h_lat,h_long))
+    #     # day_convinance = distance*50
+       
+    #     try:
+           
+    #         start_date = datetime.strptime(str(start_date), '%Y-%m-%d').date()
+          
+    #         end_date = datetime.strptime(str(end_date), '%Y-%m-%d').date() 
+           
+    #         if start_date>end_date :
+    #             # return Response({'days_difference':0,'total_convinance':0}, status.HTTP_400_BAD_REQUEST)
+    #             return Response({'days_difference':0}, status.HTTP_400_BAD_REQUEST)
+                  
+    #         day = (end_date - start_date).days
+           
+    #         total = (cost)*(day+1)
+    #         # total_convinance= day_convinance*(day+1)
+            
+    #         # return Response({'days_difference': total,'day_convinance':day_convinance,'total_convinance':total_convinance})
+    #         return Response({'days_difference': total})
+    #     except ValueError:
+    #         return Response({'error': 'Invalid date format'}, status=400)
 
-    
-    
     def get(self,request,cost=0,day_count=0,sub_srv=0,start_date=None,end_date=None):
     # def get(self,request,cost=0,day_count=0):
       
@@ -1982,9 +3784,9 @@ class calculate_total_amount(APIView):
         try:
             if sub_srv and start_date and end_date:
             
-                start_date = datetime.datetime.strptime(str(start_date), '%Y-%m-%d').date()
+                start_date = datetime.strptime(str(start_date), '%Y-%m-%d').date()
         
-                end_date = datetime.datetime.strptime(str(end_date), '%Y-%m-%d').date() 
+                end_date = datetime.strptime(str(end_date), '%Y-%m-%d').date() 
         
                 if start_date>end_date :
                     # return Response({'days_difference':0,'total_convinance':0}, status.HTTP_400_BAD_REQUEST)
@@ -1992,7 +3794,7 @@ class calculate_total_amount(APIView):
                     
                 day = (end_date - start_date).days
             
-                total = (cost)*(day+1)
+                total = (sub_srv)*(day+1)
                 return Response({'days_difference': total})
             else:
                 total_cost = (cost)*(day_count)
@@ -2003,6 +3805,7 @@ class calculate_total_amount(APIView):
         except ValueError:
             return Response({'error': 'Invalid date format'}, status=400)
         
+
 
 
 
@@ -2093,6 +3896,22 @@ class agg_hhc_professional_time_availability_api(APIView):
         dateobject=self.get_object(prof_sche_id)
         serialized= agg_hhc_professional_scheduled_serializer(dateobject,many=True)
         return Response(serialized.data)
+    
+#-------------------------agg_hhc_feedback_answers----------------------------
+
+class agg_hhc_feedback_answers_api(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get_obj(self,agg_sp_pt_id):
+        try:
+            obj= agg_hhc_events.objects.get(agg_sp_pt_id=agg_sp_pt_id,status=1)
+            return  agg_hhc_feedback_answers.objects.get(eve_id=obj.eve_id)
+        except  agg_hhc_feedback_answers.DoesNotExist:
+            raise Response(status.HTTP_404_NOT_FOUND)
+    def get(self,request,agg_sp_pt_id):
+        feedback_answer=self.get_obj(agg_sp_pt_id)
+        serialized= agg_hhc_feedback_answers_serializer(feedback_answer)
+        return Response(serialized.data)
 
 
 
@@ -2176,7 +3995,7 @@ class previous_patient_pending_amount(APIView):
             if patient_objects is None:
                 return Response({"error": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
             eve_id = patient_objects.eve_id
-            patient_remaining_payment = agg_hhc_payment_details.objects.filter(eve_id=eve_id,status=1,overall_status='SUCCESS').last()
+            patient_remaining_payment = agg_hhc_payment_details.objects.filter(eve_id=eve_id,status=1,overall_status="SUCCESS").last()
             if patient_remaining_payment:
                 return Response({'Remaining_payment': patient_remaining_payment.amount_remaining})
             else:
@@ -2203,40 +4022,6 @@ class CalculateConvinanceCharge(APIView):
     # permission_classes = [IsAuthenticated]
 
 
-# ============================================= 06/01/2024 =========================================================
-    
-    # def get(self, request, eve_id, paid_amount):
-    #     try:
-    #         event1 = agg_hhc_events.objects.get(eve_id=eve_id)
-    #     except agg_hhc_events.DoesNotExist:
-    #         return Response({"error":"event not fount"})
-    #     sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
-    #     if not sessions.exists():
-    #         return Response('no active sessions')
-    #     tot_conv=0
-    #     for i in sessions:
-    #         if i.convinance_charges:
-    #             conv=i.convinance_charges
-    #         else:
-    #             conv=0
-    #         tot_conv=int(tot_conv)+conv
-    #     single_session_charge=(int(event1.final_amount)-int(tot_conv))/sessions.count()
-    #     tot=0
-    #     count=0
-    #     for i in sessions:
-    #         if i.convinance_charges:
-    #             conv=i.convinance_charges
-    #         else: 
-    #             conv=0
-    #         if paid_amount>=tot:
-    #             count+=1
-    #             tot = tot+single_session_charge+conv
-    #         else:
-    #             break
-    #     return Response({'total_sessions':sessions.count(),'no_of_serssion':count, 'total_cahrge':int(tot), 'amount_return':int(tot-paid_amount)})
-
-
-# ============================================= 06/01/2024 =========================================================
 # ============================================= 11/04/2024 =========================================================
     
     def get(self, request, eve_id, paid_amount):
@@ -2372,101 +4157,105 @@ class CalculateConvinanceCharge(APIView):
     #     return Response({'total_sessions':sessions.count(),'no_of_serssion':s1, 'total_cahrge':final_amt, 'amount_return':user_refound})
 # ============================================= 05/01/2024 =========================================================
 # ============================================= 06/01/2024 =========================================================
-# ============================================= 06/01/2024 =========================================================
-    def get(self, request, eve_id, paid_amount):
-        total_sessions=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id)
-        sessions = total_sessions.filter(status=1)
-        l1=total_sessions.values()
-        c=([x['index_of_Session'] for x in l1])
-        c2 = {i: c.count(i) for i in set(c)}
-        filtered_lists=[ items for items in l1 if (c2[items['index_of_Session']]>1 and items['status']==1) or c2[items['index_of_Session']]==1]
-        sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1).order_by('agg_sp_dt_eve_poc_id')
-        try:
-            event1 = agg_hhc_events.objects.get(eve_id=eve_id)
-        except agg_hhc_events.DoesNotExist:
-            return Response({"error":"event not fount"})
-        single_session_charge = int(event1.Total_cost)/len(filtered_lists)
-        # print(single_session_charge)
-        # print(int(event1.Total_cost))
-        # print('single_session_charge', single_session_charge)
-        static_paid_amt=paid_amount
-        a1=0
-        s1=0
-        b=0
-        final_disc=0
-        refound = 0
-        session_charges=0
-        disc1=event1.discount_value
-        if disc1:
-            disc1=event1.discount_value
-        else:
-            disc1=0
-        if event1.discount_type==1:
-            final_disc = int((int(disc1)/100)*int((sessions.count())*single_session_charge))
-            paid_amount=paid_amount+final_disc
-        elif event1.discount_type==2:
-            final_disc = int(disc1)
-            paid_amount=paid_amount+final_disc
-        else:
-            final_disc = 0
-            paid_amount=paid_amount+final_disc
-        total_charges=0
-        day_conv=0
-        for i in sessions:
-            if i.convinance_charges:
-                conv=i.convinance_charges
-            else:
-                conv=0
+    # def get(self, request, eve_id, paid_amount):
+    #     sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
+    #     try:
+    #         event1 = agg_hhc_events.objects.get(eve_id=eve_id)
+    #     except agg_hhc_events.DoesNotExist:
+    #         return Response({"error":"event not fount"})
+    #     single_session_charge = int(event1.Total_cost)/sessions.count()
+    #     print('single_session_charge', single_session_charge)
+    #     static_paid_amt=paid_amount
+    #     a1=0
+    #     s1=0
+    #     b=0
+    #     final_disc=0
+    #     refound = 0
+    #     session_charges=0
+    #     disc1=event1.discount_value
+    #     if disc1:
+    #         disc1=event1.discount_value
+    #     else:
+    #         disc1=0
+    #     print(disc1, ';;;;;;;;;;;;;;;;;;;;;;')
 
-            if paid_amount>=(single_session_charge+conv):
-                # print('if cons ', 1)
-                a1=paid_amount - (single_session_charge+conv)
-                paid_amount = paid_amount - (single_session_charge+conv)
-                # print(a1,'a1')
-                b=b+(single_session_charge+conv)
-                # print(b,'b')
-                s1=s1+1
-                session_charges=session_charges+single_session_charge
-                # a1=a1+(single_session_charge+conv)
-                total_charges = b
-                day_conv=day_conv+conv
-                # day_conv=total_charges-session_charges
-            else:
-                refound = paid_amount
+    #     if event1.discount_type==1:
+    #         # final_disc = int((int(disc1)/100)*int((sessions.count())*single_session_charge))
+    #         # paid_amount=paid_amount+final_disc
+    #         paid_amount = paid_amount+(paid_amount)/100*disc1
+    #         print(paid_amount,';per1')
+
+    #     elif event1.discount_type==2:
+    #         final_disc = int(disc1)
+    #         # paid_amount=paid_amount+final_disc
+    #     else:
+    #         final_disc = 0
+    #         # paid_amount=paid_amount+final_disc
+    #     total_charges=0
+    #     day_conv=0
+    #     print(final_disc,'final_disc1')
+    #     for i in sessions:
+    #         if i.convinance_charges:
+    #             conv=i.convinance_charges
+    #         else:
+    #             conv=0
+    #         print('single_session_charge ', single_session_charge)
+    #         print('convinance ', conv)
+    #         print('paid_amount ', paid_amount)
+    #         if paid_amount>=(single_session_charge+conv):
+    #             print('if cons ', 1)
+    #             a1=paid_amount - (single_session_charge+conv)
+    #             paid_amount = paid_amount - (single_session_charge+conv)
+    #             print(a1,'a1')
+    #             b=b+(single_session_charge+conv)
+    #             print(b,'b')
+    #             s1=s1+1
+    #             session_charges=session_charges+single_session_charge
+    #             # a1=a1+(single_session_charge+conv)
+    #             total_charges = b
+    #             day_conv=day_conv+conv
+    #             # day_conv=total_charges-session_charges
+    #         else:
+    #             refound = paid_amount
+    #     print(refound,'refound111')
+    #     disc1=event1.discount_value
+    #     if disc1:
+    #         disc1=event1.discount_value
+    #     else:
+    #         disc1=0
+    #     print(disc1, ';;;;;;;;;;;;;;;;;;;;;;')
+    #     if event1.discount_type==1:
+    #         sess_disc = int((int(disc1)/100)*int(s1*single_session_charge))
+    #         refound = refound
+    #         # paid_amount=paid_amount+final_disc
+    #         print((int(s1*single_session_charge)),'sess_amt')
+    #         print(sess_disc,'sess_disc')
+    #         print(refound,'refound')
+
+    #     elif event1.discount_type==2:
+    #         sess_disc = int(disc1)
+    #         # paid_amount=paid_amount+final_disc
+    #     else:
+    #         sess_disc = 0
+    #         # paid_amount=paid_amount+final_disc
+    #     print('paid_amount',paid_amount)
+    #     print('session_charges', session_charges)
+    #     print('total_charges', total_charges)
+    #     print('conv',conv )
+    #     print('refund',a1)
         
-        disc1=event1.discount_value
-        if disc1:
-            disc1=event1.discount_value
-        else:
-            disc1=0
-        # print(disc1, ';;;;;;;;;;;;;;;;;;;;;;')
-        if event1.discount_type==1:
-            sess_disc = int((int(disc1)/100)*int(s1*single_session_charge))
-            # paid_amount=paid_amount+final_disc
-            # print(';per1')
-        elif event1.discount_type==2:
-            sess_disc = int(disc1)
-            # paid_amount=paid_amount+final_disc
-        else:
-            sess_disc = 0
-            # paid_amount=paid_amount+final_disc
-        # print('paid_amount',paid_amount)
-        # print('session_charges', session_charges)
-        # print('total_charges', total_charges)
-        # print('conv',conv )
-        # print('refund',a1)
-        
-        # print(final_disc,'final_disc')
-        if(session_charges==0):
-            final_amt=0
-        else:
-            final_amt = (session_charges-sess_disc)+day_conv
-        user_refound = static_paid_amt-final_amt
-        # print(final_disc,'sess_disc')
-        # print(final_amt,'final_amt')
-        # print(user_refound,'user_refound')
-        return Response({'total_sessions':sessions.count(),'no_of_serssion':s1, 'total_cahrge':final_amt, 'amount_return':user_refound})
-# ============================================= 06/01/2024 =========================================================
+    #     print(final_disc,'final_disc')
+    #     if(session_charges==0):
+    #         final_amt=0
+    #     else:
+    #         final_amt = (session_charges-sess_disc)+day_conv
+    #     user_refound = static_paid_amt-final_amt
+    #     # user_refound = refound
+    #     print(final_disc,'sess_disc')
+    #     print(final_amt,'final_amt')
+    #     print(user_refound,'user_refound')
+    #     return Response({'total_sessions':sessions.count(),'no_of_serssion':s1, 'total_cahrge':final_amt, 'amount_return':user_refound})
+          # ============================================= 06/01/2024 =========================================================
 #     def get(self, request, eve_id,paid_amount):
 #         # pk=request.data['eve_id']
 #         sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
@@ -2749,15 +4538,71 @@ class CalculateConvinanceCharge(APIView):
 
 
 
+# class PaymentDetailAPIView(APIView):
+#     @csrf_exempt
+#     def post(self, request, format=None):
+#         clgref_id = get_prof(request)[3]
+#         request.data['last_modified_by']=clgref_id
+
+
+#         sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'],status=1).order_by('actual_StartDate_Time')
+#         if sessions.count()==0:
+#             return Response({'error':'no active sessions'})
+# # # --------------------------------------------------------------------------------------------------
+#         try:
+#             event = agg_hhc_events.objects.get(eve_id=request.data['eve_id'])
+#         except agg_hhc_events.DoesNotExist:
+#             return Response({"error":"event not fount"})
+#         count=request.data['no_of_session']
+#         for s in range(0,sessions.count()):
+#             if s<int(count):
+#                 continue
+#             else: 
+#                 session=sessions[s]
+#                 session.status=2
+#                 session.save()
+#         session=sessions[0]
+#         try:
+#             request.data['srv_prof_id']=session.srv_prof_id.srv_prof_id
+#         except:
+#             request.data['srv_prof_id']=None
+#         request.data['overall_status']='SUCCESS'
+#         print(request.data,"request_data_of cash payment")
+#         serializer = PaymentDetailSerializer(data=request.data)
+#         if serializer.is_valid():
+#             print(serializer,';;;;;demo;;;;;;')
+#             serializer.save()
+#             print('111111;;;;;demo;;;;;;')
+# # --------------------------- update final amount in event ---------------------------
+#             event.final_amount=request.data['amount_paid']
+#             event.save()
+            
+# # ----------------------------------- Update event poc -------------------------------------- 
+            
+#             dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event.eve_id, status=1)
+
+#             min_actual_StartDate_Time = dtl.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))
+#             max_actual_StartDate_Time = dtl.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))
+
+#             epoc = agg_hhc_event_plan_of_care.objects.get(eve_id=event.eve_id, status=1)
+
+#             epoc.start_date = min_actual_StartDate_Time['min_actual_StartDate_Time']
+#             epoc.end_date = max_actual_StartDate_Time['max_actual_StartDate_Time']
+
+#             epoc.save()
+
+# # --------------------------- update final amount in event ---------------------------
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class PaymentDetailAPIView(APIView):
-    @csrf_exempt
     def post(self, request, format=None):
         clgref_id = get_prof(request)[3]
         request.data['last_modified_by'] = clgref_id
         
         if agg_hhc_payment_details.objects.filter(eve_id=request.data['eve_id'], overall_status='SUCCESS').exists():
             return Response({'error': 'Payment is already done'}, status=status.HTTP_409_CONFLICT)
-
 
         # Retrieve sessions
         sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'], status=1).order_by('actual_StartDate_Time')
@@ -2768,61 +4613,20 @@ class PaymentDetailAPIView(APIView):
         try:
             event = agg_hhc_events.objects.get(eve_id=request.data['eve_id'])
         except agg_hhc_events.DoesNotExist:
-            return Response({"error":"event not fount"})
-#         day_convinance=event.day_convinance
-#         prof_take_conv=0
-#         tot_conv_charge=0
-#         for prof in sessions:
-#             if prof.is_convinance:
-#                 prof_take_conv = prof_take_conv+1
-#                 tot_conv_charge=tot_conv_charge+day_convinance
-#         # print(tot_conv_charge,'lkklkkl')   
-#         # print(day_convinance,'lkklkkl')   
-#         # print(tot_conv_charge,'asdfgh')
-        
-#         session_charge = int(int(event.final_amount-tot_conv_charge)/(sessions.count()))
-#         # session_charge = request.data['singel_session_charge']
-#         # paid_amt=request.data['amount_paid']
-#         # day_convinance= request.data['day_convinance']
-#         tot=0
-#         count=0
-#         for s in sessions:
-#             if s.is_convinance:
-#                 # print(tot, day_convinance, session_charge,'sdfg')
-#                 # tot=tot+(day_convinance+session_charge)
-#                 conv=day_convinance
-#             else:
-#                 # tot=tot+session_charge
-#                 conv=0
-#             if amount >= (tot+(conv+session_charge)):
-#             # print(tot)
-#                 tot=tot+(conv+session_charge)
-#                 count=count+1
-#             else:
-#                 break
-        
-#         # print(tot,'total',session_charge, 'counts',count)
-#         # print(event.final_amount, tot_conv_charge, session_charge)
-#         # sorted_session=sessions.order_by('actual_StartDate_Time')
-#         # tot_session=event.final_amount
-#         # conv=0
-#         # tot=0
-#         # for ss in sorted_session:
-#         #     if not ss.convinance_charges:
-#         #         conv=0
-#             # if ss.convinance_charges+
-# # --------------------------------------------------------------------------------------------------
-#         # print(sessions.count())
-        count=request.data['no_of_session']
-        
-        for s in range(0,sessions.count()):
-            if s<int(count):
+            return Response({"error": "event not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        count = request.data['no_of_session']
+        # Check if sessions count is less than the required count
+        if sessions.count() < count:
+            return Response({'error': 'not enough sessions available'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update session statuses
+        for s in range(0, sessions.count()):
+            if s < int(count):
                 continue
-            else: 
-                # sessions[s].update(status=2)
-                
-                session=sessions[s]
-                session.status=2
+            else:
+                session = sessions[s]
+                session.status = 2
                 session.save()
 
         # Ensure there is at least one session to proceed
@@ -2835,28 +4639,10 @@ class PaymentDetailAPIView(APIView):
             request.data['srv_prof_id'] = session.srv_prof_id.srv_prof_id
         except AttributeError:
             request.data['srv_prof_id'] = None
-        #-------------------------------wallet function start ----------------------------------------
-        ############# wallet calculation function starts from here ##################################################
-        try:
-            wallet_amount=request.data.get("wallet_Amount")
-        except Exception as e:
-            wallet_amount=None
-        amount_paid=request.data.get("amount_paid")
-        utr=request.data.get("utr")
-        print("wallet_record")
-        wallet_record=wallet_calculate_fun(int(request.data.get('eve_id')),amount_paid,wallet_amount,utr)
-        if wallet_record=="Amount is not Available":
-            return Response({"message": "That much Amount is not Available in Wallet"})
-        else:
-            amount_paid=wallet_record
-        if amount_paid==0:
-            return Response({"Amount":"All payment added in wallet"}, status=status.HTTP_201_CREATED)
-        print("This wallet record end's")
-        ####### wallet calculation function ends from here ##################################################
-        ##-------------------------------wallet function ends ----------------------------------------
-        request.data['amount_paid']=amount_paid
-        request.data['payment_to_desk_date']=timezone.now().date()
+
         request.data['overall_status'] = 'SUCCESS'
+        request.data['payment_to_desk_date']=timezone.now().date()
+
 
         serializer = None
         if request.data['mode'] == 1:
@@ -2877,9 +4663,7 @@ class PaymentDetailAPIView(APIView):
                 # Update final amount in event
                 event.final_amount = request.data['amount_paid']
                 event.save()
-                #wallet payment id in  this Start  -----------------------------------------------------------------
-                Add_payment_id_in_wallet(serializer.data.get('pay_dt_id'),int(request.data.get('eve_id')))
-                #wallet payment id in ends --------------------------------------------------------------
+
                 # Update event plan of care
                 dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event.eve_id, status=1)
 
@@ -2899,11 +4683,6 @@ class PaymentDetailAPIView(APIView):
         else:
             error_message = "Invalid mode provided"
             return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
 
     # @csrf_exempt
 #     def post(self, request, format=None):
@@ -3001,17 +4780,14 @@ class PaymentDetailAPIView(APIView):
 #         if request.data['mode'] == 1:
 #             serializer = PaymentDetailSerializer(data=request.data)
 #         elif request.data['mode'] == 2:
-#             print(request.data)
-            
 #             serializer = PaymentDetailchequeSerializer(data=request.data)
 #         elif request.data['mode'] == 4:
 #             serializer = PaymentDetailcardSerializer(data=request.data)
 #         elif request.data['mode'] == 5:
 #             serializer = PaymentDetailQRSerializer(data=request.data)
+#         elif request.data['mode'] == 6:
+#             serializer = PaymentDetailNEFTSerializer(data=request.data)
 
-#         # if serializer.is_valid():
-#         # if serializer is not None and serializer.is_valid():
-#         # print(request.data['mode'])
 #         if serializer is not None:
 #             print(request.data['mode'])
 #             if serializer.is_valid():
@@ -3050,14 +4826,13 @@ class PaymentDetailAPIView(APIView):
 #             error_message = "Invalid mode provided"
 #             print(f"Error: {error_message}")
 #             return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
-        
-
+    
 class get_payment_details(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get_payment(self,pk):
         try:
-            event = agg_hhc_payment_details.objects.filter(eve_id=pk,status=1,overall_status='SUCCESS')
+            event = agg_hhc_payment_details.objects.filter(eve_id=pk,status=1,overall_status="SUCCESS")
             return Response(event)
         except agg_hhc_payment_details.DoesNotExist:
             # return Response('please enter valid event id',status.HTTP_404_NOT_FOUND)
@@ -3076,6 +4851,7 @@ class get_payment_details(APIView):
 
         sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=pk,status=1)
         # if 
+        print(sessions, ';sessions..........')
         # session_with_convinance =list((sessions.order_by('actual_StartDate_Time')).is_convinance)
         session_with_convinance =[s.is_convinance for s in (sessions.order_by('actual_StartDate_Time'))]
         # print(sessions.order_by('actual_StartDate_Time'),'session')
@@ -3084,14 +4860,16 @@ class get_payment_details(APIView):
             event1 = agg_hhc_events.objects.get(eve_id=pk)
         except agg_hhc_events.DoesNotExist:
             return Response({"error":"event not fount"})
+        # if event1.day_convinance:
+        #     day_convinance=event1.day_convinance
+        # else:
+        #     day_convinance=0
         con_ch = 0
         for i in sessions:
             if i.convinance_charges:
                 con_ch += i.convinance_charges
-            else:
-                con_ch += 0
-
-        day_convinance= con_ch
+                
+        day_convinance= con_ch        
         prof_take_conv=0
         tot_conv_charge=0
         for prof in sessions:
@@ -3101,11 +4879,11 @@ class get_payment_details(APIView):
         # print(tot_conv_charge,'lkklkkl')   
         # print(day_convinance,'lkklkkl')   
         # print(tot_conv_charge,'asdfgh')
-        # print(sessions.count(), ';;;;')
+        print(sessions.count(), ';;;;')
         event1_final_amount = event1.final_amount or 0
         tot_conv_charge_value = tot_conv_charge or 0
-        if sessions.count()>=0:
-            # print('llddss')
+        if sessions.count()>0:
+            print('llddss')
             # session_charge = int(int(event1.final_amount-tot_conv_charge)/(sessions.count()))
             session_charge = int((event1_final_amount - tot_conv_charge_value) / sessions.count())
         else :
@@ -3141,11 +4919,11 @@ class get_payment_details(APIView):
         else :
             event = self.get_event(pk)
             payment_serializer = GetEventPaymentDetailSerializer(event.data, many=True)
-            # print(payment_serializer.data)
-            # print(payment_serializer.data[-1], 'ddddd;;;;')
+            print(payment_serializer.data)
+            print(payment_serializer.data[-1], 'ddddd;;;;')
             total_amount = payment_serializer.data[-1]['final_amount'] or 0
             pending_amount = payment_serializer.data[-1]['final_amount'] or 0
-            # print(payment_serializer.data[-1]['final_amount'], 'total amount')
+            print(payment_serializer.data[-1]['final_amount'], 'total amount')
             # data={
             #     "eve_id" : payment_serializer.data[-1]['eve_id'],
             #     "Total_Amount":payment_serializer.data[-1]['final_amount'],
@@ -3260,6 +5038,7 @@ class JjobTypeCountAPIView(APIView):
 
 
 #----------------------------------------------Payment----------------------------------------------------
+#----------------------------------------------Payment----------------------------------------------------
 import requests
 from urllib.parse import quote  # Import the quote function for URL encoding
 from rest_framework.decorators import api_view
@@ -3267,7 +5046,141 @@ from rest_framework.response import Response
 import json
 import re 
 # from .models import PaymentRecord  # Import the PaymentRecord model
-@csrf_exempt
+@api_view(['POST'])
+def create_payment_url_sms(request):
+    url = "https://api.cashfree.com/api/v1/order/create"
+
+    # Auto-generate the order ID date-wise
+    # order_id = "order_id_SPERO" + datetime.now().strftime("%d%m%Y%H%M%S")
+    order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
+    phone_no = request.data['customerPhone'][-10:]
+    ammount = request.data['orderAmount']
+    name = request.data['customerName']
+    email = request.data['customeremail']
+    remaining = request.data['Remaining_amount']
+
+    eve_id = request.data.get('eve_id')
+    mode = 3
+    payment_status = 3
+    total_amount = request.data.get('total_amount')
+    # expiration_time = timezone.now() + timezone.timedelta(minutes=5)
+
+    # print(phone_no)
+    payload = {
+        "appId": "2045315bd01ed984f26100c6fd135402",
+        "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
+        "orderId": order_id,
+        "orderAmount": ammount,
+        "Remainingamount":remaining,
+        "orderCurrency": "INR",
+        "orderNote": "HII",
+        "customerName": name,
+        "customeremail": email,
+        "customerPhone": phone_no,  
+        # "returnUrl": "https://payments-test.cashfree.com/links/response",  
+        # "notifyUrl": "https://hhc.hospitalguru.in/web/update_transaction_status/",
+        # "expTime": int(expiration_time.timestamp()),  # Convert expiration_time to timestamp
+    }
+
+    response = requests.request("POST", url, data=payload)
+    s = response.text
+    json_acceptable_string = s.replace("'", "\"")
+    d = json.loads(json_acceptable_string)
+
+    # Assuming the response contains the payment link and payment status, you can extract them from the response.
+    payment_link = d.get('paymentLink')
+
+    # Send the payment link via SMS using Cashfree's SMS API
+    # sms_url = "https://sandbox.cashfree.com/api/v1/sms"
+    # sms_payload = {
+    #     "appId": "2045315bd01ed984f26100c6fd135402",
+    #     "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
+    #     "to": phone_no,
+    #     "message": f"Hello {name},\n\nPlease find the payment link below:\n\n{payment_link}",
+    #     "sender": "CFPG",
+    #     "type": "OTP"
+    # }
+    # sms_response = requests.request("POST", sms_url, data=sms_payload)
+    # sms_d = json.loads(sms_response.text)
+    
+    # sms_url = " https://api.cashfree.com/pg/links"
+    # sms_payload = {
+    #     "x-client-id": "20453165a737ebd97e430fcabc135402",
+    #     "x-client-secret": "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215",
+    #     "customerPhone": phone_no,
+    #     "send_sms": True,
+    #     "message": f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-:{payment_link}"
+    # }
+
+    # sms_response = requests.post(sms_url, json=sms_payload)
+
+    # # Print the SMS API response
+    # print("SMS API response:", sms_response.text)
+
+    # # Parse the response JSON
+    # try:
+    #     sms_d = sms_response.json()
+    # except json.JSONDecodeError:
+    #     sms_d = {"status": sms_response.text}
+
+    api_key = "c27d7fa6-292c-4534-8dc4-a0dd28e7d7e3"
+    unique_identifier = re.search(r'#([^/]*)', payment_link).group(1)
+    fixed_msg_part = "this is your payment link: https://payments.cashfree.com/order/"
+
+    smstmp = f'Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}. Click on this link to pay-: https://payments.cashfree.com/order/#{unique_identifier}'
+    send_payment_sms(phone_no, smstmp)
+    
+    # msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-: {payment_link}"
+    msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-: {payment_link}"
+    # Properly encode the content parameter for the WhatsApp API request
+    encoded_msg = quote(msg)
+    
+    url = f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={api_key}&phone={phone_no}&content={encoded_msg}&fileName&caption&contentType=1"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
+        # print("URL successfully hit!")
+        # print("WhatsApp API Response:", response.text)
+    except requests.exceptions.RequestException as e:
+        print("Error occurred while hitting the URL:", e)
+
+    # ... Your existing code ...
+    # transaction_status = d.get('paymentStatus') if d else None
+
+
+    event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
+
+
+    # Save payment record to the database
+    payment_record = agg_hhc_cashfree_online_payment.objects.create(
+        order_id=order_id,
+        amount_paid=payload['orderAmount'],
+        amount_remaining=payload['Remainingamount'],
+        Total_cost=total_amount,
+        order_currency=payload['orderCurrency'],
+        order_note=payload['orderNote'],
+        paid_by=payload['customerName'],
+        customer_email=payload['customeremail'],
+        customer_phone=payload['customerPhone'],
+        # transaction_status=transaction_status,
+        # signature=computed_signature,
+        eve_id=event_instance,
+        mode=mode,
+        payment_status=payment_status,
+
+    )
+
+    # Return the payment link and payment status in the API response
+    data = {
+        'payment_link': payment_link,
+        # 'SMS': sms_d.get("status"),
+        # 'payload_json':payload_json
+    }
+    return Response(data)
+
+
+import http.client
 @api_view(['POST'])
 def create_payment_url(request):
     url = "https://api.cashfree.com/pg/links"
@@ -3420,8 +5333,6 @@ def create_payment_url(request):
         'payment_link': payment_link,
     }
     return Response(data)
-
-
 # import requests
 # from urllib.parse import quote
 # from rest_framework.decorators import api_view
@@ -3649,8 +5560,6 @@ import hmac
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.db import transaction
-
 # def generateSignature(timestamp, payload):
 #     signatureData = timestamp + payload
 #     message = bytes(signatureData, 'utf-8')
@@ -3706,7 +5615,8 @@ def update_transaction_status(request):
         request_data = json.loads(request.body)
 
         # Extract order_id from the JSON content
-        order_id = request_data.get('data', {}).get('order', {}).get('order_id')
+        order_id = request_data.get('data', {}).get('order', {}).get('order_tags', {}).get('link_id')
+        CF_order_id = request_data.get('data', {}).get('order', {}).get('order_id')
         if order_id is None:
             raise ValueError('Order ID not found in the request payload')
 
@@ -3743,7 +5653,8 @@ def update_transaction_status(request):
                     payment_status=payment_record.payment_status,
                     transaction_status=request_data,
                     overall_status=payment_statuss,
-                    payment_to_desk_date = timezone.now().date()
+                    payment_to_desk_date = timezone.now().date(),
+                    cf_order_id = CF_order_id
                 )
                 payment_record1.save()
                 return JsonResponse({'message': 'Transaction status updated successfully'}, status=200)
@@ -3758,9 +5669,30 @@ def update_transaction_status(request):
 
     except ValueError as ve:
         return JsonResponse({'error': str(ve)}, status=400)
-    # except Exception as e:
-    #     return JsonResponse({'error': str(e)}, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
     
+# def verify_webhook_signature(request):
+#     webhook_signature = request.headers.get('x-webhook-signature')
+#     webhook_timestamp = request.headers.get('x-webhook-timestamp')
+#     webhook_version = request.headers.get('x-webhook-version')
+#     secret_key = "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215"  # Replace with your actual secret key
+
+#     if not webhook_signature or not webhook_timestamp or not webhook_version:
+#         raise ValueError('Webhook signature headers not provided')
+
+#     # Reconstruct the expected signature
+#     expected_signature = hmac.new(
+#         key=bytes(secret_key, 'utf-8'),
+#         msg=f'{webhook_timestamp}.{request.body.decode("utf-8")}'.encode('utf-8'),
+#         digestmod=hashlib.sha256
+#     ).hexdigest()
+
+#     # Compare the expected signature with the received signature
+#     if not hmac.compare_digest(expected_signature, webhook_signature):
+#         raise ValueError('Invalid webhook signature')
 
 
 
@@ -3787,11 +5719,11 @@ class GetDtlAvalView(APIView):
             response_data_arr = []
             
             try:
-                aval = agg_hhc_professional_availability.objects.get(srv_prof_id=pro, day=day)
+                aval = agg_hhc_professional_availability.objects.get(srv_prof_id=pro, day=day, status=1)
                 print("aval--", aval)
                 print("day--", day)
                 aval_id = aval.professional_avaibility_id
-                aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=aval_id, start_time=start_time, end_time=end_time)
+                aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=aval_id, start_time=start_time, end_time=end_time, status=1)
             
                 unique_date_obj = []
 
@@ -3848,7 +5780,7 @@ class GetDtlAvalView(APIView):
                     
                     for i in serializer.data:
 
-                        loc_arr_objs = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i['prof_avaib_id'],start_time=i['start_time'],end_time=i['end_time'])
+                        loc_arr_objs = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i['prof_avaib_id'],start_time=i['start_time'],end_time=i['end_time'], status=1)
 
                         loc_obj_zone_nm_arr = []
                         loc_id_arr = []
@@ -3901,18 +5833,18 @@ class DelAvalView(APIView):
             if pro_detl_id_arr: # to delete all the records contaning different zone or locations for selected time slots
                 print("pro_detl_id_arr--", pro_detl_id_arr)
                 for dt in pro_detl_id_arr:
-                    avaldetls = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=dt)
+                    avaldetls = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=dt, status=1)
                     print("avaldetals---", avaldetls)
                 
-                    aval_detls_max = agg_hhc_professional_availability_detail.objects.filter(start_time=avaldetls.start_time, end_time=avaldetls.end_time, prof_avaib_id=avaldetls.prof_avaib_id)
+                    aval_detls_max = agg_hhc_professional_availability_detail.objects.filter(start_time=avaldetls.start_time, end_time=avaldetls.end_time, prof_avaib_id=avaldetls.prof_avaib_id, status=1)
                     print("aval_detls_max--", aval_detls_max)
 
                     for aval_detls in aval_detls_max:
                         if aval_detls:
                             prof_avai_id = aval_detls.prof_avaib_id.professional_avaibility_id
-                            aval = agg_hhc_professional_availability.objects.get(professional_avaibility_id=prof_avai_id)
+                            aval = agg_hhc_professional_availability.objects.get(professional_avaibility_id=prof_avai_id, status=1)
 
-                            avaldt = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_avai_id)
+                            avaldt = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_avai_id, status=1)
 
                             aval_day = int(aval.day)
 
@@ -3927,49 +5859,15 @@ class DelAvalView(APIView):
 
                         if aval_detls:
                             print("Finally")
-                            aval_detls.delete()
+                            # aval_detls.delete()
+                            aval_detls.status = 2
+                            aval_detls.save()
                             # pass
 
             
             return Response({'Res_Data':{'msg':'Time slot deleted successfully.'}}, status=status.HTTP_200_OK)            
         except:
             return Response({'Res_Data':{'msg': 'Record not found'}}, status=status.HTTP_200_OK)
-        
-class DelLocView(APIView):
-    def post(self, request, format=None):
-        prof_loc_zone_id_arr = request.data['prof_loc_zone_id']
-        prof_loc_id = request.data['prof_loc_id']
-        pro = request.GET.get('pro')
-
-        try:
-            if prof_loc_zone_id_arr: 
-                print("prof_loc_zone_id_arr--", prof_loc_zone_id_arr)
-                for dt in prof_loc_zone_id_arr:
-                    locdetls = agg_hhc_professional_locations_as_per_zones.objects.get(prof_loc_zone_id=dt, srv_prof_id=pro)
-                    print("locdetals-1--", locdetls.prof_loc_dtl_id)
-                    print("locdetals-2--", locdetls.prof_loc_dtl_id.prof_loc_dt_id)
-                
-                    loc_detl = agg_hhc_professional_location_details.objects.get(prof_loc_dt_id=locdetls.prof_loc_dtl_id.prof_loc_dt_id)
-                    print("loc_detl--", loc_detl)
-
-                    if loc_detl:
-                        print("Finally")
-                        loc_detl.delete()
-
-                    
-            if prof_loc_id:
-                loc = agg_hhc_professional_location.objects.get(prof_loc_id=prof_loc_id, srv_prof_id=pro)
-
-                if loc:
-                    print("Finally")
-                    loc.delete()
-                        
-
-            return Response({'Res_Data':{'msg':'Location deleted successfully.'}}, status=status.HTTP_200_OK)            
-        except:
-            return Response({'Res_Data':{'msg': 'Record not found'}}, status=status.HTTP_200_OK)
-
-
 
 class AddAvalView(APIView):
     renderer_classes = [UserRenderer]
@@ -4097,12 +5995,12 @@ class AddAvalView(APIView):
             for day in day_arr:
                 try:
                 # if day:
-                    aval = agg_hhc_professional_availability.objects.get(srv_prof_id=pro, day=day)
+                    aval = agg_hhc_professional_availability.objects.get(srv_prof_id=pro, day=day, status=1)
                     print("aval--", aval)
                     print("day--", day)
                     aval_id = aval.professional_avaibility_id
-                    aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=aval_id)
-                    print("aval_detls--", aval_detls)
+                    aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=aval_id, status=1)
+                    print("aval_detlsggggggg--", aval_detls)
                 # else:
                 #     aval = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro).order_by('day')
                 #     for i in aval:
@@ -4130,7 +6028,7 @@ class AddAvalView(APIView):
                                 unique_date_obj.append(p.prof_avaib_dt_id)
                                 
 
-                        aval_unique_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_dt_id__in=list(unique_date_obj))
+                        aval_unique_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_dt_id__in=list(unique_date_obj), status=1)
 
                         # print("unique_loc_name----", unique_loc_name)
                         # print("unique_date_loc_zon_obj----", unique_date_loc_zon_obj)
@@ -4173,7 +6071,7 @@ class AddAvalView(APIView):
                         for i in serializer.data:
                             # print("serializer.data time", i['start_time'], i['end_time'])
 
-                            loc_arr_objs = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i['prof_avaib_id'],start_time=i['start_time'],end_time=i['end_time'])
+                            loc_arr_objs = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i['prof_avaib_id'],start_time=i['start_time'],end_time=i['end_time'], status=1)
 
                             # print("loc_arr_objs---", loc_arr_objs)
                             loc_obj_zone_nm_arr = []
@@ -4348,7 +6246,7 @@ class AddAvalView(APIView):
             for i in days:
                 aval = 0
                 try:
-                    aval = agg_hhc_professional_availability.objects.get(srv_prof_id=prof, day=i)
+                    aval = agg_hhc_professional_availability.objects.get(srv_prof_id=prof, day=i, status=1)
                     print("aval prof- ", aval)
                 except:
                     pass
@@ -4379,7 +6277,7 @@ class AddAvalView(APIView):
 
                         try:
                             # prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gte=j[0], start_time__lte=j[1])
-                            prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gt=j[0], start_time__lt=j[1])
+                            prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gt=j[0], start_time__lt=j[1], status=1)
 
                             if prof_aval_dtl_exts:
                             
@@ -4402,21 +6300,39 @@ class AddAvalView(APIView):
                                 request.data['start_time'] = j[0]
                                 request.data['end_time'] = j[1]
                                 request.data['prof_loc_zone_id'] = loc_zone
+                                request.data['srv_prof_id'] = prof
                                 
                                 prof_aval_detail_serializer = agg_hhc_professional_availability_detail_serializer(data=request.data)
                                 print("prof_aval_detail_serializer---", prof_aval_detail_serializer)
                                 if prof_aval_detail_serializer.is_valid(raise_exception=True):
-                                    prof_aval_detail_serializer.save()
+                                    dtl_data_srl = prof_aval_detail_serializer.save()
+                                    print(dtl_data_srl)
+                                    print(dtl_data_srl.prof_avaib_dt_id)
+                                    prof_ins = agg_hhc_service_professionals.objects.get(srv_prof_id = prof)
+                                    get_dttt = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=dtl_data_srl.prof_avaib_dt_id)
+                                    get_dttt.srv_prof_id = prof_ins
+                                    get_dttt.save()
 
                         else:
+                            
                             for z_id in prof_zone_id:
                                 request.data['start_time'] = j[0]
                                 request.data['end_time'] = j[1]
                                 request.data['prof_zone_id'] = z_id
-                            
+                                request.data['srv_prof_id'] = prof
+                                print("request.data--", request.data)
                                 prof_aval_detail_serializer1 = agg_hhc_professional_availability_detail_serializer2(data=request.data)
+
                                 if prof_aval_detail_serializer1.is_valid(raise_exception=True):
-                                    prof_aval_detail_serializer1.save()
+                                    # 
+                                    dtl_data_srl = prof_aval_detail_serializer1.save()
+                                    print(dtl_data_srl)
+                                    print(dtl_data_srl.prof_avaib_dt_id)
+                                    prof_ins = agg_hhc_service_professionals.objects.get(srv_prof_id = prof)
+                                    get_dttt = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=dtl_data_srl.prof_avaib_dt_id)
+                                    get_dttt.srv_prof_id = prof_ins
+                                    get_dttt.save()
+                                    print("prof_aval_detail_serializer1------------", prof_aval_detail_serializer1.data)
 
                             
             response_data={
@@ -4424,8 +6340,8 @@ class AddAvalView(APIView):
             }
             return Response(response_data,status=status.HTTP_201_CREATED)
             
-        except:
-            return Response({'Res_Data': {'msg':'Professional Availability Already Exist.'}}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Res_Data': {'msg':'Professional Availability Already Exist.', 'error' : str(e)}}, status=status.HTTP_200_OK)
         
 
     def put(self, request, format=None):
@@ -4448,18 +6364,18 @@ class AddAvalView(APIView):
 
             if pro_detl_id: # to delete all the records contaning different zone or locations for selected time slots
                 print("pro_detl_id--", pro_detl_id)
-                avaldetls = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=pro_detl_id)
-                print("avaldetals---", avaldetls)
+                avaldetls = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=pro_detl_id, status=1)
+                print("avaldetalsLLLLLLLLLLLL---", avaldetls.start_time, avaldetls.end_time)
 
-                aval_detls_max = agg_hhc_professional_availability_detail.objects.filter(start_time=avaldetls.start_time, end_time=avaldetls.end_time, prof_avaib_id=avaldetls.prof_avaib_id)
+                aval_detls_max = agg_hhc_professional_availability_detail.objects.filter(start_time=avaldetls.start_time, end_time=avaldetls.end_time, prof_avaib_id=avaldetls.prof_avaib_id, status=1)
                 print("aval_detls_max--", aval_detls_max)
 
                 for aval_detls in aval_detls_max:
                     if aval_detls:
                         prof_avai_id = aval_detls.prof_avaib_id.professional_avaibility_id
-                        aval = agg_hhc_professional_availability.objects.get(professional_avaibility_id=prof_avai_id)
+                        aval = agg_hhc_professional_availability.objects.get(professional_avaibility_id=prof_avai_id, status=1)
 
-                        avaldt = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_avai_id)
+                        avaldt = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_avai_id, status=1)
 
                         aval_day = int(aval.day)
 
@@ -4474,7 +6390,9 @@ class AddAvalView(APIView):
 
                     if aval_detls:
                         print("Finally")
-                        aval_detls.delete()
+                        # aval_detls.delete()
+                        aval_detls.status = 2
+                        aval_detls.save()
                         # pass
 
 
@@ -4491,7 +6409,7 @@ class AddAvalView(APIView):
             
             aval = 0
             try:
-                aval = agg_hhc_professional_availability.objects.get(srv_prof_id=prof, day=day)
+                aval = agg_hhc_professional_availability.objects.get(srv_prof_id=prof, day=day, status=1)
                 print("aval prof- ", aval)
             except:
                 pass
@@ -4571,7 +6489,7 @@ class AddAvalView(APIView):
         except:
             return Response({'Res_Data': {'msg':'Professional Availability Already Exist.'}}, status=status.HTTP_200_OK)
 
-        
+         
 
 class LocListView(APIView):
     renderer_classes = [UserRenderer]
@@ -4580,7 +6498,7 @@ class LocListView(APIView):
     def get(self, request, format=None):
         loc = request.GET.get('loc')
         try:
-            locs = agg_hhc_professional_location_details.objects.filter(prof_loc_dt_id=loc)
+            locs = agg_hhc_professional_location_details.objects.filter(prof_loc_dt_id=loc, status=1)
             if locs:
                 serializer = agg_hhc_professional_location_details_serializer(locs, many=True)
                 response_data={
@@ -4597,18 +6515,17 @@ class AvalZoneView(APIView):
 
     def get(self, request, format=None):
         # pro = get_prof(request)[0]
-        # pro = request.data['srv_prof_id']
-        pro = request.GET.get('pro')
+        pro = request.data['srv_prof_id']
 
         try:
             # locs = agg_hhc_professional_location.objects.filter(srv_prof_id=pro)
             # print(locs)
 
-            zon_loc = agg_hhc_professional_locations_as_per_zones.objects.filter(srv_prof_id=pro)
+            zon_loc = agg_hhc_professional_locations_as_per_zones.objects.filter(srv_prof_id=pro, status=1)
             zon_loc_arr = []
             for zl in zon_loc:
                 locdtid = zl.prof_loc_dtl_id
-                zon_locid = agg_hhc_professional_locations_as_per_zones.objects.filter(prof_loc_dtl_id=locdtid)
+                zon_locid = agg_hhc_professional_locations_as_per_zones.objects.filter(prof_loc_dtl_id=locdtid, status=1)
 
                 zh_arr = []
                 for zh in zon_locid:
@@ -4669,7 +6586,7 @@ class AvalZoneView(APIView):
         try:
             if t_pro:
                 try:
-                    rec = agg_hhc_professional_location.objects.filter(srv_prof_id=t_pro, location_name=pro_loc_name)
+                    rec = agg_hhc_professional_location.objects.filter(srv_prof_id=t_pro, location_name=pro_loc_name, status=1)
                     print("rec ", rec)
                 except:
                     pass
@@ -4757,33 +6674,28 @@ class AvalZoneView(APIView):
 
 
 
-
-
 class sos_dtls_api(APIView): # List of SOS Details
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
         try:
             sos_dtl =  sos_details.objects.filter(action_status=1, status=1).order_by('added_date')
-            
+            print("sos dtls--", sos_dtl)
             try:
                 if sos_dtl:
                     serializer = agg_hhc_sos_dtl_serializer_get(sos_dtl, many=True)
-                    
                     j=0
                     for i in serializer.data:
-                        
                         prf_nm = agg_hhc_service_professionals.objects.get(srv_prof_id = serializer.data[j]['srv_prof_id'])
                         serializer.data[j]['srv_prof_id'] = prf_nm.prof_fullname
                         serializer.data[j]['srv_prof_con'] = prf_nm.phone_no
                         j = j + 1
-
                     return Response(serializer.data, status=status.HTTP_200_OK)
-                return Response({'msg':'No Data Found'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'msg':'No Data Found'}, status=status.HTTP_200_OK)
             except:
-                return Response({'msg':'No Data Found'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'msg':'No Data Found'}, status=status.HTTP_200_OK)
         except:
-            return Response({'not found': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'not found': 'Record not found'}, status=status.HTTP_200_OK)
         
     def put(self, request):
         clgref_id = get_prof(request)[3]
@@ -4800,38 +6712,13 @@ class sos_dtls_api(APIView): # List of SOS Details
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
-class pen_consent_api(APIView): # List of Zones
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
-    def get(self, request, format=None):
-        try:
-            # get_submited_data = agg_hhc_concent_form_details.objects.values_list('eve_id', flat=True)
-            # eve_sms =  SMS_sent_details.objects.filter(sms_type=2).values_list('eve_id', flat=True)
-            # excluded_eve_ids = eve_sms.exclude(eve_id__in=get_submited_data)
-
-            eve_ids_in_agg = agg_hhc_concent_form_details.objects.values_list('eve_id', flat=True)
-            print("eve ids in agg--", eve_ids_in_agg)
-            filtered_sms = SMS_sent_details.objects.filter(sent_status=1, sms_type=2).exclude(eve_id__in=eve_ids_in_agg)
-            print("filtered sms-", filtered_sms)
-
-            eve_arr = []
-            for p in filtered_sms:
-                eve_arr.append(p.eve_id)
-
-            eve_poc = agg_hhc_event_plan_of_care.objects.filter(consent_submited = 2 , eve_id__in = eve_arr)
-            # if groups:
-            #     serializer = agg_hhc_professional_zone_serializer(groups, many=True)
-            return Response({'msg':'No Data Found'}, status=status.HTTP_200_OK)
-            # return Response({'msg':'No Data Found'}, status=status.HTTP_400_BAD_REQUEST)
-        except:
-            return Response({'not found': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-        
 class agg_hhc_zone_api(APIView): # List of Zones
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get(self, request, pk, format=None):
         try:
-            groups =  agg_hhc_professional_zone.objects.filter(city_id=pk).order_by('Name')
+            groups =  agg_hhc_professional_zone.objects.filter(city_id=pk, status=1).order_by('Name')
+            print('j')
             if groups:
                 serializer = agg_hhc_professional_zone_serializer(groups, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -4845,13 +6732,14 @@ class agg_hhc_all_zone_api(APIView): # List of Zones
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
-            groups =  agg_hhc_professional_zone.objects.all().order_by('Name')
+            groups =  agg_hhc_professional_zone.objects.filter(status=1).order_by('Name')
             if groups:
                 serializer = agg_hhc_professional_zone_serializer(groups, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response({'msg':'No Data Found'}, status=status.HTTP_400_BAD_REQUEST)
         except:
             return Response({'not found': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
 class agg_hhc_sub_srv(APIView): # List of Sub-Services
     renderer_classes = [UserRenderer]
@@ -4896,7 +6784,129 @@ class agg_hhc_sub_srv_jc_form_num(APIView): # List of Sub-Services
 class agg_hhc_session_job_closure(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
-    
+    # def post(self, request):
+    #     print("Here not working")
+    #     print("detail envent",request.GET.get('dtl_eve'))
+    #     dtl_eve = request.GET.get('dtl_eve')
+    #     form_num = request.data['form_number']
+    #     for i in range(20):
+    #         print(i)
+    #     is_exist_jc_dtl_eve = 0
+    #     try:
+    #         is_exist_jc_dtl_eve = agg_hhc_jobclosure_detail.objects.get(dtl_eve_id=dtl_eve, status=1)
+    #         print("is_exist_jc_dtl_eve", is_exist_jc_dtl_eve)
+    #         if is_exist_jc_dtl_eve is not 0:
+    #             is_exist_jc_dtl_eve.status = 2
+    #             is_exist_jc_dtl_eve.save()
+    #     except:
+    #         pass
+
+    #     prof_sub_srv = agg_hhc_detailed_event_plan_of_care.objects.get(agg_sp_dt_eve_poc_id=dtl_eve)
+    #     clgref_id = get_prof(request)[3]
+    #     # pro = get_prof(request)[0]
+
+    #     # print("pro-- ", pro)
+    #     print("clgref_id-- ", clgref_id)
+    #     request.data['srv_prof_id'] = prof_sub_srv.srv_prof_id.srv_prof_id
+    #     request.data['last_modified_by'] = clgref_id
+    #     # request.data['last_modified_by'] = 1
+    #     print('clgref_id---', type(clgref_id))
+    #     print("Type od clgref_id", type(clgref_id))
+    #     request.data['dtl_eve_id'] = int(dtl_eve)
+    #     request.data['prof_sub_srv_id'] = prof_sub_srv.eve_poc_id.sub_srv_id.sub_srv_id
+    #     print("request data-- ", request.data)
+    #     try:
+    #         if form_num == 1:
+    #             print("1")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_1(data=request.data)
+    #         elif form_num == 2:
+    #             print("2")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_2(data=request.data)
+    #         elif form_num == 3:
+    #             print("3")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_3(data=request.data)
+    #         elif form_num == 4:
+    #             print("4")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_4(data=request.data)
+    #         elif form_num == 5:
+    #             print("5")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_5(data=request.data)
+    #         elif form_num == 6:
+    #             print("6")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_6(data=request.data)
+    #         elif form_num == 7:
+    #             print("7")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_7(data=request.data)
+    #         elif form_num == 8:
+    #             print("8")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_8(data=request.data)
+    #         elif form_num == 9:
+    #             print("9")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_9(data=request.data)
+    #         elif form_num == 10:
+    #             print("10")
+    #             serializer =  agg_hhc_session_job_closure_serializer_form_10(data=request.data)
+
+    #         print("serializer-- ")
+    #         # print("serializer-- ", serializer.data)
+    #         print("dtl_eve--", dtl_eve)
+    #         dtl_eves = agg_hhc_detailed_event_plan_of_care.objects.get(agg_sp_dt_eve_poc_id=dtl_eve,status=1)
+    #         print("dtl_eves--", dtl_eves)
+    #         dtl_eves.Session_jobclosure_status = 1
+    #         dtl_eves.Session_status = 9
+    #         try:
+    #             dtl_eves.prof_session_start_date = request.data['prof_st_dt']
+    #             dtl_eves.prof_session_end_date = request.data['prof_ed_dt']
+    #             dtl_eves.prof_session_start_time = request.data['prof_st_time']
+    #             dtl_eves.prof_session_end_time = request.data['prof_ed_time']
+    #         except:
+    #             pass
+    #         dtl_eves.save()
+
+    #         all_detail_event_plan=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=dtl_eves.eve_id,status=1).count()
+    #         print("all detail event plan--count ",all_detail_event_plan)
+    #         detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=dtl_eves.eve_id,status=1,Session_jobclosure_status=1).count()
+    #         print("detail_event-- count",detail_event)
+            
+    #         if (all_detail_event_plan==detail_event):
+    #             event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=dtl_eves.eve_id)
+    #             print("event plan care-- " )
+    #             event_plan_care.service_status=4
+    #             event_plan_care.save()
+    #             print("event plan care-- ")
+    #             print("dtl_eves.eve_id-- ",dtl_eves.eve_id.eve_id)
+    #             event=agg_hhc_events.objects.get(eve_id=dtl_eves.eve_id.eve_id)
+    #             print("event-- ")           
+    #             event.event_status=3
+    #             event.save()
+    #             print("out")
+    #         try:
+    #             if serializer.is_valid():
+    #                 # print("in seriii", serializer.data)
+    #                 print("out")
+    #                 serializer.save()
+    #                 response_data={
+    #                 'record': serializer.data,
+    #                 'success' : 'True'
+    #                 }
+    #                 print("serializer-- ", serializer.data)
+    #                 return Response(response_data, status=status.HTTP_201_CREATED)
+    #                 # return Response({'msg':"done"}, status=status.HTTP_201_CREATED)
+    #         except Exception as e:
+    #             return Response({"error":str(e)})
+    #         response_data={
+    #         'record': None,
+    #         'success' : 'False',
+    #         'msg':'No Data Found.'
+    #         }
+    #         return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+    #     except:
+    #         return Response({
+    #         'record': None,
+    #         'success' : 'False',
+    #         'msg':'No Data Found'
+    #         }, status=status.HTTP_404_NOT_FOUND)
+
     def post(self, request):
         dtl_eve = request.GET.get('dtl_eve')
         form_num = request.data.get('form_number')
@@ -4926,15 +6936,6 @@ class agg_hhc_session_job_closure(APIView):
                 # dtl_eves.Session_jobclosure_status = 1
                 # dtl_eves.Session_status = 9
                 # dtl_eves.save()
-                all_detail_event_plan=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=dtl_eves.eve_id,status=1).count()
-                detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=dtl_eves.eve_id,status=1,Session_jobclosure_status=1).count()
-                if (all_detail_event_plan==detail_event):
-                    event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=dtl_eves.eve_id)
-                    event_plan_care.service_status=4
-                    event_plan_care.save()               
-                    event=agg_hhc_events.objects.get(eve_id=dtl_eves.eve_id.eve_id)
-                    event.event_status=3
-                    event.save()
             except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
                 pass     
             for key, value in request.data.items():
@@ -4956,32 +6957,628 @@ class agg_hhc_session_job_closure(APIView):
                         'success': 'True'
                     }
                     return Response(response_data, status=status.HTTP_201_CREATED)
-            # except Exception as e:
-            #     return Response({"error":e})
-            response_data={
-            'record': None,
-            'success' : 'False',
-            'msg':'No Data Found.'
+                else:
+                    response_data = {
+                        'record': None,
+                        'success': 'False',
+                        'msg': 'Invalid data.',
+                        'errors': serializer.errors
+                    }
+                    return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            response_data = {
+                'record': None,
+                'success': 'False',
+                'msg': 'No serializer matched the form number.'
             }
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            return Response({    
-                'record': None, 
+            return Response({
+                'record': None,
                 'success': 'False',
                 'msg': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class agg_hhc_service_professional_loc_dtl(APIView): # List of professionals availability location dtls
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        pro = request.GET.get('pro')
+        # print("pro..",pro)
+        loc_dtl_arr = []
+        try:
+            loc = agg_hhc_professional_location.objects.filter(srv_prof_id=pro, status=1)
+            # print("loc--", loc)
+            # prof_avail_dtl_arr = []
+
+            for lc in loc:
+                # print("lc--",lc)
+                try:
+                    loc_dtls = agg_hhc_professional_location_details.objects.filter(prof_loc_id=lc.prof_loc_id, status=1)
+                    loc_latlong_arr = []
+                    
+                    for locdtl in loc_dtls:
+                        lat_long_obj = {
+                            "prof_loc_dt_id" : locdtl.prof_loc_dt_id,
+                            "latitude" : locdtl.lattitude,
+                            "longitude" : locdtl.longitude
+                        }
+                        loc_latlong_arr.append(lat_long_obj)
+                        prof_avail_dtl_arr = []
+                        # Find prof location in which zone appears
+                        try:
+                            loc_as_per_zone = agg_hhc_professional_locations_as_per_zones.objects.filter(prof_loc_dtl_id= locdtl.prof_loc_dt_id, status=1)
+                            print("loc_as_per_zone-----------locdtl.prof_loc_dt_id-----",loc_as_per_zone,locdtl.prof_loc_dt_id)
+                            loc_as_per_zone_arr = []
+                            
+                            for loc_pr in loc_as_per_zone:
+                                # loc_pr_obj = {
+                                #     # "prof_loc_zone_id" : loc_pr.prof_loc_zone_id,
+                                #     "prof_main_zone_name" : loc_pr.prof_zone_id.Name
+                                # }
+                                loc_as_per_zone_arr.append(loc_pr.prof_zone_id.Name)
+                                print("loc_pr.prof_loc_zone_id----",loc_pr.prof_loc_zone_id)
+                                try:
+                                    prof_avail_dtls = agg_hhc_professional_availability_detail.objects.filter(prof_loc_zone_id=loc_pr.prof_loc_zone_id, status=1)
+                                    print("prof_avail_dtls---",prof_avail_dtls)
+                                    if len(prof_avail_dtls) != 0:
+                                        for avdtl in prof_avail_dtls:
+                                            # print("avdtl333-----",avdtl.prof_avaib_id.professional_avaibility_id)
+                                            day_dtl = agg_hhc_professional_availability.objects.get(professional_avaibility_id=avdtl.prof_avaib_id.professional_avaibility_id, status=1)
+                                            # print("avdtl.start_time--",type(avdtl.start_time))
+
+                                            day = day_dtl.day
+                                            # print("day--", day)
+                                            avdtl_obj = {
+                                                "day": day,
+                                                "start_time" : (avdtl.start_time).strftime("%H:%M:%S"),
+                                                "end_time" : (avdtl.end_time).strftime("%H:%M:%S")
+                                            }
+                                            prof_avail_dtl_arr.append(avdtl_obj)
+                                            print("prof_avail_dtl_arr-----",prof_avail_dtl_arr)
+                                    else:
+                                        print("is zero")
+                                except:
+                                    continue
+                        except:
+                            pass
+                    # print("prof_avail_dtl_arr2-----",prof_avail_dtl_arr)
+                    loc_dtl_obj = {
+                        "prof_loc_lat_long" : loc_latlong_arr,
+                        "prof_loc_name_as_per_zone" : loc_as_per_zone_arr,
+                        "prof_avail_dtl_arr" : prof_avail_dtl_arr
+                    }
+                    loc_dtl_arr.append(loc_dtl_obj)
+                except:
+                    pass
+
+            # print("loc_dtl_obj--", loc_dtl_obj)
+            # return Response({"msg" : "hii"} , status=status.HTTP_200_OK)
+            return Response(loc_dtl_arr , status=status.HTTP_200_OK)
+        except:
+            return Response({'not found':'Record not found'}, status=status.HTTP_200_OK)
+
+
+
+
+
+
+class agg_hhc_service_professional_list_api2(APIView): # List of professionals
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        zones = request.GET.get('zone')
+        title = request.GET.get('title')
+        pro = request.GET.get('pro')
+        srv_id = request.GET.get('srv')
+        eve_poc_id = request.GET.get('eve_poc_id')
+        try:
+            if zones:
+                zones_name = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+        
+            if eve_poc_id and zones:
+                # print("Inside eve_poc_id and zone block", eve_poc_id, zones)
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                sub_srv_nm = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
+                # print("serv nm--", sub_srv_nm.srv_id.service_title)
+                # print("zone nm--", zones_nm.Name)
+
+                # This below code is to get list of professional id's based on location zone table
+                # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All')) #this query to fetch related zone name not exactly same
+                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'))
+                zone_prof = []
+                # print("Zone professionals list33%-- ", zone_profs_list)
+                for i in zone_profs_list:
+                    # print("Zone professionals list 1st-- ", i.location_name)
+                    # print("Zone professionals -- ", i.srv_prof_id)
+                    # print("Zone service id-- ", sub_srv_nm.srv_id)
+                    try:
+                        # print("In try block")
+                        zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=sub_srv_nm.srv_id)
+                        # print("didnt work")
+                    except:
+                        pass
+                    # print("Out try block")
+                    try:
+                        if zone.srv_prof_id in zone_prof:
+                            # print("This item already exists in list.")
+                            pass
+                        else:
+                            # print("in zone prof--", zone.srv_prof_id)
+                            # print("in zone prof--", zone.srv_id)
+                            zone_prof.append(zone.srv_prof_id)
+                    except:
+                        pass
+                # print("Zone of profs with zone and all type--", zone_prof)
+                if len(zone_prof) == 0:
+                    return Response({'Not found': 'Professionals for this service is not available for now.'}, status=status.HTTP_200_OK)
+
+                all_dates = []
+                st_times = []
+                ed_times = []
+                
+                dtl_evts = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id=eve_poc_id)
+                for evt in dtl_evts:
+                    # print("dtl event-- ", evt.eve_id)
+                    all_dates.append(evt.actual_StartDate_Time)
+                    st_times.append(evt.start_time)
+                    ed_times.append(evt.end_time)
+
+                busy_profs = []
+                aval_zone_prof = []
+                sort_profs = []
+                # print("all_dates--", all_dates)
+                # print("st_times--", st_times)
+                # print("ed_times--", ed_times)
+                i = -1
+                bus_prof = 0
+                for d in all_dates:
+                    i = i + 1
+                    try:
+                        busy_prof = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=all_dates[i]), Q(start_time__gte = st_times[i]), Q(end_time__lte = ed_times[i]))
+                        # print("busy_prof--",bus_profs)
+                        bus_prof = 1
+                        bp = busy_prof[0].srv_prof_id.srv_prof_id
+                        busy_profs.append(bp)
+                    except:
+                        pass
+
+                
+                # sorted_profs = agg_hhc_service_professionals.objects.filter(Q(srv_prof_id__in=list(busy_profs))| Q(prof_zone_id=zones_nm), prof_registered=1, prof_interviewed=1, prof_doc_verified=1)
+                if bus_prof == 0:
+                    # print("In busy prof block")
+                    sorted_profs = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+                else:
+                    # print("In else busy prof block")
+                    sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+
+                # print('In sorted#$#$#$')
+                # print('In sorted#$#$#$', sorted_profs)
+                
+                for i in sorted_profs:
+                    sort_profs.append(i.srv_prof_id)
+                # print("Sorted busy professionals-- ", sort_profs)
+
+                aval_profs = agg_hhc_service_professionals.objects.exclude(Q(srv_prof_id__in=list(sort_profs)) | Q(prof_registered=False) | Q(prof_interviewed=False) | Q(prof_doc_verified=False)| Q(status=2)| ~Q(professinal_status=4))
+
+                for i in aval_profs:
+                    aval_zone_prof.append(i.srv_prof_id)
+                # print("AVAL ZONee-- ", aval_zone_prof)
+
+                common_elements = [value for value in aval_zone_prof if value in zone_prof]
+                # print("Common elements--- ",common_elements)
+
+                not_common_elements = [value for value in aval_zone_prof + zone_prof if value not in aval_zone_prof or value not in zone_prof]
+                # print("Not Common elements--- ",not_common_elements)
+
+
+                
+
+                zone_pr = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(common_elements)).order_by("prof_fullname")
+                # print("ZONEEEE-- ", zone_pr)
+
+                zone_nt_pr = agg_hhc_service_professionals.objects.filter(~Q(srv_prof_id__in=list(zone_prof))).order_by("prof_fullname")
+                # print("NOTTT ZONEE-- ", zone_nt_pr)
+
+
+                bus_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(sort_profs))
+                # print("BUSY Prof-- ", bus_profs)
+
+                # prof_list = list(chain(zone_pr, zone_nt_pr, bus_profs))
+                prof_list = list(chain(zone_pr, bus_profs))
+                zone = prof_list
+                # zone = zone_pr
+                # print("Final List----------  ", zone)
+
+            elif zones and title:
+                # print("Inside zones and title if statement---")
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                # print("zone id-- ", zones)
+                # print("zone name-- ", zones_nm.Name)
+                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All'))
+
+                # print("Zone professionals list-- ", zone_profs_list)
+                zone_prof = []
+                for i in zone_profs_list:
+                    # print("prof-- ", i.srv_prof_id.srv_prof_id)
+
+                    # zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id) | Q(title=title) | Q(srv_id=sub_srv), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1)
+
+                    zone = agg_hhc_service_professionals.objects.get(srv_prof_id=i.srv_prof_id.srv_prof_id, prof_registered=1, prof_interviewed=1, prof_doc_verified=1, professinal_status=4, status=1)
+
+                    # print("zonnne ", zone)
+
+                    if zone.srv_prof_id in zone_prof:
+                        # print("This item already exists in list.")
+                        pass
+                    else:
+                        zone_prof.append(zone.srv_prof_id)
+                # print("Name of profs--", zone_prof)
+                zone = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(zone_prof), prof_registered=True, prof_interviewed=True, prof_doc_verified=True).order_by("prof_fullname")
+                # print("List of zone profs--", zone)
+
+            elif pro:
+                # print("Inside pro")
+                zone = agg_hhc_service_professionals.objects.filter(srv_prof_id=pro, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
+
+            elif zones and srv_id:
+                # print("Inside srv_id and zone block")
+                srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
+                # print("Srv!@!@!@!--", srv_obj)
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+
+                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'))
+                zone_prof = []
+                # print("Zone professionals list33%-- ", zone_profs_list)
+                for i in zone_profs_list:
+                    # print("Zone professionals list 1st-- ", i.location_name)
+                    # print("service id-- ", srv_id)
+                    # print("prof id-- ", i.srv_prof_id.srv_prof_id)
+
+                    try:
+                        zone = agg_hhc_service_professionals.objects.get(srv_prof_id=i.srv_prof_id.srv_prof_id, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
+                        # zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
+                        # print("zone!@!@!@!--", zone)
+                    except:
+                        pass
+                    try:
+                        if zone in zone_prof:
+                            # print("This item already exists in list.")
+                            pass
+                        else:
+                            # print("in zone prof--", zone.srv_prof_id)
+                            zone_prof.append(zone)
+                            # zone_prof.append(zone.srv_prof_id)
+                    except:
+                        pass
+                zone = zone_prof
+                # print("Zone of profs with zone and all type--", zone_prof)
+                if len(zone_prof) == 0:
+                    return Response({'Not found': 'Professionals for this service is not available for now.'}, status=status.HTTP_200_OK)
+
+                aval_zone_prof = []
+
+            else:
+                print("Inside else block")
+                zone = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
+                
+            if zone:
+                # print("All filtered prof--%-- ", zone)
+                # for j in zone:
+                #     print("j value", j.srv_prof_id)
+                #     try:
+                #         loc_nm = agg_hhc_professional_location.objects.filter(srv_prof_id = j['srv_prof_id'])
+                #         zone_list_arr = []
+                #         for pkb in loc_nm:
+                #             print("pkb-- ", pkb.location_name)
+                #             zone_list_arr.append(pkb.location_name)
+                #         print("zone_list_arr-------+++++++++________--", zone_list_arr)
+                #         # j.prof_zone_id = zone_list_arr
+                #         # j.prof_zone_id = loc_nm.location_name
+                #         print("locnm - ", j.prof_zone_id)
+                #     except:
+                #         pass
+
+                serializer = agg_hhc_service_professional_serializer(zone, many=True)
+                # print("serializer data--", serializer)
+                for j in serializer.data:
+                    try:
+                        loc_nm = agg_hhc_professional_location.objects.filter(Q(location_name = zones_name.Name) | Q(location_name = 'All'), srv_prof_id = j['srv_prof_id'])
+                        if loc_nm:
+                            # print("loc nm-", loc_nm)
+                            zone_list_arr = []
+                            for pkb in loc_nm:
+                                # print("pkb-- ", pkb.location_name)
+                                zone_list_arr.append(pkb.location_name)
+                            # print("zone_list_arr-------+++++++++________--", zone_list_arr)
+                            j['prof_zone_id'] = zone_list_arr
+                            # j.prof_zone_id = loc_nm.location_name
+                            # print("locnm - ", j['prof_zone_id'])
+                        else:
+                            # print("Serializer data--",serializer.data)
+                            pass
+                    except:
+                        pass
+                print("here")
+                return Response(serializer.data , status=status.HTTP_200_OK)
+            return Response({'msg':'No Data Found'}, status=status.HTTP_200_OK)
+        except:
+            return Response({'not found': 'Record not found'}, status=status.HTTP_200_OK)
+        
 
 # Function to get busy or leave days of professional
 class agg_hhc_busy_days_of_profs_api(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
 
+    # def post(self, request, format=None):
+    #     pro = request.GET.get('pro')
+    #     eve_poc_id = request.GET.get('eve_poc_id')
+    #     all_days = []
+    #     all_days1 = []
+    #     Unavailable_days = []
+
+    #     eve_poc_obj = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
+
+    #     # date_range = pd.date_range(start=eve_poc_obj.start_date, end=eve_poc_obj.end_date)
+    #     # date_list = date_range.strftime('%Y-%m-%d').tolist() 
+
+    #     date_list = request.data['data'] 
+
+    #     datetime_obj_e = datetime.combine(datetime.today(), eve_poc_obj.end_time)
+    #     end_time_added_15 =  datetime_obj_e + timedelta(minutes=15)
+
+    #     datetime_obj_s = datetime.combine(datetime.today(), eve_poc_obj.start_time)
+    #     start_time_added_15 =  datetime_obj_s - timedelta(minutes=15)
+
+    #     # print("start_date--", eve_poc_obj.start_date)
+    #     # print("end_date--", eve_poc_obj.end_date)
+    #     # print("start_time--", eve_poc_obj.start_time)
+    #     # print("end_time--", eve_poc_obj.end_time)
+    #     # print("start_time_added_15--", start_time_added_15)
+    #     # print("end_time_added_15--", end_time_added_15)
+
+    #     extra_added_dates = []
+    #     extra_weeknm = []
+    #     prof_leaves_arr = []
+    #     ed_time_f = None
+    #     st_time_s = None
+        
+    #     # extra_added_dates.append(date_list[0])
+    #     for dt in date_list:
+    #         if eve_poc_obj.start_time >= eve_poc_obj.end_time:
+
+    #             # st_time_f = eve_poc_obj.start_time
+    #             ed_time_f = "23:59:00"
+    #             st_time_s = "00:00:00"
+    #             # ed_time_s = eve_poc_obj.end_time
+                
+    #             dt_obj = datetime.strptime(dt, "%Y-%m-%d")
+    #             dt_next_day = dt_obj + timedelta(days=1)
+    #             extra_weeknm.append(dt_obj.weekday())
+    #             extra_weeknm.append(dt_next_day.weekday())
+                
+    #             if dt in extra_added_dates:
+    #                 pass
+    #             else:
+    #                 extra_added_dates.append(dt)
+
+    #             if dt_next_day in extra_added_dates:
+    #                 pass
+    #             else:
+    #                 extra_added_dates.append(dt_next_day.strftime("%Y-%m-%d"))
+
+    #         else:
+    #             dt_obj = datetime.strptime(dt, "%Y-%m-%d")
+    #             extra_weeknm.append(dt_obj.weekday())
+    #             if dt in extra_added_dates:
+    #                 pass
+    #             else:
+    #                 extra_added_dates.append(dt)
+
+            
+    #         try:
+    #             prof_leaves = agg_hhc_attendance.objects.get(Q(Professional_iid=pro, attnd_date=dt, status=1), ~Q(attnd_status="Present"))
+    #             print("prof leaves-++++++++++++++++++++++-", prof_leaves)
+    #             prof_leaves_arr.append(prof_leaves)
+    #         except:
+    #             Unavailable_days.append(dt)
+
+    #     Leave_days = []
+    #     Leave_days1 = []
+
+    #     try:
+    #         for lv in prof_leaves_arr:
+    #             if lv in Leave_days:
+    #                 pass
+    #             else:
+    #                 Leave_days.append(str(lv.attnd_date.date()))
+    #             all_days.append(str(lv.attnd_date.date()))
+    #     except:
+    #         pass
+
+
+    #     # Half day leave handling----------------------started-------------------------------
+        
+    #     allowed_attn_sts2 = ["First Half", "Second Half"]
+    #     prof_H_leaves = agg_hhc_attendance.objects.filter(Q(Professional_iid=pro, attnd_date__range=(eve_poc_obj.start_date, eve_poc_obj.end_date), status=1, attnd_status__in=allowed_attn_sts2))
+    #     print("Prof half day leavehhhhhhhh--------------", prof_H_leaves)
+
+    #     try:
+    #         for lv in prof_H_leaves:
+    #             print("in hlf for lv.from_avail", lv.from_avail)
+    #             print("in hlf for lv.to_avail", lv.to_avail)
+    #             print("in hlf for eve_poc_obj.start_time", eve_poc_obj.start_time)
+    #             print("in hlf for eve_poc_obj.end_time", eve_poc_obj.end_time)
+    #             if lv.from_avail <= eve_poc_obj.start_time and lv.to_avail >= eve_poc_obj.end_time:
+    #                 print("In if continue")
+    #                 Leave_days.remove(str(lv.attnd_date.date()))
+    #                 print("after removing---", Leave_days)
+    #             else:
+    #                 print("else")
+    #                 Leave_days1.append(str(lv.attnd_date.date()))
+    #                 all_days1.append(str(lv.attnd_date.date()))
+    #     except:
+    #         pass
+
+    #     # -----------------------ended---------------------------- 
+
+
+
+        
+
+    #     session_st = ['2','6','9']
+
+    #     Busy_days = []
+    #     for dt in date_list:
+    #         dtl_eve_objs_busy_intime1 = None
+    #         dtl_eve_objs_busy_intime2 = None
+    #         # dtl_eve_objs_busy_intime1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt, srv_prof_id=pro, status=1, end_time__gte = start_time_added_15.time(), start_time__lte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+    #         dt_obj = datetime.strptime(dt, "%Y-%m-%d")
+    #         dt_prev = (dt_obj - timedelta(days=1)).strftime("%Y-%m-%d")
+    #         dt_next = (dt_obj + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    #         if eve_poc_obj.start_time >= eve_poc_obj.end_time:
+    #             dtl_eve_objs_busy_intime1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt), Q(srv_prof_id=pro, status=1, end_time__gte = start_time_added_15.time(), start_time__lte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+    #             # dtl_eve_objs_busy_intime2 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt_prev), Q(srv_prof_id=pro, status=1, end_time__gte = start_time_added_15.time(), start_time__lte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+    #             dtl_eve_objs_busy_intime2 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt_prev), Q(srv_prof_id=pro, status=1), Q(end_time__lte = start_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+    #         else:
+    #             dtl_eve_objs_busy_intime1 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt), Q(srv_prof_id=pro, status=1, end_time__gte = start_time_added_15.time(), start_time__lte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+    #             # dtl_eve_objs_busy_intime2 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt_next), Q(srv_prof_id=pro, status=1, end_time__gte = start_time_added_15.time(), start_time__lte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+    #             # if end_time_added_15.time() > "23:59:00":
+    #             #     dtl_eve_objs_busy_intime2 = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=dt_next), Q(srv_prof_id=pro, status=1, start_time__gte = end_time_added_15.time()), ~Q(Session_status__in=session_st)).order_by('actual_StartDate_Time')
+
+
+    #         if dtl_eve_objs_busy_intime2 != None:
+    #             Busy_days.append(dt)
+    #             all_days.append(dt)
+    #             # for i in dtl_eve_objs_busy_intime1:
+    #             #     # dt_obj = {
+    #             #     #     'date': str(i.actual_StartDate_Time),
+    #             #     #     # 'start_time': str(i.start_time),
+    #             #     #     # 'end_time': str(i.end_time)
+    #             #     # }
+    #             #     Busy_days.append(str(i.actual_StartDate_Time))
+    #             #     all_days.append(str(i.actual_StartDate_Time))
+
+
+    #     print("busy days--", Busy_days)
+
+    #     # Avble_days = []
+    #     # avls_day_obj = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro)
+    #     # for i in avls_day_obj:
+    #     #     # avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = "18:30:00", end_time__lte = "18:30:00")
+    #     #     avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = str(eve_poc_obj.start_time), end_time__lte = str(eve_poc_obj.end_time))
+
+    #     Avble_days = []
+    #     for wk in extra_weeknm:
+    #         avls_day_obj = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro,day=wk)
+    #         for i in avls_day_obj:
+    #             # avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = "18:30:00", end_time__lte = "18:30:00")
+    #             if eve_poc_obj.start_time >= eve_poc_obj.end_time: 
+    #                 avls_in_day = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=i.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = ed_time_f) | Q(start_time__gte = st_time_s, end_time__lte = ed_time_f))
+    #             else:
+    #                 avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = str(eve_poc_obj.start_time), end_time__lte = str(eve_poc_obj.end_time))
+
+
+    #             unique_time = []
+    #             for p in avls_in_day:
+    #                 st = p.start_time
+    #                 et = p.end_time
+
+    #                 if len(unique_time) == 0:
+    #                     stt = st
+    #                     ett = et
+    #                     obj = {
+    #                         "start_time":str(p.start_time),
+    #                         "end_time":str(p.end_time)
+    #                     }
+    #                     unique_time.append(obj)
+    #                 elif stt == st and ett == et:
+    #                     pass
+    #                 else:
+    #                     stt = st
+    #                     ett = et
+    #                     obj = {
+    #                         "start_time":str(p.start_time),
+    #                         "end_time":str(p.end_time)
+    #                     }
+    #                     unique_time.append(obj)
+    #             # day_obj = {
+    #             #     "day" : i.day,
+    #             #     "time_slots" : unique_time
+    #             # }
+    #             # Avble_days.append(day_obj)
+    #             Avble_days.append(i.day)
+        
+            
+
+    #     free_dates = []
+    #     for i in date_list:
+    #         if i in Busy_days:
+    #             pass
+    #         elif i in Leave_days:
+    #             pass
+    #         elif i in Unavailable_days:
+    #             pass
+    #         else:
+    #             free_dates.append(i)
+
+    #     free_days = []
+    #     for i in free_dates:
+    #         date_object = datetime.strptime(i, '%Y-%m-%d')
+    #         # Get the weekday as an integer (Monday=0, Sunday=6)
+    #         wk_nm = date_object.weekday()
+    #         if wk_nm in Avble_days:
+    #             free_days.append(i)
+    #             all_days.append(i)
+    #         else:
+    #             pass
+
+    #     # all_days = []
+    #     # all_days.append(Leave_days)
+    #     # all_days.append(Busy_days)
+    #     # all_days.append(free_days)
+
+        
+    #     # for i in date_list:
+    #     #     if i in all_days:
+    #     #         pass
+    #     #     elif i in Unavailable_days:
+    #     #         pass
+    #     #     else:
+    #     #         Unavailable_days.append(i)
+
+    #     print("Leave_days - ", Leave_days)
+    #     # print("all days - ", all_days)
+    #     # print("available days - ", free_days)
+    #     # print("busy days - ", Busy_days)
+    #     # print("Unavailable days - ", Unavailable_days)
+
+    #     data = {
+    #         'leave_days':Leave_days,
+    #         'busy_days':Busy_days,
+    #         # 'available_days':Avble_days
+    #         'available_days':free_days,
+    #         'unavailable_days': Unavailable_days
+    #     }
+    #     return Response({'Data':data}, status=status.HTTP_200_OK)
+
+    
+
     def post(self, request, format=None):
         pro = request.GET.get('pro')
         eve_poc_id = request.GET.get('eve_poc_id')
         all_days = []
-        all_days1 = []
         Unavailable_days = []
         free_dates = []
 
@@ -5010,8 +7607,10 @@ class agg_hhc_busy_days_of_profs_api(APIView):
         prof_leaves_arr = []
         ed_time_f = None
         st_time_s = None
+        avls_in_day111 = None
+        avls_in_day112 = None
         
-    
+        print("date_list-------------", date_list)
         for dt in date_list:
             print("dt--", dt)
             if eve_poc_obj.start_time >= eve_poc_obj.end_time:
@@ -5030,38 +7629,61 @@ class agg_hhc_busy_days_of_profs_api(APIView):
                 print("Tommorow--",dt_next_day.weekday())
 
 
-                avls_day_obj1 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_obj.weekday())
+                try:
+                    avls_day_obj1 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_obj.weekday(), status=1)
+                except:
+                    pass
                 if eve_poc_obj.start_time >= eve_poc_obj.end_time: 
-                    avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = ed_time_f))
+                    try:
+                        # avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = ed_time_f))
+                        avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__lte = str(eve_poc_obj.start_time), end_time__gte = ed_time_f), Q(status=1))
+                    except:
+                        pass
                     
 
                     # Checking the next day availability for remaining time from 00:00:00
                     try:
-                        avls_day_obj12 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_next_day.weekday())
+                        avls_day_obj12 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_next_day.weekday(), status=1)
                         if eve_poc_obj.start_time >= eve_poc_obj.end_time: 
                             # avls_in_day112 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj12.professional_avaibility_id), Q(start_time__gte = st_time_s, end_time__lte = eve_poc_obj.end_time))
-                            avls_in_day112 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj12.professional_avaibility_id), Q(start_time__lte = st_time_s, end_time__gte = eve_poc_obj.end_time))
+                            avls_in_day112 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj12.professional_avaibility_id), Q(start_time__lte = st_time_s, end_time__gte = eve_poc_obj.end_time), Q(status=1))
                     except:
                         pass
 
                 else:
                     # avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = eve_poc_obj.end_time))
-                    avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__lte = str(eve_poc_obj.start_time), end_time__gte = eve_poc_obj.end_time))
+                    try:
+                        avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=avls_day_obj1.professional_avaibility_id), Q(start_time__lte = str(eve_poc_obj.start_time), end_time__gte = eve_poc_obj.end_time), Q(status=1))
+                    except:
+                        pass
 
 
                 print("avls_in_day111_________________-----",avls_in_day111)
                 print("avls_in_day112_________________-----",avls_in_day112)
 
+                try:
+                    print('trying_____________')
+                    # print('len(avls_in_day111)_____________',len(avls_in_day111))
+                    print('avls_in_day111_____________',avls_in_day111)
+                    print('avls_in_day112_____________',avls_in_day112)
+                    # print('len(avls_in_day112)_____________',len(avls_in_day112))
+                    # if len(avls_in_day111) == 0 and avls_in_day111 == None:
+                    if avls_in_day111 == None or len(avls_in_day111) == 0:
+                        print("11111111")
+                        Unavailable_days.append(dt)
+                    # elif len(avls_in_day111) != 0 and avls_in_day112 == None and len(avls_in_day112) == 0:
+                    elif (avls_in_day111 != None or len(avls_in_day111) == 0) and (len(avls_in_day112) == 0 or avls_in_day112 == None):
+                        print("222222222")
+                        Unavailable_days.append(dt)
+                    else:
+                        print("33333333")
+                        free_dates.append(dt)
 
+                    print("free_dates-________-----____--",free_dates)
+                    print("Unavailable_days-________-----____--",Unavailable_days)
 
-                if len(avls_in_day111) == 0:
-                    Unavailable_days.append(dt)
-                elif len(avls_in_day111) != 0 and len(avls_in_day112) == 0:
-                    Unavailable_days.append(dt)
-                else:
-                    free_dates.append(dt)
-
-                print("free_dates-________-----____--",free_dates)
+                except:
+                    pass
 
 
 
@@ -5095,53 +7717,56 @@ class agg_hhc_busy_days_of_profs_api(APIView):
                 
                 dt_obj = datetime.strptime(dt, "%Y-%m-%d")
                 print("Day--",dt_obj.weekday())
-
-                avls_day_obj1 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_obj.weekday())
-                
-                avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=avls_day_obj1.professional_avaibility_id, start_time__lte = eve_poc_obj.start_time.strftime("%H:%M:%S"), end_time__gte = eve_poc_obj.end_time.strftime("%H:%M:%S"))
-
-
-                print("avls_day_obj1_________________-----",avls_day_obj1.professional_avaibility_id)
-                print("avls_in_day111_________________-----",avls_in_day111)
-
-
-                if len(avls_in_day111) == 0:
-                    Unavailable_days.append(dt)
-                else:
-                    free_dates.append(dt)
-
-                print("free_dates-________-----____--",free_dates)
+                print("pro--",pro)
+                try:
+                    avls_day_obj1 = None
+                    avls_in_day111 = None
+                    try:
+                        avls_day_obj1 = agg_hhc_professional_availability.objects.get(srv_prof_id=pro,day=dt_obj.weekday(), status=1)
+                    except:
+                        pass
+                    print("avls_day_obj1_________________-----",type(avls_day_obj1))
+                    
+                    try:
+                        avls_in_day111 = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=avls_day_obj1.professional_avaibility_id, start_time__lte = eve_poc_obj.start_time.strftime("%H:%M:%S"), end_time__gte = eve_poc_obj.end_time.strftime("%H:%M:%S"), status=1)
+                    except:
+                        pass
 
 
+                    # print("avls_day_obj1_________________-----",avls_day_obj1.professional_avaibility_id)
+                    # print("avls_in_day111_________________-----",avls_in_day111)
+                    print("type(avls_in_day111)_________________-----",type(avls_in_day111))
+
+
+                    # if len(avls_in_day111) == 0 or avls_day_obj1 == None or avls_in_day111 == None:
+                    if avls_day_obj1 == None or avls_in_day111 == None:
+                        print("everything is null")
+                        Unavailable_days.append(dt)
+                    else:
+                        free_dates.append(dt)
+
+                    print("free_dates-________-----____--",free_dates)
+                    print("Unavailable_days-________-----____--",Unavailable_days)
 
 
 
-                extra_weeknm.append(dt_obj.weekday())
-                # extra_weeknm.append(dt_next_day.weekday())
-                
-                if dt in extra_added_dates:
+
+
+                    extra_weeknm.append(dt_obj.weekday())
+                    # extra_weeknm.append(dt_next_day.weekday())
+                    
+                    if dt in extra_added_dates:
+                        pass
+                    else:
+                        extra_added_dates.append(dt)
+
+                    # if dt_next_day in extra_added_dates:
+                    #     pass
+                    # else:
+                    #     extra_added_dates.append(dt_next_day.strftime("%Y-%m-%d"))
+
+                except:
                     pass
-                else:
-                    extra_added_dates.append(dt)
-
-                # if dt_next_day in extra_added_dates:
-                #     pass
-                # else:
-                #     extra_added_dates.append(dt_next_day.strftime("%Y-%m-%d"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -5298,13 +7923,13 @@ class agg_hhc_busy_days_of_profs_api(APIView):
         
         Avble_days = []
         for wk in extra_weeknm:
-            avls_day_obj = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro,day=wk)
+            avls_day_obj = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro,day=wk,status=1)
             for i in avls_day_obj:
                 # avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = "18:30:00", end_time__lte = "18:30:00")
                 if eve_poc_obj.start_time >= eve_poc_obj.end_time: 
-                    avls_in_day = agg_hhc_professional_availability_detail.objects.filter(Q(prof_avaib_id=i.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = ed_time_f) | Q(start_time__gte = st_time_s, end_time__lte = ed_time_f))
+                    avls_in_day = agg_hhc_professional_availability_detail.objects.filter(Q(status=1), Q(prof_avaib_id=i.professional_avaibility_id), Q(start_time__gte = str(eve_poc_obj.start_time), end_time__lte = ed_time_f) | Q(start_time__gte = st_time_s, end_time__lte = ed_time_f))
                 else:
-                    avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = str(eve_poc_obj.start_time), end_time__lte = str(eve_poc_obj.end_time))
+                    avls_in_day = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=i.professional_avaibility_id, start_time__gte = str(eve_poc_obj.start_time), end_time__lte = str(eve_poc_obj.end_time), status=1)
 
 
                 unique_time = []
@@ -5349,11 +7974,11 @@ class agg_hhc_busy_days_of_profs_api(APIView):
                 all_days.append(i)
         
 
-        # print("Leave_days - ", Leave_days)
+        print("Leave_days - ", Leave_days)
         # print("all days - ", all_days)
         print("available days - ", free_days)
-        # print("busy days - ", Busy_days)
-        # print("Unavailable days - ", Unavailable_days)
+        print("busy days - ", Busy_days)
+        print("Unavailable days - ", Unavailable_days)
 
         data = {
             'leave_days':Leave_days,
@@ -5365,8 +7990,6 @@ class agg_hhc_busy_days_of_profs_api(APIView):
         return Response({'Data':data}, status=status.HTTP_200_OK)
 
 
-
-
 class new_api(APIView):
     def get(self,request,eve_poc_id):
         eve_p= eve_poc_id
@@ -5374,13 +7997,14 @@ class new_api(APIView):
         print("find out event ")
         detail_eve_plan_c=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id=eve_p,status=1,actual_StartDate_Time=eve_poc_obj.start_date).first()
         # time_gap=detail_eve_plan_c.start_time-detail_eve_plan_c.end_time
+
         # start_time_dt = datetime.combine(datetime.min, detail_eve_plan_c.start_time)
         time_list=['00','01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24']
         start_time_dt = datetime.combine(detail_eve_plan_c.actual_StartDate_Time,detail_eve_plan_c.start_time)
         for i in time_list:
             print(i)
         end_time_dt =2
-        time_gap =abs(start_time_dt-end_time_dt)
+        time_gap =abs(start_time_dt-end_time_dt )
         print("total time gap is",time_gap)
         convert_date_time_pair = datetime.combine(detail_eve_plan_c.actual_StartDate_Time,detail_eve_plan_c.start_time)
         print("old date time ",convert_date_time_pair)
@@ -5389,12 +8013,342 @@ class new_api(APIView):
         return Response({'Data':'Hello'}, status=status.HTTP_200_OK)
 
 
-
 # Function to filter professionals with multiple zones
 class agg_hhc_service_professional_list_api(APIView): # List of professionals
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
 
+    # def get(self, request, format=None):
+    #     zones = request.GET.get('zone')
+    #     title = request.GET.get('title')
+    #     pro = request.GET.get('pro')
+    #     srv_id = request.GET.get('srv')
+    #     eve_poc_id = request.GET.get('eve_poc_id')
+    #     pro_name = request.GET.get('prof_name')
+    #     home_loc = request.GET.get('home_loc')
+    #     print("pro_name..",pro_name)
+
+    #     try:
+    #         zone = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
+
+
+    #         if zones:
+    #             zones_name = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+
+    #         if pro_name:
+    #             print("Inside pro name")
+    #             zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name).order_by('prof_fullname')
+
+    #         if srv_id:
+    #             print("Inside srv id")
+    #             srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
+    #             zone = agg_hhc_service_professionals.objects.filter(srv_id=srv_obj.service_title).order_by('prof_fullname')
+
+
+    #         if pro_name and srv_id:
+    #             print("Inside pro_name and srv id")
+    #             srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
+    #             zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name, srv_id=srv_obj.service_title).order_by('prof_fullname')
+                
+    #         if eve_poc_id and zones:
+    #             print("Inside eve_poc_id and zone block", eve_poc_id, zones)
+    #             zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+    #             sub_srv_nm = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
+    #             print("serv nm--", sub_srv_nm.srv_id.service_title)
+    #             print("zone nm--", zones_nm.Name)
+
+    #             # This below code is to get list of professional id's based on location zone table
+    #             # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All')) #this query to fetch related zone name not exactly same
+
+    #             # changed here
+    #             # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All')) 
+    #             zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9))
+
+    #             zone_prof = []
+    #             # print("Zone professionals list33%-- ", zone_profs_list)
+    #             for i in zone_profs_list:
+    #                 # print("Zone professionals list 1st-- ", i.location_name)
+    #                 # print("Zone professionals -- ", i.srv_prof_id)
+    #                 # print("Zone service id-- ", sub_srv_nm.srv_id)
+    #                 try:
+    #                     zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=sub_srv_nm.srv_id)
+    #                 except:
+    #                     pass
+    #                 # print("Out try block")
+    #                 try:
+    #                     if zone.srv_prof_id in zone_prof:
+    #                         # print("This item already exists in list.")
+    #                         pass
+    #                     else:
+    #                         # print("in zone prof--", zone.srv_prof_id)
+    #                         # print("in zone prof--", zone.srv_id)
+    #                         zone_prof.append(zone.srv_prof_id)
+    #                 except:
+    #                     pass
+    #             # print("Zone of profs with zone and all type--", zone_prof)
+    #             if len(zone_prof) == 0:
+    #                 return Response({'Not found': 'Professionals for this service is not available for now.'}, status=status.HTTP_200_OK)
+
+
+    #             all_dates = []
+    #             st_times = []
+    #             ed_times = []
+                
+    #             dtl_evts = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id=eve_poc_id)
+    #             for evt in dtl_evts:
+    #                 # print("dtl event-- ", evt.eve_id)
+    #                 all_dates.append(evt.actual_StartDate_Time)
+    #                 st_times.append(evt.start_time)
+    #                 ed_times.append(evt.end_time)
+
+    #             busy_profs = []
+    #             aval_zone_prof = []
+    #             sort_profs = []
+    #             # print("all_dates--", all_dates)
+    #             # print("st_times--", st_times)
+    #             # print("ed_times--", ed_times)
+    #             i = -1
+    #             bus_prof = 0
+    #             for d in all_dates:
+    #                 i = i + 1
+    #                 try:
+    #                     busy_prof = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time=all_dates[i]), Q(start_time__gte = st_times[i]), Q(end_time__lte = ed_times[i]))
+    #                     # print("busy_prof--",bus_profs)
+    #                     bus_prof = 1
+    #                     bp = busy_prof[0].srv_prof_id.srv_prof_id
+    #                     busy_profs.append(bp)
+    #                 except:
+    #                     pass
+
+                
+    #             # sorted_profs = agg_hhc_service_professionals.objects.filter(Q(srv_prof_id__in=list(busy_profs))| Q(prof_zone_id=zones_nm), prof_registered=1, prof_interviewed=1, prof_doc_verified=1)
+    #             if bus_prof == 0:
+    #                 print("In busy prof block")
+    #                 sorted_profs = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+    #             else:
+    #                 print("In else busy prof block")
+    #                 sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+
+    #             # print('In sorted#$#$#$')
+    #             # print('In sorted#$#$#$', sorted_profs)
+                
+    #             for i in sorted_profs:
+    #                 sort_profs.append(i.srv_prof_id)
+    #             # print("Sorted busy professionals-- ", sort_profs)
+
+    #             aval_profs = agg_hhc_service_professionals.objects.exclude(Q(srv_prof_id__in=list(sort_profs)) | Q(prof_registered=False) | Q(prof_interviewed=False) | Q(prof_doc_verified=False)| Q(status=2)| ~Q(professinal_status=4))
+
+    #             for i in aval_profs:
+    #                 aval_zone_prof.append(i.srv_prof_id)
+    #             # print("AVAL ZONee-- ", aval_zone_prof)
+
+    #             common_elements = [value for value in aval_zone_prof if value in zone_prof]
+    #             # print("Common elements--- ",common_elements)
+
+    #             not_common_elements = [value for value in aval_zone_prof + zone_prof if value not in aval_zone_prof or value not in zone_prof]
+    #             # print("Not Common elements--- ",not_common_elements)
+
+
+                
+
+    #             zone_pr = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(common_elements)).order_by("prof_fullname")
+    #             # print("ZONEEEE-- ", zone_pr)
+
+    #             zone_nt_pr = agg_hhc_service_professionals.objects.filter(~Q(srv_prof_id__in=list(zone_prof))).order_by("prof_fullname")
+    #             # print("NOTTT ZONEE-- ", zone_nt_pr)
+
+
+    #             bus_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(sort_profs))
+    #             # print("BUSY Prof-- ", bus_profs)
+
+    #             # prof_list = list(chain(zone_pr, zone_nt_pr, bus_profs))
+    #             prof_list = list(chain(zone_pr, bus_profs))
+    #             zone = prof_list
+    #             # zone = zone_pr
+    #             print("Final List----------  ", zone)
+
+    #         if zones and title:
+    #             print("Inside zones and title if statement---")
+    #             zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                
+
+    #             # changed here
+    #             # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All'))
+
+    #             zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9))
+
+    #             # print("Zone professionals list-- ", zone_profs_list)
+    #             zone_prof = []
+    #             for i in zone_profs_list:
+    #                 # print("prof-- ", i.srv_prof_id.srv_prof_id)
+
+    #                 # zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id) | Q(title=title) | Q(srv_id=sub_srv), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1)
+
+    #                 zone = agg_hhc_service_professionals.objects.get(srv_prof_id=i.srv_prof_id.srv_prof_id, prof_registered=1, prof_interviewed=1, prof_doc_verified=1, professinal_status=4, status=1)
+
+    #                 # print("zonnne ", zone)
+
+    #                 if zone.srv_prof_id in zone_prof:
+    #                     # print("This item already exists in list.")
+    #                     pass
+    #                 else:
+    #                     zone_prof.append(zone.srv_prof_id)
+    #             # print("Name of profs--", zone_prof)
+    #             zone = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(zone_prof), prof_registered=True, prof_interviewed=True, prof_doc_verified=True).order_by("prof_fullname")
+    #             # print("List of zone profs--", zone)
+
+    #         if pro:
+    #             print("Inside pro")
+    #             zone = agg_hhc_service_professionals.objects.filter(srv_prof_id=pro, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
+
+    #         if zones and srv_id:
+                
+    #             print("Inside srv_id and zone block")
+    #             srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
+    #             # print("Srv obj--", srv_obj.service_title)
+    #             zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+    #             # print("Zone name--", zones_nm)
+
+    #             # changed here
+    #             # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'), srv_prof_id__srv_id = srv_obj.service_title)
+
+    #             zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9), srv_prof_id__srv_id = srv_obj.service_title)
+
+
+    #             zone_prof = []
+    #             # print("Profs list based selected zone-- ", zone_profs_list)
+
+    #             for i in zone_profs_list:
+    #                 # print("loc nm-- ", i.location_name)
+    #                 # print("service id-- ", srv_id)
+    #                 # print("prof id-- ", i.srv_prof_id.srv_prof_id)
+    #                 # print("Srv id-- ", i.srv_prof_id.srv_id)
+
+    #                 try:
+    #                     zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
+    #                     # print("zone!@!@!@!--", zone)
+    #                     try:
+    #                         if zone in zone_prof:
+    #                             # print("This item already exists in list.")
+    #                             continue
+    #                         else:
+    #                             # print("in zone prof--", zone.srv_prof_id)
+    #                             # print("Zone professionals list 1st-- ", i.location_name)
+    #                             zone_prof.append(zone)
+    #                     except:
+    #                         pass
+    #                 except:
+    #                     pass 
+    #             # print("Zone of profs with zone and all type--", zone_prof)
+    #             if len(zone_prof) == 0:
+    #                 return Response({'Not available': 'Professionals for this service is not available for now.'}, status=status.HTTP_200_OK)
+    #             else:
+    #                 zone = zone_prof
+    #             # print("zone&*&7--", zone)
+    #             # aval_zone_prof = []
+
+    #         # else:
+    #         #     print("Inside else block")
+    #         #     zone = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
+                
+    #         if zone:
+    #             print("Inside zone+++++=")
+    #             serializer = agg_hhc_service_professional_serializer(zone, many=True)
+    #             # print("serializer data--", serializer.data)
+    #             for j in serializer.data:
+    #                 try:
+    #                     # changed here
+    #                     # loc_nm = agg_hhc_professional_location.objects.filter(Q(location_name = zones_name.Name) | Q(location_name = 'All'), srv_prof_id = j['srv_prof_id'])
+                        
+    #                     loc_nm = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9), srv_prof_id = j['srv_prof_id'])
+
+
+    #                     if loc_nm:
+    #                         # print("loc nm-", loc_nm)
+    #                         zone_list_arr = []
+    #                         for pkb in loc_nm:
+
+    #                             # changed here
+    #                             # zone_list_arr.append(pkb.location_name)
+    #                             zone_list_arr.append(pkb.prof_zone_id.Name)
+                                
+    #                         # print("zone_list_arr-------+++++++++________--", zone_list_arr)
+    #                         j['prof_zone_name'] = zone_list_arr
+    #                         # j.prof_zone_id = loc_nm.location_name
+    #                         # print("locnm - ", j['prof_zone_id'])
+
+    #                     if home_loc and eve_poc_id and zones:
+    #                         eve_poc_id_dtl = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
+    #                         patient_lat1 = eve_poc_id_dtl.eve_id.agg_sp_pt_id.lattitude
+    #                         patient_long1 = eve_poc_id_dtl.eve_id.agg_sp_pt_id.langitude
+
+    #                         srv_prof = agg_hhc_service_professionals.objects.get(srv_prof_id=j['srv_prof_id'])
+    #                         srv_home_lat21 = srv_prof.lattitude
+    #                         srv_home_long22 = srv_prof.langitude
+
+    #                         zone_mid_latlong = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+    #                         zone_lat21 = zone_mid_latlong.midpoint_latitude
+    #                         zone_long22 = zone_mid_latlong.midpoint_longitude
+
+
+    #                         # print("patient_lat----patient_long----srv_home_lat----srv_home_long----zone_lat21--zone_long22--", patient_lat1, patient_long1, srv_home_lat21, srv_home_long22, zone_lat21, zone_long22)
+
+    #                         if home_loc == '1':
+    #                             try:
+    #                                 if srv_home_lat21 != None and srv_home_long22 != None:
+    #                                     dlat = srv_home_lat21 - patient_lat1
+    #                                     dlon = srv_home_long22 - patient_long1
+    #                                     a = math.sin(dlat / 2)**2 + math.cos(patient_lat1) * math.cos(srv_home_lat21) * math.sin(dlon / 2)**2
+    #                                     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                                        
+    #                                     # Radius of the Earth in kilometers. Use 3956 for miles. 
+    #                                     R = 6371
+    #                                     distance = R * c
+
+    #                                     print("distance111111---", distance)
+    #                                     j['home_distance'] = round(distance, 2)
+    #                                 else:
+    #                                     print("This prof doesn't have home location....")
+    #                             except:
+    #                                 pass
+
+    #                         elif home_loc == '2':
+    #                             try:
+    #                                 if zone_lat21 != None and zone_long22 != None:
+    #                                     dlat = zone_lat21 - patient_lat1
+    #                                     dlon = zone_long22 - patient_long1
+    #                                     a = math.sin(dlat / 2)**2 + math.cos(patient_lat1) * math.cos(zone_lat21) * math.sin(dlon / 2)**2
+    #                                     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                                        
+    #                                     # Radius of the Earth in kilometers. Use 3956 for miles. 
+    #                                     R = 6371
+    #                                     distance = R * c
+
+    #                                     print("distance2222222---", distance)
+    #                                     j['zone_distance'] = round(distance, 2)
+
+    #                                 else:
+    #                                     print("This prof doesn't have zone location..")
+
+    #                             except:
+    #                                 pass
+                                
+                                
+
+    #                     else:
+    #                         pass
+    #                 except:
+    #                     pass
+    #             return Response(serializer.data , status=status.HTTP_200_OK)
+    #     #     return Response({'msg':'Professionals are not available for now'}, status=status.HTTP_200_OK)
+    #     # except:
+    #     #     return Response({'msg': 'Professionals are not available for now'}, status=status.HTTP_200_OK)    
+
+    #         return Response({'not found':'Record not found'}, status=status.HTTP_200_OK)
+    #     except:
+    #         return Response({'not found': 'Record not found'}, status=status.HTTP_200_OK)  
+    # 
+    
     def get(self, request, format=None):
         zones = request.GET.get('zone')
         title = request.GET.get('title')
@@ -5402,6 +8356,7 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
         srv_id = request.GET.get('srv')
         eve_poc_id = request.GET.get('eve_poc_id')
         pro_name = request.GET.get('prof_name')
+        home_loc = request.GET.get('home_loc')
         print("pro_name..",pro_name)
 
         try:
@@ -5409,41 +8364,52 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
 
 
             if zones:
-                zones_name = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                zones_name = agg_hhc_professional_zone.objects.get(prof_zone_id=zones, status=1)
 
             if pro_name:
                 print("Inside pro name")
-                zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name).order_by('prof_fullname')
+                zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by('prof_fullname')
 
             if srv_id:
                 print("Inside srv id")
                 srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
-                zone = agg_hhc_service_professionals.objects.filter(srv_id=srv_obj.service_title).order_by('prof_fullname')
+                zone = agg_hhc_service_professionals.objects.filter(srv_id=srv_obj.service_title, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by('prof_fullname')
 
 
             if pro_name and srv_id:
                 print("Inside pro_name and srv id")
                 srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
-                zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name, srv_id=srv_obj.service_title).order_by('prof_fullname')
+                zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name, srv_id=srv_obj.service_title, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by('prof_fullname')
                 
             if eve_poc_id and zones:
                 print("Inside eve_poc_id and zone block", eve_poc_id, zones)
-                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones, status=1)
                 sub_srv_nm = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
                 print("serv nm--", sub_srv_nm.srv_id.service_title)
                 print("zone nm--", zones_nm.Name)
 
                 # This below code is to get list of professional id's based on location zone table
                 # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All')) #this query to fetch related zone name not exactly same
-                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'))
+
+                # changed here
+                # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All')) 
+                # zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9))
+
+                zone_profs_list = agg_hhc_professional_availability_detail.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9) | Q(prof_loc_zone_id__prof_zone_id = zones_nm.prof_zone_id) | Q(prof_loc_zone_id__prof_zone_id = 9), status=1).values('srv_prof_id', 'prof_zone_id', 'prof_loc_zone_id').distinct()
+
+                print("*****************888zone_profs_list ", zone_profs_list)
+
+
+
                 zone_prof = []
-                print("Zone professionals list33%-- ", zone_profs_list)
+                # print("Zone professionals list33%-- ", zone_profs_list)
                 for i in zone_profs_list:
                     # print("Zone professionals list 1st-- ", i.location_name)
-                    # print("Zone professionals -- ", i.srv_prof_id)
+                    print("Zone professionals -- ", i['srv_prof_id'])
                     # print("Zone service id-- ", sub_srv_nm.srv_id)
                     try:
-                        zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=sub_srv_nm.srv_id)
+                        if i['srv_prof_id'] != None:
+                            zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i['srv_prof_id']), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=sub_srv_nm.srv_id)
                     except:
                         pass
                     # print("Out try block")
@@ -5496,10 +8462,10 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
                 # sorted_profs = agg_hhc_service_professionals.objects.filter(Q(srv_prof_id__in=list(busy_profs))| Q(prof_zone_id=zones_nm), prof_registered=1, prof_interviewed=1, prof_doc_verified=1)
                 if bus_prof == 0:
                     print("In busy prof block")
-                    sorted_profs = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+                    sorted_profs = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id, professinal_status=4, status=1).order_by("prof_fullname")
                 else:
                     print("In else busy prof block")
-                    sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id).order_by("prof_fullname")
+                    sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=sub_srv_nm.srv_id, professinal_status=4, status=1).order_by("prof_fullname")
 
                 # print('In sorted#$#$#$')
                 # print('In sorted#$#$#$', sorted_profs)
@@ -5541,10 +8507,14 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
 
             if zones and title:
                 print("Inside zones and title if statement---")
-                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
-                # print("zone id-- ", zones)
-                # print("zone name-- ", zones_nm.Name)
-                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All'))
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones, status=1)
+                
+
+                # changed here
+                # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All'))
+
+                # zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9))
+                zone_profs_list = agg_hhc_professional_availability_detail.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9) | Q(prof_loc_zone_id__prof_zone_id = zones_nm.prof_zone_id) | Q(prof_loc_zone_id__prof_zone_id = 9), status=1).values('srv_prof_id', 'prof_zone_id', 'prof_loc_zone_id').distinct()
 
                 # print("Zone professionals list-- ", zone_profs_list)
                 zone_prof = []
@@ -5553,7 +8523,7 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
 
                     # zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id) | Q(title=title) | Q(srv_id=sub_srv), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1)
 
-                    zone = agg_hhc_service_professionals.objects.get(srv_prof_id=i.srv_prof_id.srv_prof_id, prof_registered=1, prof_interviewed=1, prof_doc_verified=1, professinal_status=4, status=1)
+                    zone = agg_hhc_service_professionals.objects.get(srv_prof_id=i['srv_prof_id'], prof_registered=1, prof_interviewed=1, prof_doc_verified=1, professinal_status=4, status=1)
 
                     # print("zonnne ", zone)
 
@@ -5563,7 +8533,7 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
                     else:
                         zone_prof.append(zone.srv_prof_id)
                 # print("Name of profs--", zone_prof)
-                zone = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(zone_prof), prof_registered=True, prof_interviewed=True, prof_doc_verified=True).order_by("prof_fullname")
+                zone = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(zone_prof), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
                 # print("List of zone profs--", zone)
 
             if pro:
@@ -5575,10 +8545,16 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
                 print("Inside srv_id and zone block")
                 srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
                 # print("Srv obj--", srv_obj.service_title)
-                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
+                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones, status=1)
                 # print("Zone name--", zones_nm)
 
-                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'), srv_prof_id__srv_id = srv_obj.service_title)
+                # changed here
+                # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All'), srv_prof_id__srv_id = srv_obj.service_title)
+
+                # zone_profs_list = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9), srv_prof_id__srv_id = srv_obj.service_title)
+                zone_profs_list = agg_hhc_professional_availability_detail.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9) | Q(prof_loc_zone_id__prof_zone_id = zones_nm.prof_zone_id) | Q(prof_loc_zone_id__prof_zone_id = 9), srv_prof_id__srv_id = srv_obj.service_title, status=1).values('srv_prof_id', 'prof_zone_id', 'prof_loc_zone_id').distinct()
+
+
                 zone_prof = []
                 # print("Profs list based selected zone-- ", zone_profs_list)
 
@@ -5589,7 +8565,7 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
                     # print("Srv id-- ", i.srv_prof_id.srv_id)
 
                     try:
-                        zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
+                        zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i['srv_prof_id']), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
                         # print("zone!@!@!@!--", zone)
                         try:
                             if zone in zone_prof:
@@ -5615,161 +8591,115 @@ class agg_hhc_service_professional_list_api(APIView): # List of professionals
             #     print("Inside else block")
             #     zone = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
                 
+            if pro_name and srv_id and eve_poc_id and zones:
+                print("Inside pro_name and srv id")
+                srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
+                zone = agg_hhc_service_professionals.objects.filter(prof_fullname__icontains = pro_name, srv_id=srv_obj.service_title).order_by('prof_fullname')
+
+                
             if zone:
-                print("Inside zone+++++=")
+                print("Inside zone++************************88+++=", zone)
                 serializer = agg_hhc_service_professional_serializer(zone, many=True)
                 # print("serializer data--", serializer.data)
                 for j in serializer.data:
                     try:
-                        loc_nm = agg_hhc_professional_location.objects.filter(Q(location_name = zones_name.Name) | Q(location_name = 'All'), srv_prof_id = j['srv_prof_id'])
+                        # changed here
+                        # loc_nm = agg_hhc_professional_location.objects.filter(Q(location_name = zones_name.Name) | Q(location_name = 'All'), srv_prof_id = j['srv_prof_id'])
+                        
+                        # loc_nm = agg_hhc_professional_locations_as_per_zones.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9), srv_prof_id = j['srv_prof_id'])
+                        loc_nm = agg_hhc_professional_availability_detail.objects.filter(Q(prof_zone_id = zones_nm.prof_zone_id) | Q(prof_zone_id = 9) | Q(prof_loc_zone_id__prof_zone_id = zones_nm.prof_zone_id) | Q(prof_loc_zone_id__prof_zone_id = 9), srv_prof_id = j['srv_prof_id'], status=1).values('srv_prof_id', 'prof_zone_id', 'prof_loc_zone_id').distinct()
+
+
                         if loc_nm:
-                            # print("loc nm-", loc_nm)
+                            print("loc nm-", loc_nm)
                             zone_list_arr = []
                             for pkb in loc_nm:
-                                # print("pkb-- ", pkb.location_name)
-                                zone_list_arr.append(pkb.location_name)
+
+                                # changed here
+                                # zone_list_arr.append(pkb.location_name)
+                                print("pkb--", pkb['prof_zone_id'])
+                                zone_nms = agg_hhc_professional_zone.objects.get(prof_zone_id=pkb['prof_zone_id'], status=1)
+                                zone_list_arr.append(zone_nms.Name)
+                                
                             # print("zone_list_arr-------+++++++++________--", zone_list_arr)
-                            j['prof_zone_id'] = zone_list_arr
+                            j['prof_zone_name'] = zone_list_arr
                             # j.prof_zone_id = loc_nm.location_name
                             # print("locnm - ", j['prof_zone_id'])
+
+                        if home_loc and eve_poc_id and zones:
+                            eve_poc_id_dtl = agg_hhc_event_plan_of_care.objects.get(eve_poc_id=eve_poc_id)
+                            patient_lat1 = eve_poc_id_dtl.eve_id.agg_sp_pt_id.lattitude
+                            patient_long1 = eve_poc_id_dtl.eve_id.agg_sp_pt_id.langitude
+
+                            srv_prof = agg_hhc_service_professionals.objects.get(srv_prof_id=j['srv_prof_id'], prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1)
+                            srv_home_lat21 = srv_prof.lattitude
+                            srv_home_long22 = srv_prof.langitude
+
+                            zone_mid_latlong = agg_hhc_professional_zone.objects.get(prof_zone_id=zones, status=1)
+                            zone_lat21 = zone_mid_latlong.midpoint_latitude
+                            zone_long22 = zone_mid_latlong.midpoint_longitude
+
+
+                            # print("patient_lat----patient_long----srv_home_lat----srv_home_long----zone_lat21--zone_long22--", patient_lat1, patient_long1, srv_home_lat21, srv_home_long22, zone_lat21, zone_long22)
+
+                            if home_loc == '1':
+                                try:
+                                    if srv_home_lat21 != None and srv_home_long22 != None:
+                                        dlat = srv_home_lat21 - patient_lat1
+                                        dlon = srv_home_long22 - patient_long1
+                                        a = math.sin(dlat / 2)**2 + math.cos(patient_lat1) * math.cos(srv_home_lat21) * math.sin(dlon / 2)**2
+                                        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                                        
+                                        # Radius of the Earth in kilometers. Use 3956 for miles. 
+                                        R = 6371
+                                        distance = R * c
+
+                                        print("distance111111---", distance)
+                                        # j['home_distance'] = round(distance, 2)
+                                        j['zone_distance'] = round(distance, 2)
+                                    else:
+                                        print("This prof doesn't have home location....")
+                                except:
+                                    pass
+
+                            elif home_loc == '2':
+                                try:
+                                    if zone_lat21 != None and zone_long22 != None:
+                                        dlat = zone_lat21 - patient_lat1
+                                        dlon = zone_long22 - patient_long1
+                                        a = math.sin(dlat / 2)**2 + math.cos(patient_lat1) * math.cos(zone_lat21) * math.sin(dlon / 2)**2
+                                        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                                        
+                                        # Radius of the Earth in kilometers. Use 3956 for miles. 
+                                        R = 6371
+                                        distance = R * c
+
+                                        print("distance2222222---", distance)
+                                        j['zone_distance'] = round(distance, 2)
+
+                                    else:
+                                        print("This prof doesn't have zone location..")
+
+                                except:
+                                    pass
+                                
+                                
+
                         else:
                             pass
                     except:
                         pass
                 return Response(serializer.data , status=status.HTTP_200_OK)
+        #     return Response({'msg':'Professionals are not available for now'}, status=status.HTTP_200_OK)
+        # except:
+        #     return Response({'msg': 'Professionals are not available for now'}, status=status.HTTP_200_OK)    
+
             return Response({'not found':'Record not found'}, status=status.HTTP_200_OK)
         except:
             return Response({'not found': 'Record not found'}, status=status.HTTP_200_OK)
-        
 
 
 
-class agg_hhc_service_professional_reschdl_list_api2(APIView): # List of professionals
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self, request, format=None):
-        zones = request.GET.get('zone')
-        actual_StartDate_Time = request.GET.get('actual_StartDate_Time')
-        actual_EndDate_Time = request.GET.get('actual_EndDate_Time')
-        start_time = request.GET.get('start_time')
-        end_time = request.GET.get('end_time') 
-        srv_id = request.GET.get('srv')       
-
-        try:
-            if zones:
-                srv_obj = agg_hhc_services.objects.get(srv_id=srv_id)
-                zones_nm = agg_hhc_professional_zone.objects.get(prof_zone_id=zones)
-                # print("zones_nm-- ", zones_nm.Name) # To get the name of zone from zone id
-
-                # This below code is to get list of professional id's based on location zone table
-                # zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name__icontains= zones_nm.Name) | Q(location_name = 'All')) #this query to fetch related zone name not exactly same
-                
-                zone_profs_list = agg_hhc_professional_location.objects.filter(Q(location_name = zones_nm.Name) | Q(location_name = 'All')) # To get exact same zone name profs and "all" name type
-                # zone_prof_list_arr = []
-
-                zone_prof = []
-                for i in zone_profs_list:
-                    # print("Zone professionals list 1st-- ", i.location_name)
-                    # print("Zone professionals -- ", i.srv_prof_id)
-                    # print("Zone service id-- ", sub_srv_nm.srv_id)
-                    try:
-                        zone = agg_hhc_service_professionals.objects.get(Q(srv_prof_id=i.srv_prof_id.srv_prof_id), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1, srv_id=srv_obj)
-                    except:
-                        pass
-                    try:
-                        if zone in zone_prof:
-                            # print("This item already exists in list.")
-                            pass
-                        else:
-                            # print("in zone prof--", zone.srv_prof_id)
-                            # print("in zone prof--", zone.srv_id)
-
-                            zone_prof.append(zone)
-                            # zone_prof.append(zone.srv_prof_id)
-                    except:
-                        pass
-
-                print("Zone of profs with zone and all type--", zone_prof)
-                if len(zone_prof) == 0:
-                    return Response({'Not found': 'Professionals for this service is not available for now.'}, status=status.HTTP_200_OK)
-
-
-                busy_profs = []
-                aval_zone_prof = []
-                sort_profs = []
-                bus_prof = 0
-                # i = -1
-                # for d in all_dates:
-                #     i = i + 1
-                try:
-                    busy_prof = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(actual_StartDate_Time__gte= actual_StartDate_Time), Q(actual_EndDate_Time__lte=actual_EndDate_Time), Q(start_time__gte = start_time), Q(end_time__lte = end_time))
-                    bp = busy_prof[0].srv_prof_id.srv_prof_id
-                    busy_profs.append(bp)
-                    bus_prof = 1
-                except:
-                    pass
-
-                # sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True).order_by("prof_fullname")
-
-                if bus_prof == 0:
-                    print("In busy prof block")
-                    sorted_profs = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=srv_id).order_by("prof_fullname")
-                else:
-                    print("In else busy prof block")
-                    sorted_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(busy_profs), prof_registered=True, prof_interviewed=True, prof_doc_verified=True, srv_id=srv_id).order_by("prof_fullname")
-
-                aval_profs = 0
-                for i in sorted_profs:
-                    sort_profs.append(i.srv_prof_id)
-                print("Sorted BUSY professionals-- ", sort_profs)
-
-                if len(sort_profs) == 0:
-                    print("lrn")
-                    # aval_profs = agg_hhc_service_professionals.objects.exclude(Q(prof_registered=False) | Q(prof_interviewed=False) | Q(prof_doc_verified=False)| Q(status=2)| ~Q(professinal_status=4))
-                    aval_profs = zone_prof
-                else:
-                    aval_profs = zone_prof
-                    # aval_profs = agg_hhc_service_professionals.objects.exclude(Q(srv_prof_id__in=list(sort_profs)) | Q(prof_registered=False) | Q(prof_interviewed=False) | Q(prof_doc_verified=False)| Q(status=2)| ~Q(professinal_status=4))
-
-                print("avalzone--", aval_profs)
-                for i in aval_profs:
-                    print("i prof id", i.srv_prof_id)
-                    aval_zone_prof.append(i.srv_prof_id)
-                print("AVAL ZONee-- ", aval_zone_prof)
-
-                # common_elements = [value for value in aval_zone_prof if value in zone_prof]
-                # print("Common elements--- ",common_elements)
-
-                # not_common_elements = [value for value in aval_zone_prof + zone_prof if value not in aval_zone_prof or value not in zone_prof]
-                # print("Not Common elements--- ",not_common_elements)
-
-
-
-                zone_pr = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(aval_zone_prof)).order_by("prof_fullname")
-                print("ZONEEEE-- ", zone_pr)
-                
-                zone_nt_pr = agg_hhc_service_professionals.objects.filter(~Q(srv_prof_id__in=list(aval_zone_prof))).order_by("prof_fullname")
-                print("NOTTT ZONEE1-- ", zone_nt_pr) #working correctly fetcing professional not in zone
-
-                bus_profs = agg_hhc_service_professionals.objects.filter(srv_prof_id__in=list(sort_profs))
-                print("BUSY Prof-- ", bus_profs)
-
-                prof_list = list(chain(zone_pr, zone_nt_pr, bus_profs))
-                print("Final prof list-- ", prof_list)
-                zone = prof_list
-
-            
-            else:
-                zone = agg_hhc_service_professionals.objects.filter(prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4, status=1).order_by("prof_fullname")
-                
-            if zone:
-                serializer = agg_hhc_service_professional_serializer2(zone, many=True)
-
-                return Response(serializer.data , status=status.HTTP_200_OK)
-            return Response({'msg':'No Data Found'}, status=status.HTTP_400_BAD_REQUEST)
-        except:
-            return Response({'not found': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-        
 
 class agg_hhc_service_professional_reschdl_list_api(APIView): # List of professionals
     renderer_classes = [UserRenderer]
@@ -5911,8 +8841,8 @@ class agg_hhc_service_professional_reschdl_list_api(APIView): # List of professi
             return Response({'msg':'No Data Found'}, status=status.HTTP_200_OK)
         except:
             return Response({'not found': 'Record not found'}, status=status.HTTP_200_OK)
-
-
+        
+        
 class all_dtl_evnts(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -5922,17 +8852,15 @@ class all_dtl_evnts(APIView):
         today_dt = date.today()
         print("today-- ", type(today_dt))
         try:
-            dtl_events =  agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id=eve, is_cancelled=2, Session_jobclosure_status=2, status=1, actual_StartDate_Time__lte=today_dt)).order_by('index_of_Session')# To display all detailed events against event.)
-            # print("dtl events-- ", dtl_events[0],';;;;;;;;;;;;;;;;;')
-            # print("mohinsssssss",eve_poc_id) 
+            dtl_events =  agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id=eve, is_cancelled=2, Session_jobclosure_status=2, status=1, actual_StartDate_Time__lte=today_dt)).order_by('index_of_Session').values()# To display all detailed events against event.)
+            print("data from models ",dtl_events.filter(status=1).last())
             if dtl_events:
                 serializer = all_dtl_evnts_serializer(dtl_events, many=True)
-                print(serializer.data[0])
+                print("dtl events-- ",serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response({'msg':'No Data Found'}, serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except:
             return Response({'not found': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
-            
         
 class agg_hhc_detailed_event_plan_of_care_api(APIView):
     renderer_classes = [UserRenderer]
@@ -6232,9 +9160,9 @@ class combined_info(APIView):
                     if pay_dtls.exists():  
                         srv_payment_status = True  
                     else:
-                        srv_payment_status = False 
+                        srv_payment_status = False  
 
-                    
+
                     even = {
                         'flag':4 if event_plan_of_care.service_reschedule==1 else 1,
                         'event_id': i.get('eve_id'),
@@ -6243,20 +9171,17 @@ class combined_info(APIView):
                         'patient_number': patient_number,
                         'patient_zone': patient_zone.Name,
                         'patient_id':patient.agg_sp_pt_id,
-                        'doct_cons_id': patient.doct_cons_id.doct_cons_id,
                         'event_start_date': event_start_date,
                         'event_end_date': event_end_date,
                         'service_name': service_name,
                         'caller_status': caler_status,
                         'caller_id':caller_id,
-                        'caller_name':caller_status.caller_fullname,
                         'professional_prefered': professional_prefered,
                         'patient_googel_address':pat_ser.data.get('google_address'),
                         'caller_phone_number':caller_seri.data.get('phone'),
                         'patient_address':pat_ser.data.get('address'),
                         'payment_is_done': srv_payment_status,
                         'sub_service': event_plan_of_care.sub_srv_id.recommomded_service if event_plan_of_care.sub_srv_id.recommomded_service else None,
-                        
 
                     }
                     event.append(even)
@@ -6283,7 +9208,7 @@ class LogoutView(APIView):
             token.blacklist()
             return Response({'msg':'Token is blacklisted successfully.'},status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
-            return Response({'msg':'Bad Request'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg':'Bad Request'},status=status.HTTP_200_OK)
 
 
 #--------------------------------mayank--------------------------------------------
@@ -6316,10 +9241,6 @@ def total_services(request):
 #---------------- ongoing service ------------------------
 
 
-
-# from . models import agg_hhc_event_professional,agg_hhc_events,agg_hhc_payments
-# from . serializers import OngoingServiceSerializer
-
 import logging
 
 class OngoingServiceView(APIView):
@@ -6329,31 +9250,20 @@ class OngoingServiceView(APIView):
     logger = logging.getLogger(__name__)
 
     def get(self, request,hosp_id, format=None):
-        # print('hii')
         if(int(hosp_id)==0):
             data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),status=1)
         else:
             data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),status=1,added_from_hosp=hosp_id)
         serializer = self.serializer_class(data, many=True)  
         filtered_data = [item for item in serializer.data if item is not None]
-        # filtered_data_sorted_by_date = sorted(filtered_data, key=lambda x: x['srv_prof_id'][0]['start_date'] if x['srv_prof_id'] else '')
+        # # filtered_data_sorted_by_date = sorted(filtered_data, key=lambda x: x['srv_prof_id'][0]['start_date'] if x['srv_prof_id'] else '')
         filtered_data_sorted_by_date = sorted(filtered_data, key=lambda x: x['srv_prof_id'][0]['start_date'] if x['srv_prof_id'] and x['srv_prof_id'][0]['start_date'] else '')
 
+       
         return Response(filtered_data_sorted_by_date)
-    
-    
+        return Response(serializer.data)
 
-
-    
-
-# #---------------- ongoing service ------------------------
-
-
-
-# # from . models import agg_hhc_event_professional,agg_hhc_events,agg_hhc_payments
-# # from . serializers import OngoingServiceSerializer
-
-# import logging
+# from django.http import StreamingHttpResponse
 
 # class OngoingServiceView(APIView):
 #     renderer_classes = [UserRenderer]
@@ -6361,300 +9271,33 @@ class OngoingServiceView(APIView):
 #     serializer_class = OngoingServiceSerializer
 #     logger = logging.getLogger(__name__)
 
-#     def get(self, request,hosp_id, format=None):
-#         if(int(hosp_id)==0):
-#             data =  agg_hhc_events.objects.filter(status=1)
-#         else:
-#             data =  agg_hhc_events.objects.filter(status=1,added_from_hosp=hosp_id)
-#         serializer = self.serializer_class(data, many=True)  
-#         filtered_data = [item for item in serializer.data if item is not None]
-#         filtered_data_sorted_by_date = sorted(filtered_data, key=lambda x: x['srv_prof_id'][0]['start_date'] if x['srv_prof_id'] else '')
-#         # records_sorted = sorted(filtered_data, key=lambda x: x['eve_id'])
-#         # print(serializer.data)
-#         #logger.info("Ongoing services HD module GET request received") 
-#         # return Response(filtered_data)
-#         return Response(filtered_data_sorted_by_date)
-    
-    
-# -------------------------------------Amit Rasale---------------------------------------------------------------
-class agg_hhc_enquiry_previous_follow_up_APIView(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
-    # def get(self, request, flag, event_id):
-    #     # queryset =  agg_hhc_enquiry_follow_up.objects.all()
-    #     # if event_id is not None:
-    #     #     queryset = queryset.filter(event_id=event_id)
-    #     # serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset, many=True)
-    #     # return Response(serializer.data[::-1]) # edit as per frontend requirment shwo only last record
-    #     # queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id, follow_up=1).last()
-    #     # print(queryset, 'dtyjxfgh') 
-    #     # # print(queryset.count())
-    #     # serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset)
-    #     if flag == 1:
-    #         queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id).last()
-    #         print(queryset,'queryset')
-    #         serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset)
-    #     elif flag == 2:
-    #         queryset = agg_hhc_service_follow_up.objects.filter(event_id=event_id).last()
-    #         print(queryset,'queryset')
-    #         serializer =  agg_hhc_service_previous_follow_up_serializer(queryset)
-        
-    #     print(serializer.data)
-    #     return Response([serializer.data]) 
+#     def stream_data(self, queryset):
+#         serializer = self.serializer_class(queryset, many=True)
+#         for item in serializer.data:
+#             if item is not None:
+#                 yield dict(item)  # Convert ordered dictionary to dictionary
 
-    def get(self, request, flag, event_id):
-        if flag == 1:
-            queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id).last()
-            serializer = agg_hhc_enquiry_previous_follow_up_serializer(queryset)
-        elif flag == 2:
-            queryset = agg_hhc_service_follow_up.objects.filter(event_id=event_id).last()
-            serializer = agg_hhc_service_previous_follow_up_serializer(queryset)
-        
-        return Response([serializer.data])
-    # def get(self, request, flag, event_id=None):
-    #     # queryset =  agg_hhc_enquiry_follow_up.objects.all()
-    #     # if event_id is not None:
-    #     #     queryset = queryset.filter(event_id=event_id)
-    #     # serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset, many=True)
-    #     # return Response(serializer.data[::-1]) # edit as per frontend requirment shwo only last record
-    #     if flag == 1:
-    #         queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id).last()
-    #         serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset)
-    #     elif flag == 2:
-    #         queryset = agg_hhc_service_follow_up.objects.filter(event_id=event_id).last()
-    #         serializer =  agg_hhc_service_previous_follow_up_serializer(queryset)
+#     def get(self, request, hosp_id, format=None):
+#         queryset = agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3), status=1)
+#         if int(hosp_id) != 0:
+#             queryset = queryset.filter(added_from_hosp=hosp_id)
 
-    #     eve_pending = [items for items in serializer.data if items.get('follow_up')==4]
-    #     eve_reschedule = [items for items in serializer.data if items.get('follow_up')==1]
-    #     filter_data=sorted(eve_reschedule, key=lambda x: x.get('follow_up'))
-    #     print(filter_data)
-    #     return Response([serializer.data])          
-    
-class agg_hhc_enquiry_Add_follow_up_APIView(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
-    def post(self, request):
-        # clgref_id = get_prof(request)[3]
-        clgref_id = 'abc'
-        iddd = request.data.get('flag_id')
-        request.data['last_modified_by'] = clgref_id
-        request.data['follow_up_count']= int(request.data['follow_up_count'])+1
-        if iddd == 1:
-            serializer =  agg_hhc_enquiry_Add_follow_up_serializer(data=request.data)
-        elif iddd == 2:
-            serializer =  agg_hhc_service_Add_follow_up_serializer(data=request.data)
-        if serializer.is_valid():
-            if serializer.validated_data['follow_up'] == 3:
-                serializer.validated_data['follow_up_status'] = 2
-            serializer.save()
-            return Response({"msg": "Follow up added","data":serializer.data}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         response = StreamingHttpResponse(self.stream_data(queryset), content_type='application/json')
+#         response['Content-Disposition'] = 'attachment; filename="ongoing_services.json"'
+#         return response
     
 
-
-
-class Create_Get_User_Views(APIView):
-    def get(self, request, format=None):
-        users = agg_com_colleague.objects.filter(is_active=True).exclude(Q(grp_id=2) | Q(grp_id=3) | Q(grp_id=None)).order_by('-added_date')
-        serializer = Create_User_serializer(users, many=True)
-        return Response(serializer.data)
-
-
-class group_and_type_Views(APIView):
-    def get(self, request, format=None):
-        users = agg_mas_group.objects.filter(grp_status=1)
-        serializer = group_and_type_serializer(users, many=True)
-        return Response(serializer.data)
-
-
-
-# class Create_Post_User_Views(APIView):
-#     def post(self, request, format=None):
-#         data = request.data
-#         # Generate clg_Emplyee_code
-#         last_user = agg_com_colleague.objects.all().order_by('id').last()
-#         if last_user:
-#             last_code = last_user.clg_Emplyee_code
-#             if last_code and last_code.startswith('EMP') and last_code[3:].isdigit():
-#                 new_code = 'EMP' + str(int(last_code[3:]) + 1).zfill(6)
-#             else:
-#                 new_code = 'EMP000001'
-#         else:
-#             new_code = 'EMP000001'
-        
-#         # Add the auto-generated clg_Emplyee_code to the data
-#         data['clg_Emplyee_code'] = new_code
-        
-#         serializer = Create_User_serializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class Create_Post_User_Views(APIView):
-#     def get(self, request, format=None):
-#         users = agg_com_colleague.objects.all()
-#         serializer = Create_User_POST_serializer(users, many=True)
-#         return Response(serializer.data)
-    
-#     def post(self, request, format=None):
-#         data = request.data
-#         # Generate clg_Emplyee_code
-#         last_user = agg_com_colleague.objects.all().order_by('id').last()
-#         if last_user:
-#             last_code = last_user.clg_Emplyee_code
-#             if last_code and last_code.startswith('EMP') and last_code[3:].isdigit():
-#                 new_code = 'EMP' + str(int(last_code[3:]) + 1).zfill(6)
-#             else:
-#                 new_code = 'EMP000001'
-#         else:
-#             new_code = 'EMP000001'
-        
-#         # Add the auto-generated clg_Emplyee_code to the data
-#         data['clg_Emplyee_code'] = new_code
-        
-#         serializer = Create_User_POST_serializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-import traceback
-logger = logging.getLogger(__name__)
-
-class Create_Post_User_Views(APIView):
-    # def get(self, request, format=None):
-    #     users = agg_com_colleague.objects.all()
-    #     serializer = Create_User_POST_serializer(users, many=True)
-    #     return Response(serializer.data)
-
-    def post(self, request, format=None):
-        try: 
-            data = request.data
-            mobile_no = data.get('clg_mobile_no')
-            grp_id = data.get('grp_id')
-            clg_email = data.get('clg_email')
-            clg_user = data.get('clg_ref_id')
-
-
-            current_date = datetime.now().strftime('%Y%m%d')
-
-            # Check for the existence of clg_mobile_no and grp_id separately
-            mobile_exists = agg_com_colleague.objects.filter(clg_mobile_no=mobile_no).exists()
-            group_exists = agg_com_colleague.objects.filter(grp_id=grp_id).exists()
-            mail_exists = agg_com_colleague.objects.filter(clg_email=clg_email).exists()
-            user_exists = agg_com_colleague.objects.filter(clg_ref_id=clg_user).exists()
-
-            if mobile_exists and group_exists and mail_exists and user_exists:
-                return Response({"error": "Mobile number and group ID and Email id already exist."}, status=status.HTTP_409_CONFLICT)
-            elif mobile_exists:
-                return Response({"error": "Mobile number already exists."}, status=status.HTTP_409_CONFLICT)
-            elif user_exists:
-                return Response({"error": "User Name already exists."}, status=status.HTTP_409_CONFLICT)
-            elif mail_exists:
-                return Response({"error": "Mail ID already exists."}, status=status.HTTP_409_CONFLICT)
-
-            last_user = agg_com_colleague.objects.all().order_by('id').last()
-
-            if last_user:
-                last_code = last_user.clg_Emplyee_code
-                if last_code and last_code.startswith(f'EMP{current_date}') and last_code[len(f'EMP{current_date}'):].isdigit():
-                    # Increment the existing code if it matches the current date
-                    new_code = f'EMP{current_date}' + str(int(last_code[len(f'EMP{current_date}'):]) + 1).zfill(6)
-                else:
-                    # Start the sequence for the new date
-                    new_code = f'EMP{current_date}000001'
-            else:
-                # First code creation
-                new_code = f'EMP{current_date}000001'
-
-            
-            data['clg_Emplyee_code'] = new_code
-            
-            serializer = Create_User_POST_serializer(data=data)
-            # try:
-            if serializer.is_valid():
-                user = serializer.save()
-                user.set_password('1234')  # Set the default password to "1234"
-                user.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_409_CONFLICT)             
-        except Exception as e:
-            error_trace = traceback.format_exc()
-            logger.error(f"An error occurred: {str(e)}\nTraceback: {error_trace}")
-            return Response({
-                'error1': str(e),
-                'traceback': error_trace
-            }, status=status.HTTP_400_BAD_REQUEST)        
-    
-
-
-
-class Edit_User_Views(APIView):
-    def get(self, request, clg_id, format=None):
-        users = agg_com_colleague.objects.get(pk=clg_id)
-        serializer = User_Edit_serializer(users)
-        return Response(serializer.data)
-    
-    def put(self, request, clg_id, format=None):
-        try:
-            user = agg_com_colleague.objects.get(pk=clg_id)
-        except agg_com_colleague.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        data = request.data
-        
-        # Check if another user with the same mobile number and group ID already exists
-        mobile_no = data.get('clg_mobile_no')
-        grp_id = data.get('grp_id')
-        if agg_com_colleague.objects.filter(clg_mobile_no=mobile_no, grp_id=grp_id).exclude(pk=clg_id).exists():
-            raise ValidationError("Another user with the same mobile number and group ID already exists.")
-        
-        serializer = User_Edit_serializer(user, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-class active_inActive_User_Views(APIView):
-    def get(self, request, clg_id, format=None):
-        users = agg_com_colleague.objects.get(pk=clg_id)
-        serializer = active_inActive_User_serializer(users)
-        return Response(serializer.data)
-    
-    def put(self, request, clg_id, format=None):
-        try:
-            user = agg_com_colleague.objects.get(pk=clg_id)
-        except agg_com_colleague.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        data = request.data
-        
-        # Check if another user with the same mobile number and group ID already exists
-        # mobile_no = data.get('clg_mobile_no')
-        # grp_id = data.get('grp_id')
-        # if agg_com_colleague.objects.filter( grp_id=grp_id).exclude(pk=clg_id).exists():
-        #     raise ValidationError("Another user with the same mobile number and group ID already exists.")
-        
-        serializer = active_inActive_User_serializer(user, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-# ------------------------------------------------------------- Admin Permission module - Amit -------------------------------------------------------
+# ------------------------------------- Start Amit Rasale---------------------------------------------------------------
 from django.db import DatabaseError
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework.exceptions import ParseError
 
-#  - Add Group
+# ------------------------------------------------------------- Admin Permission module  - Amit -------------------------------------------------------
+# - Add Group
+
 class create_module_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
     def post(self, request, *args, **kwargs):
         try :
             data = request.data.copy()
@@ -6680,8 +9323,8 @@ class create_module_Views(APIView):
         except DatabaseError as e:
             return Response({"error": "Database Error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
-            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
-
+            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)           
+        
 # - Add MOdule 
 class create_permission_module_Views (APIView):
     renderer_classes = [UserRenderer]
@@ -6716,8 +9359,11 @@ class create_permission_module_Views (APIView):
         except Exception as e:
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 # Add Permission 
 class Add_New_permission_Views (APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
     def post(self, request, *args, **kwargs):
         try :
             data = request.data.copy()
@@ -6748,8 +9394,11 @@ class Add_New_permission_Views (APIView):
         except Exception as e:
             return Response({"error5": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 # Get Module 
 class get_sub_moduel_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
     def get(self, request, group_id):
         try:
             if group_id:
@@ -6761,13 +9410,11 @@ class get_sub_moduel_Views(APIView):
         except Permission_module.DoesNotExist:
             return Response({'error': 'Professional not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)             
-
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)         
 
 
 
 #  ------------------------------------------------------------- Admin Permission module - Add Module - Amit -------------------------------------------------------
-
 
 
 class create_group_module_Views(APIView):
@@ -6778,7 +9425,8 @@ class create_group_module_Views(APIView):
     #     serializer = module_serializer(modules, many=True)
     #     # Return the serialized data as a response
     #     return Response(serializer.data, status=status.HTTP_200_OK)
-
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         # Extract group data from the request
@@ -6803,10 +9451,12 @@ class create_group_module_Views(APIView):
         else:
             return Response(module_serializer_instance.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 from django.db import IntegrityError
 
 class create_permission_Views(APIView):
-
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
         try:
             # Deserialize the incoming data
@@ -6828,13 +9478,80 @@ class create_permission_Views(APIView):
             return Response({"error": "Integrity Error", "details": str(ie)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             # Handle any other unanticipated exceptions
-            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)              
-
-
-# ------------------------ Amit Rasale -------------------------------------
+            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)               
 
 
 
+class agg_hhc_enquiry_previous_follow_up_APIView(APIView):
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
+    def get(self, request, flag, event_id):
+        if flag == 1:
+            queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id, follow_up=1).last()
+            serializer = agg_hhc_enquiry_previous_follow_up_serializer(queryset)
+        elif flag == 2:
+            queryset = agg_hhc_service_follow_up.objects.filter(event_id=event_id).last()
+            serializer = agg_hhc_service_previous_follow_up_serializer(queryset)
+        
+        return Response([serializer.data])
+
+
+
+    # def get(self, request, flag, event_id):
+    #     # queryset =  agg_hhc_enquiry_follow_up.objects.all()
+    #     # if event_id is not None:
+    #     #     queryset = queryset.filter(event_id=event_id)
+    #     # serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset, many=True)
+    #     # return Response(serializer.data[::-1]) # edit as per frontend requirment shwo only last record
+    #     # queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id, follow_up=1).last()
+    #     # print(queryset, 'dtyjxfgh') 
+    #     # # print(queryset.count())
+    #     # serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset)
+    #     if flag == 1:
+    #         queryset = agg_hhc_enquiry_follow_up.objects.filter(event_id=event_id).last()
+    #         print(queryset,'queryset')
+    #         serializer =  agg_hhc_enquiry_previous_follow_up_serializer(queryset)
+    #     elif flag == 2:
+    #         queryset = agg_hhc_service_follow_up.objects.filter(event_id=event_id).last()
+    #         print(queryset,'queryset')
+    #         serializer =  agg_hhc_service_previous_follow_up_serializer(queryset)
+        
+    #     print(serializer.data)
+    #     return Response([serializer.data])          
+    
+class agg_hhc_enquiry_Add_follow_up_APIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        clgref_id = get_prof(request)[3]
+        # clgref_id = 'abc'
+        iddd = request.data.get('flag_id')
+        print(iddd, '########')
+        request.data['last_modified_by'] = clgref_id
+        request.data['follow_up_count']= int(request.data['follow_up_count'])+1
+        serializer = None
+        if iddd == 1:
+            serializer =  agg_hhc_enquiry_Add_follow_up_serializer(data=request.data)
+        elif iddd == 2:
+            serializer =  agg_hhc_service_Add_follow_up_serializer(data=request.data)
+        if serializer.is_valid():
+            if serializer.validated_data['follow_up'] == 3:
+                serializer.validated_data['follow_up_status'] = 2
+            serializer.save()
+            return Response({"msg": "Follow up added","data":serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # def post(self, request):
+    #     clgref_id = get_prof(request)[3]
+    #     request.data['last_modified_by'] = clgref_id
+    #     request.data['follow_up_count']= int(request.data['follow_up_count'])+1
+    #     serializer =  agg_hhc_enquiry_Add_follow_up_serializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     
 # --------------------------------------ongoing followup------------------------------------------------
 class agg_hhc_ongoing_Add_follow_up_APIView(APIView):
@@ -6869,13 +9586,13 @@ class agg_hhc_enquiry_followUp_cancellation_api(APIView):
         return Response(serializer.data)
    
 class agg_hhc_enquiry_Add_follow_up_Cancel_by_APIView(APIView):   
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         iddd = request.data.get('flag_id')
         data = request.data.copy()
-        # clgref_id = get_prof(request)[3]
-        clgref_id='abc'
+        clgref_id = get_prof(request)[3]
+        # clgref_id='abc'
         data['last_modified_by'] = clgref_id
         eve_id=request.data.get('event_id')
 
@@ -6908,6 +9625,7 @@ class agg_hhc_enquiry_Add_follow_up_Cancel_by_APIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
+    
 class agg_hhc_enquiry_Add_follow_up_create_service_APIView(APIView):
     # renderer_classes = [UserRenderer]
     # permission_classes = [IsAuthenticated]
@@ -6924,13 +9642,14 @@ class agg_hhc_enquiry_Add_follow_up_create_service_APIView(APIView):
 
 
 class agg_hhc_service_enquiry_list_combined_table_view(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
     def get(self, request,hosp_id,eve_id=None,event_id=None, *args, **kwargs):
         if(hosp_id==0):
             queryset = agg_hhc_events.objects.filter(purp_call_id=2,enq_spero_srv_status=3,status=1)
         else:
             queryset = agg_hhc_events.objects.filter(purp_call_id=2,enq_spero_srv_status=3,status=1,added_from_hosp=hosp_id)
+        # print(queryset, ';;;;;;;;;kj;;')
         if eve_id is not None:
             try:
                 eve_id = int(eve_id)
@@ -6939,7 +9658,7 @@ class agg_hhc_service_enquiry_list_combined_table_view(APIView):
                 pass
         queryset = queryset.exclude(agg_hhc_enquiry_follow_up__follow_up='2')
         serializer = agg_hhc_service_enquiry_list_serializer(queryset, many=True)
-        eve_pending = [items for items in serializer.data if items.get('follow_up')=='4']
+        eve_pending = [items for items in serializer.data if items.get('follow_up') in ('4', '3')]
         eve_reschedule = [items for items in serializer.data if items.get('follow_up')=='1']
         data=sorted(eve_reschedule, key=lambda x: x['folloup_id'])
         data=eve_pending+data
@@ -6994,16 +9713,16 @@ class coupon_code_api(APIView):
 # from . serializers import Detailed_EPOC_serializer
 
 class service_reschedule_view(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
     def get(self, request, eve_id, format=None):
         queryset =  agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1).order_by('actual_StartDate_Time')
         serializer = Detailed_EPOC_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
    
     def patch(self, request, eve_id):
-        clgref_id = get_prof(request)[3]
-        # clgref_id = 'abc'
+        # clgref_id = get_prof(request)[3]
+        clgref_id = 'abc'
         selected_dates = request.data.get('dates', [])
         remark = request.data.get('remark')
         start_time = request.data.get('start_time')
@@ -7060,15 +9779,15 @@ class service_reschedule_view(APIView):
                         da.end_time = end_time_obj
                         da.srv_prof_id = None
                         da.save()
-                    
+
+
                     evepoc.start_date = reschedule_dates[0]
                     evepoc.end_date = reschedule_dates[-1]
-                    evepoc.serivce_dates=reschedule_dates
                     evepoc.service_reschedule = 1
                     evepoc.last_modified_by = clgref_id
                     evepoc.remark = remark
                     evepoc.save()
-                    
+
                     eveid = agg_hhc_events.objects.get(eve_id =evepoc.eve_id.eve_id)
                     eveid.event_status = 1
                     eveid.enq_spero_srv_status = 2
@@ -7082,7 +9801,6 @@ class service_reschedule_view(APIView):
                 return Response({"Msg": "Cannot reschedule due to job closure already done for session."}, status=status.HTTP_424_FAILED_DEPENDENCY)
         else:
             return Response({"Msg": "Selected dates do not match the session count."}, status=status.HTTP_424_FAILED_DEPENDENCY)
-
 
 
 
@@ -7118,13 +9836,15 @@ class Reschedule_session_view(APIView):
         remark = request.data.get('remark')
 
         try:
+ 
             get_session_data = agg_hhc_detailed_event_plan_of_care.objects.get(
                 eve_id=eve_id, actual_StartDate_Time=session_date_component, status=1
             )
+            
             start_datetime = datetime.combine(resch_session_date_component, resch_session_start_time_component)
             end_datetime = datetime.combine(resch_session_date_component, resch_session_end_time_component)
-            start_window = start_datetime - timedelta(minutes=14)
-            end_window = end_datetime + timedelta(minutes=14)
+            start_window = start_datetime - timedelta(minutes=15)
+            end_window = end_datetime + timedelta(minutes=15)
             get_next_session_data = agg_hhc_detailed_event_plan_of_care.objects.filter(
                 Q(start_time__range=(start_window.time(), end_window.time()))|
                 Q(end_time__range=(start_window.time(), end_window.time())),
@@ -7137,11 +9857,11 @@ class Reschedule_session_view(APIView):
                 for i in get_next_session_data:
                     data = {
                         'eve_id': int(i.eve_id.eve_id),
-                        'eve_code': str(i.eve_id.event_code),  
-                        'session_start_date': i.actual_StartDate_Time.strftime('%Y-%m-%d'),
-                        'session_end_date': i.actual_EndDate_Time.strftime('%Y-%m-%d'),
-                        'start_time': i.start_time.strftime('%H:%M'),
-                        'end_time': i.end_time.strftime('%H:%M'),
+                        'eve_code': str(i.eve_id.event_code),  # Convert to string for serialization
+                        'session_start_date': i.actual_StartDate_Time.strftime('%Y-%m-%d'),  # Convert date to string
+                        'session_end_date': i.actual_EndDate_Time.strftime('%Y-%m-%d'),  # Convert date to string
+                        'start_time': i.start_time.strftime('%H:%M'),  # Convert time to string
+                        'end_time': i.end_time.strftime('%H:%M'),  # Convert time to string
                         'patient_name': i.eve_id.agg_sp_pt_id.name,
                         'caller_name': i.eve_id.caller_id.caller_fullname,
                         'srv_name': i.eve_poc_id.srv_id.service_title
@@ -7211,6 +9931,108 @@ class Reschedule_session_view(APIView):
             return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+        # clgref_id = get_prof(request)[3]
+        # # clgref_id = 'abc'
+        
+        # request.data['last_modified_by'] = clgref_id
+        
+        # eve_id = request.data.get('eve_id')
+        # session_date_str = request.data.get('session_date')
+        # session_reschedule_date_str = request.data.get('reschedule_date')
+        # start_time_str = request.data.get('reschedule_start_time')
+        # end_time_str = request.data.get('reschedule_end_time')
+        # if start_time_str and end_time_str:
+        #     start_time = datetime.strptime(start_time_str, "%H:%M").time()
+        #     end_time = datetime.strptime(end_time_str, "%H:%M").time()
+
+        # session_date = datetime.strptime(session_date_str, '%Y-%m-%d')
+        # session_reschedule_date = datetime.strptime(session_reschedule_date_str, '%Y-%m-%d')
+    
+        # session_date_component = session_date.date()
+        # session_time_component = session_date.time()
+
+        # resch_session_date_component = session_reschedule_date.date()
+        # resch_session_start_time_component = start_time
+        # resch_session_end_time_component = end_time
+
+        # remark = request.data.get('remark')
+  
+        # try:
+          
+        #     get_session_data = agg_hhc_detailed_event_plan_of_care.objects.get(eve_id=eve_id,actual_StartDate_Time=session_date_component,status=1)
+   
+        #     get_next_session_data = agg_hhc_detailed_event_plan_of_care.objects.filter(
+        #         Q(start_time__lte=resch_session_start_time_component, end_time__gte=resch_session_end_time_component) |
+        #         Q(start_time__gte=resch_session_start_time_component, end_time__lte=resch_session_end_time_component), srv_prof_id = get_session_data.srv_prof_id,
+        #         actual_StartDate_Time=resch_session_date_component, status=1
+        #     )
+
+        #     if get_next_session_data.exists():
+        #         dtl_dates_nxt_sch = []
+        #         for i in get_next_session_data:
+        #             data = {
+        #                 'eve_id': i.eve_id,
+        #                 'eve_code': str(i.eve_id.event_code),
+        #                 'session_start_date': i.actual_StartDate_Time,
+        #                 'session_end_date': i.actual_EndDate_Time,
+        #                 'start_time': i.start_time,
+        #                 'end_time': i.end_time,
+        #                 'patient_name': i.eve_id.agg_sp_pt_id.name,
+        #                 'caller_name': i.eve_id.caller_id.caller_fullname,
+        #                 'srv_name': i.eve_poc_id.srv_id.service_title
+        #             }
+        #             dtl_dates_nxt_sch.append(data)
+
+        #         return Response({'msg': 'Professional has already a session',
+        #                         'Schedule_session': dtl_dates_nxt_sch})
+            
+        #     get_session_data.status = 2
+        #     get_session_data.save()
+
+        #     new_session = agg_hhc_detailed_event_plan_of_care(
+        #         eve_poc_id = get_session_data.eve_poc_id,
+        #         eve_id = get_session_data.eve_id,
+        #         index_of_Session = get_session_data.index_of_Session,
+        #         srv_prof_id = get_session_data.srv_prof_id,
+        #         actual_StartDate_Time = resch_session_date_component,
+        #         actual_EndDate_Time = resch_session_date_component,
+        #         start_time = resch_session_start_time_component,
+        #         end_time = resch_session_end_time_component,
+        #         service_cost = get_session_data.service_cost,
+        #         amount_received = get_session_data.amount_received,
+        #         status=1,
+        #         remark = remark,
+        #         Reschedule_status=1,
+        #         last_modified_by = clgref_id
+        #     )
+        #     new_session.save()
+            
+        #     get_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
+        #         eve_id=eve_id,
+        #         status=1  
+        #     )
+        #     epoc_model = agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id, status=1)
+
+        #     depoc_start_date = get_sessions.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))['min_actual_StartDate_Time']
+
+        #     # Retrieve the maximum actual start date
+        #     depoc_end_date = get_sessions.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))['max_actual_StartDate_Time']
+
+        #     epoc_model.start_date = depoc_start_date
+        #     epoc_model.end_date = depoc_end_date
+        #     epoc_model.last_modified_by = clgref_id
+        #     epoc_model.save()
+        #     return Response("Success: Record updated and new record created", status=status.HTTP_200_OK)
+
+        # except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+        #     # Handle the case where the existing session record does not exist
+        #     return Response("Message: Record with given session not found", status=status.HTTP_200_OK)
+        # except Exception as e:
+        #     # Handle other exceptions that might occur during this process
+        #     return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ------------------ Professional Reschedule ------------------
 from . models import Session_status_enum
 class Professional_Reschedule_Apiview(APIView):
@@ -7218,82 +10040,161 @@ class Professional_Reschedule_Apiview(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class =  Prof_Reschedule_serializer
 
+    # def get(self, request, eve_id,index_of_session):
+        
+    #     data = models.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,Session_status=Session_status_enum.Pending)
+    #     serializer = self.serializer_class(data, many=True)
+    #     return Response(serializer.data)
+    
+    # def get(self, request, eve_id, index_of_session):
     def get(self, request,eve_id):
         try:
+            # record =  agg_hhc_detailed_event_plan_of_care.objects.get(eve_id=eve_id, index_of_Session=index_of_session,Session_status=Session_status_enum.Pending)
             record =  agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,Session_status=Session_status_enum.Pending,status=1)
             serializer = self.serializer_class(record, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        # except  agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+        #     return Response({'error': 'No record found for the given eve_id and index_of_session'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
-    
+
+
+
     def patch(self, request, eve_id):
         clgref_id = get_prof(request)[3]
-        # clgref_id = 'abc'
+        request.data['last_modified_by'] = clgref_id
+        
         try:
-            selected_dates = request.data.get('dates', [])
-            if not selected_dates:
-                return Response({"Msg": "No dates provided."}, status=status.HTTP_400_BAD_REQUEST)
-            
+            # start_date_str = request.data.get('start_date')
+            # end_date_str = request.data.get('end_date')
+
+            start_date_str = request.data.get('actual_StartDate_Time')
+            end_date_str = request.data.get('actual_EndDate_Time')
+            # print('hii',end_date_str)
+
             srv_prof_id = request.data.get('srv_prof_id')
-            remark = request.data.get('remark')
-            start_time = request.data.get('start_time')
-            end_time = request.data.get('end_time')
-            
-            all_dates = []
-            for date_list in selected_dates:
-                if not date_list:
-                    continue
-                
-                sorted_dates = sorted(date_list, key=lambda date: datetime.strptime(date, '%Y-%m-%d'))
-                s_date = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
-                e_date = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
-                start_time_obj = datetime.strptime(start_time, '%H:%M')
-                end_time_obj = datetime.strptime(end_time, '%H:%M')
-                
-                while s_date <= e_date:
-                    all_dates.append(s_date.strftime('%Y-%m-%d'))
-                    s_date += timedelta(days=1)
-            
-            if not all_dates:
-                return JsonResponse({'message': 'No valid dates found.'}, status=400)
 
-            reschedule_dates = sorted(all_dates)
-            dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, actual_StartDate_Time__in=reschedule_dates, status=1)
-            prof_id = agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id)
-            
-            for dtl in dtl_data:
-                if dtl.Session_jobclosure_status == 1:
-                    return Response({'msg': f'For {dtl.actual_StartDate_Time}, this date Prof not reschedule, the job closure is already done, so we cannot reschedule the professional.'})
-                else:
-                    dtl.srv_prof_id = prof_id
-                    dtl.remark = remark
-                    dtl.last_modified_by=clgref_id
-                    dtl.save()
+            # Convert date strings to datetime objects
+            # start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            # end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
-            return JsonResponse({'message': f'The professional has been successfully rescheduled to those dates {reschedule_dates}.'}, status=200)
+            # print('ny',start_date)
+
+            # If start_date and end_date are the same, update the specific record
+            if start_date == end_date:
+                # record = agg_hhc_detailed_event_plan_of_care.objects.get(
+                #     eve_id=eve_id, start_date__date=start_date, end_date__date=end_date
+                # )
+
+                # record = agg_hhc_detailed_event_plan_of_care.objects.get(
+                #     eve_id=eve_id, actual_StartDate_Time__date=start_date, actual_EndDate_Time__date=end_date
+                # )
+
+                record = agg_hhc_detailed_event_plan_of_care.objects.get(
+                    eve_id=eve_id, actual_StartDate_Time=start_date, actual_EndDate_Time=end_date,status=1
+                )
+                # print(record)
+
+                serializer = self.serializer_class(record, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+            else:
+                service_professional = agg_hhc_service_professionals.objects.get(pk=srv_prof_id,status=1)
+
+                # records_to_update = agg_hhc_detailed_event_plan_of_care.objects.filter(
+                #     eve_id=eve_id, start_date__date__gte=start_date, end_date__date__lte=end_date
+                # )
+
+                # records_to_update = agg_hhc_detailed_event_plan_of_care.objects.filter(
+                #     eve_id=eve_id, actual_StartDate_Time__gte=start_date, actual_EndDate_Time__date__lte=end_date
+                # )
+                
+
+                records_to_update = agg_hhc_detailed_event_plan_of_care.objects.filter(
+                    eve_id=eve_id, actual_StartDate_Time__gte=start_date, actual_EndDate_Time__lte=end_date,status=1
+                )
+               
+
+                if not records_to_update.exists():
+                    return JsonResponse({'error': 'No matching records found'}, status=404)
+
+                records_to_update.update(srv_prof_id=service_professional, last_modified_by=clgref_id)
+
+                
+                # records_to_update.update(actual_StartDate_Time=start_date_str,
+                #                          actual_EndDate_Time=end_date_str)
+
+            return JsonResponse({'message': 'Records updated successfully'}, status=200)
+        except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+            return JsonResponse({'error': 'No matching session found or session is less than date'}, status=404)
         except Exception as e:
-            print(str(e),'error')
             return JsonResponse({'error': str(e)}, status=500)
 
 
 
 
 
-    def post(self, request):
-        # clgref_id = get_prof(request)[3]
-        # clgref_id = 'abc'
 
-        eve_id = request.data.get('eve_id')
-        caller_id = request.data.get('caller_id')
-        pt_id = request.data.get('agg_sp_pt_id')
-        srv_prof_date_and_id = request.data.get('srv_prof_date_and_id',{})
-        
-        for srv_prof_id, date_range_list in srv_prof_date_and_id.item():
-            print(srv_prof_id,'srv_prof_id - keys')
-            print(date_range_list,'date_range_list -- values')
-        
-        return Response({"msg":"ok"})
+
+
+# def patch(self, request, eve_id):
+#         try:
+            
+#             start_date_str = request.data.get('actual_StartDate_Time')
+#             end_date_str = request.data.get('actual_EndDate_Time')
+
+#             srv_prof_id = request.data.get('srv_prof_id')
+
+           
+#             # start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+#             # end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+#             if start_date_str == end_date_str:
+#                 # record = agg_hhc_detailed_event_plan_of_care.objects.get(
+#                 #     eve_id=eve_id, actual_StartDate_Time__date=start_date, actual_EndDate_Time__date=end_date
+#                 # )
+
+#                 record = agg_hhc_detailed_event_plan_of_care.objects.get(
+#                     eve_id=eve_id, actual_StartDate_Time__date=start_date_str, actual_EndDate_Time__date=end_date_str
+#                 )
+#                 serializer = self.serializer_class(record, data=request.data, partial=True)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#             else:
+#                 service_professional = agg_hhc_service_professionals.objects.get(pk=srv_prof_id)
+
+#                 records_to_update = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                     eve_id=eve_id, actual_StartDate_Time__gte=start_date_str, actual_EndDate_Time__date__lte=end_date_str
+#                 )
+
+#                 if not records_to_update.exists():
+#                     return JsonResponse({'error': 'No matching records found'}, status=404)
+
+#                 records_to_update.update(srv_prof_id=service_professional)
+
+#                 records_to_update.update(actual_StartDate_Time=start_date_str,
+#                                          actual_EndDate_Time=end_date_str)
+
+#             return JsonResponse({'message': 'Records updated successfully'}, status=200)
+#         except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+#             return JsonResponse({'error': 'No matching session found or session is less than date'}, status=404)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+# -------------- Professional Allocation ----------
+
+# class get_all_avail_professionals(APIView):
+#     serializer_class =  avail_prof_serializer
+#     def get(self,request,srv_id):
+
+#         data =  agg_hhc_professional_sub_services.objects.filter(srv_id=srv_id)
+#         serializer =  self.serializer_class(data,many=True)
+#         return Response(serializer.data) 
 
 
 
@@ -7333,7 +10234,9 @@ class ServiceCancellationView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error':str(serializer.errors)})
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 # ----------------------- session Cancellation ------------------
@@ -7553,7 +10456,8 @@ class SessionCancellationView(APIView):
         
 
 
-        
+
+
 
 
 # ------------------------------------- Professional Availibilty for cancellation according to srv id -------------------
@@ -7639,9 +10543,8 @@ class add_convinance_charges(APIView):
         source=f'{lat2},{lon2}'
         destination=f'{lat1},{lon1}'
         direction_result=googel_client.directions(source, destination, mode='driving', avoid='ferries', departure_time=now, transit_mode='bus')
-        print(((direction_result[0]['legs'][0]['distance']['text'].split(' ')[0].replace(',',''))))
         distance=float(direction_result[0]['legs'][0]['distance']['text'].split(' ')[0].replace(',',''))
-        
+        print((float(direction_result[0]['legs'][0]['distance']['text'].split(' ')[0].replace(',',''))))
         final_distance=0
         if distance >5:
             final_distance=ceil((distance-5)/3)
@@ -7696,14 +10599,16 @@ class add_convinance_charges(APIView):
                 #     h_long=prof.langitude
                 # except agg_hhc_service_professionals.DoesNotExist:
                 #     print('professional has no lat, long passed')
-                #     return Response('professional has no lat, long passed')
+                # #     return Response('professional has no lat, long passed')
                 # if prof.langitude is not None and prof.lattitude is not None:
                 #     h_long=prof.langitude
                 #     h_lat=prof.lattitude
                 # else:
                 h_lat=18.502230
                 h_long=73.831780
+                # print(prof.langitude)
                 distance=ceil(self.calculate_distance(p_lat,p_long,h_lat,h_long))
+                print(distance,'distance,,,,,,,,,,,,,,,')
                 day_convinance = distance*80
                 # s_date=event_poc.start_date
                 # e_date=event_poc.end_date
@@ -7740,6 +10645,7 @@ class allocate_api(APIView):
         try:
             event_id=agg_hhc_events.objects.get(eve_id=request.data.get('eve_id'),status=1)
             event_serializer=agg_hhc_updateIDs_event_serializer(event_id)
+
             event_id_is=event_serializer.data.get('eve_id')
             caller_id_is=event_serializer.data.get('caller_id')
             patient_id_is=event_serializer.data.get('agg_sp_pt_id')
@@ -7792,6 +10698,9 @@ class allocate_api(APIView):
                 # print("we are working on andriod api ")
         return Response({'eve_id':event_id_is,'caller_id_is':caller_id_is,'agg_sp_pt_id':patient_id_is,'eve_poc_id':event_plan_of_care_id_is,'message':'professional Allocated sucessfully'})
 
+
+
+
 class conveniance_charges_count(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -7820,6 +10729,9 @@ class conveniance_charges_count(APIView):
 
 
 def dates_list(start_date,end_date):
+        # print((start_date))
+        # print(start_date, ';;;;;;;;;;;;;;')
+        # print(end_date, ';;;;;;;;;;;;;;')
         lst=[]
         first_date=date.fromisoformat(start_date)
         last_date=date.fromisoformat(end_date)
@@ -7839,12 +10751,12 @@ def date_function(record):
         list=record[str(i)]
         list.pop()
         if(list[0]==list[-1]):
-            print("single day service")
+            # print("single day service")
             list.pop()
             # print(list)
             dictionary[i]=list
         else:
-            print("multiple day service ")
+            # print("multiple day service ")
             first_date=date.fromisoformat(list[0])
             last_date=date.fromisoformat(list[-1])
             base_date=first_date
@@ -7872,221 +10784,440 @@ def send_otp(mobile,msg):
         print("Error occurred while hitting the URL:", e)
         return e
 
-class multiple_allocate_api(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
-    def post(self,request):
-        # clgref_id = get_prof(request)[3]
-        clgref_id = "abc3"
-        flag_id = request.data.get('flag_id')
-        if flag_id == 1:
-            print('w3r')
-            request.data['last_modified_by'] = clgref_id
-            # try:
-            event_id=agg_hhc_events.objects.get(eve_id=request.data.get('eve_id'),status=1)
-            event_serializer=agg_hhc_updateIDs_event_serializer(event_id)
-            event_id_is=event_serializer.data.get('eve_id')
-            caller_id_is=event_serializer.data.get('caller_id')
-            patient_id_is=event_serializer.data.get('agg_sp_pt_id')
-            # except Exception as e:
-            #     return Response({'message':str(e)},status=404)
-            srv_prof_date_and_id_list=request.data.get('srv_prof_date_and_id')
-            # print(srv_prof_date_and_id_list.values())
-            # print(srv_prof_date_and_id_list)
-            # ==========================================================================================================
-            # ==========================================================================================================
-            all_dates=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event_id_is, status=1).values_list('actual_StartDate_Time',flat=True)
-            d=[l[0] for l in srv_prof_date_and_id_list.values()]
-            dates1=[]
-            for x in d:
-                dates1+=x
-            dictionary=[]
-            for i in dates1:
-                # i=i.split(',')
-            #     print(i, 'aSDF')
-            # i=dates1
-                all_dates1 = dates_list(i[0],i[1])
-                dictionary+=all_dates1
-            # print(dates1)
-            # print(dictionary)
-            dictionary = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in dictionary]
-            # print(dictionary)
-            # print(all_dates)
-            if(int(len(all_dates))==len(dictionary)):
-                for i in all_dates:
-                    if i in dictionary:
-                        pass
-                    else:
-                        print(i, 'asdf')
-                        return Response({'message':'Select proper dates'})
-            else:
-                # print(len(dictionary))
-                # print(int(len(all_dates)))
-                return Response({'message':'Select proper dates'})
-            # print('1')
-            detailed_event_poc_round=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),status=1)
-            for j in dictionary:
-                detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
-                if(detailed_event_poc.srv_prof_id!=None):
-                    # date={}
-                    date_list=[]
-                    for dates in detailed_event_poc_round:
-                        if(dates.srv_prof_id!=None):
-                            # date[j]=str(dates.actual_StartDate_Time)
-                            date_list.append(str(dates.actual_StartDate_Time))
-                    return Response({'message':'professional already Allocated','date':date_list},status=404)
-            # print('2')
-            total_convi=0
-            for prof, dates in srv_prof_date_and_id_list.items():
-                # print(dates[0], 'lk')
-                prof_dates=dates[0]
-                dates1=[]
-                # print(prof_dates, 'dates')
-                # for x in prof_dates:
-                #     print(x)
-                #     dates1+=x
-                dictionary=[]
-                for i in prof_dates:
-                #     print(i)
-                # i=prof_dates
-                    # i=i[0].split(',')
-                    # print(i, 'aSDF')
-                    all_dates1 = dates_list(i[0],i[1])
-                    dictionary+=all_dates1
-                professional=None
-                try:
-                    professional=agg_hhc_service_professionals.objects.get(srv_prof_id=int(prof)) 
-                    # professional=agg_hhc_service_professional_serializer(professional)
-                except:
-                    return Response({'message':'professional not found'},status=404)
-                                # print("this is professional id",professional.request.data.get('srv_prof_id'))
-                print(professional, '..........')
-                if professional:
-                    # prof_mo=professional.clg_ref_id.clg_Work_phone_number
-                    base_url = "xl6mjq.api-in.infobip.com"
-                    api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
-                    # from_number = "918956193883"
-                    # template_name = "professional_name_sms"
-                    # order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
-                    pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=patient_id_is, status=1).last()
-                    payload = json.dumps({
-                        "messages": [
-                            {
-                                "from": "918956193883",
-                                "to": f'91{professional.clg_ref_id.clg_Work_phone_number}',
-                                "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
-                                "content": {
-                                    "templateName": "professional_name_sms",
-                                    "templateData": {
-                                        "body": {
-                                            "placeholders": [
-                                                professional.prof_fullname,
-                                                pt.name,
-                                                pt.caller_id.phone,
-                                                pt.phone_no,
-                                                pt.address,
-                                                detailed_event_poc.eve_id.event_code,
-                                                detailed_event_poc.eve_poc_id.srv_id.service_title,
-                                                detailed_event_poc.eve_poc_id.sub_srv_id.recommomded_service,
-                                                f'{detailed_event_poc.eve_poc_id.start_date} to {detailed_event_poc.eve_poc_id.end_date}',
-                                                f'{detailed_event_poc.eve_poc_id.start_time} to {detailed_event_poc.eve_poc_id.end_time}'
-                                            ]
-                                        },                   
-                                    },
-                                    "language": "en"
-                                }
-                            }
-                        ]
-                    })
-                    headers = {
-                        'Authorization': f'App {api_key}',
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
 
-                    conn = http.client.HTTPSConnection(base_url)
-                    conn.request("POST", "/whatsapp/1/message/template", payload, headers)
-                    res = conn.getresponse()
-                    data = res.read()
-                    conn.close()
-                    print('yes')
-                print(dictionary, 'dictionary')
-                # if request.data.get('ambs_id'):
-                #     amb=ambulance.objects.filter(ambs_id=request.data.get('ambs_id')).first()
-                # else:
-                #     amb=None
-                for j in dictionary:
-                    amb=ambulance.objects.filter(ambs_id=dates[2]).first()
-                    detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
-                    if detailed_event_poc.eve_poc_id.service_reschedule != 1:
-                        detailed_event_poc.convinance_charges=int(dates[1])
-                        detailed_event_poc.is_convinance=True
-                        total_convi=total_convi+int(dates[1])
-                        detailed_event_poc.srv_prof_id=professional#.srv_prof_id
-                        detailed_event_poc.ambs_id=amb
-                        detailed_event_poc.status=1
-                        detailed_event_poc.last_modified_by=clgref_id
-                        detailed_event_poc.save()
-                        event_id.event_status=2
-                        event_id.status=1
-                        event_id.last_modified_by=clgref_id
-                        event_id.save()
-                    else:
-                    
-                        detailed_event_poc.srv_prof_id=professional#.srv_prof_id
-                        detailed_event_poc.ambs_id=amb
-                        detailed_event_poc.status=1
-                        detailed_event_poc.last_modified_by=clgref_id
-                        detailed_event_poc.save()
-                        event_id.event_status=2
-                        event_id.status=1
-                        event_id.last_modified_by=clgref_id
-                        event_id.save()
-            event_id.final_amount=event_id.final_amount+total_convi
-            event_id.save()
-            event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=event_id, status=1)
-            try:
-                msg = f"Dear  {professional.prof_fullname}\n\n Patient : {event_id.agg_sp_pt_id.name} \n\n Caller No: {event_id.caller_id.caller_fullname}\n Mob No: {event_id.agg_sp_pt_id.phone_no}\n\n Address: {event_id.agg_sp_pt_id.address}\n\n Event No:{event_id.event_code}\n Service : {event_plan_care.srv_id.service_title} \nSub-Service : {event_plan_care.sub_srv_id.recommomded_service}\n\n Date: {prof_dates} \n\n Reporting time: {event_plan_care.start_time}\n\n Message: Attend call\n\nSpero"
-            
-            except:
-                pass
-            print('demos;;;;;;;;;;;;;;')
-            poc=event_plan_care
-            eve=event_id
-            
-            request_body={
-                "eve_id": event_id.eve_id,
-                "total_amount": event_id.final_amount,
-                "customerName": event_id.agg_sp_pt_id.name,
-                "customeremail": event_id.agg_sp_pt_id.patient_email_id,
-                "customerPhone": str(event_id.agg_sp_pt_id.phone_no),
-                "orderAmount": event_id.final_amount,
-                "Remaining_amount": 0
-            }
-            print(request_body,'request_body;;;;;;;;')
-            factory = RequestFactory()
-            request = factory.post('/web/multiple_allocate_api', data=json.dumps(request_body), content_type='application/json')
 
-            # Pass the request to create_payment_url
-            response  = create_payment_url(request)
-            print(response ,',,,,,,,,,,,,,,,,,,,,,,')
-            # placeholder=[event_id.caller_id.caller_fullname,event_plan_care.srv_id.service_title,event_plan_care.sub_srv_id.recommomded_service,links['payment_link']]
-            if isinstance(response, Response):
-            # Decode the response content and parse as JSON
-                response_content = response.data
-                payment_link = response_content.get('payment_link')
 
-                if payment_link:
-                    placeholder = [event_id.caller_id.caller_fullname, f'{event_plan_care.srv_id.service_title}({event_plan_care.sub_srv_id.recommomded_service})', event_id.event_code, payment_link]
-                else:
-                    placeholder = [event_id.caller_id.caller_fullname, f'{event_plan_care.srv_id.service_title}({event_plan_care.sub_srv_id.recommomded_service})', event_id.event_code,'Payment Link is not Available. Please contact to Desk']
+from rest_framework.request import Request
+from django.http import HttpRequest
+import json
 
-            whatsapp_sms(eve.caller_id.phone, 'caller_no',placeholder)
+class CustomHttpRequest(HttpRequest):
+    def __init__(self, body, **kwargs):
+        super().__init__(**kwargs)
+        self._body = body
+        self._headers = kwargs.get('headers', {})
 
-            return Response({'eve_id':event_id_is,'caller_id_is':caller_id_is,'agg_sp_pt_id':patient_id_is,'message':'professional Allocated sucessfully'})
+    def get_body(self):
+        return self._body
+
+    def get_headers(self):
+        return self._headers
+
+
+
+
+
+# from django.test import RequestFactory
+# import http.client 
+
+# class multiple_allocate_api(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def post(self,request):
+#         flag_id = request.data.get('flag_id')
+#         clgref_id = get_prof(request)[3]
+#             # clgref_id = "abc"
+#         if flag_id == 1:
+#             print('w3r')
+#             # clgref_id = get_prof(request)[3]
+#             clgref_id = "abc"
+#             request.data['last_modified_by'] = clgref_id
+#             # try:
+#             event_id=agg_hhc_events.objects.get(eve_id=request.data.get('eve_id'),status=1)
+#             event_serializer=agg_hhc_updateIDs_event_serializer(event_id)
+#             event_id_is=event_serializer.data.get('eve_id')
+#             caller_id_is=event_serializer.data.get('caller_id')
+#             patient_id_is=event_serializer.data.get('agg_sp_pt_id')
+#             # except Exception as e:
+#             #     return Response({'message':str(e)},status=404)
+#             srv_prof_date_and_id_list=request.data.get('srv_prof_date_and_id')
+#             # print(srv_prof_date_and_id_list.values())
+#             # print(srv_prof_date_and_id_list)
+#             # ==========================================================================================================
+#             # ==========================================================================================================
+#             all_dates=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event_id_is, status=1).values_list('actual_StartDate_Time',flat=True)
+#             d=[l[0] for l in srv_prof_date_and_id_list.values()]
+#             dates1=[]
+#             for x in d:
+#                 dates1+=x
+#             dictionary=[]
+#             for i in dates1:
+#                 # i=i.split(',')
+#             #     print(i, 'aSDF')
+#             # i=dates1
+#                 all_dates1 = dates_list(i[0],i[1])
+#                 dictionary+=all_dates1
+#             # print(dates1)
+#             # print(dictionary)
+#             dictionary = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in dictionary]
+#             # print(dictionary)
+#             # print(all_dates)
+#             if(int(len(all_dates))==len(dictionary)):
+#                 for i in all_dates:
+#                     if i in dictionary:
+#                         pass
+#                     else:
+#                         print(i, 'asdf')
+#                         return Response({'message':'Select proper dates'})
+#             else:
+#                 # print(len(dictionary))
+#                 # print(int(len(all_dates)))
+#                 return Response({'message':'Select proper dates'})
+#             # print('1')
+#             detailed_event_poc_round=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),status=1)
+#             for j in dictionary:
+#                 detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
+#                 if(detailed_event_poc.srv_prof_id!=None):
+#                     # date={}
+#                     date_list=[]
+#                     for dates in detailed_event_poc_round:
+#                         if(dates.srv_prof_id!=None):
+#                             # date[j]=str(dates.actual_StartDate_Time)
+#                             date_list.append(str(dates.actual_StartDate_Time))
+#                     return Response({'message':'professional already Allocated','date':date_list},status=404)
+#             # print('2')
+#             total_convi=0
+#             for prof, dates in srv_prof_date_and_id_list.items():
+#                 # print(dates[0], 'lk')
+#                 prof_dates=dates[0]
+#                 dates1=[]
+#                 # print(prof_dates, 'dates')
+#                 # for x in prof_dates:
+#                 #     print(x)
+#                 #     dates1+=x
+#                 dictionary=[]
+#                 for i in prof_dates:
+#                 #     print(i)
+#                 # i=prof_dates
+#                     # i=i[0].split(',')
+#                     # print(i, 'aSDF')
+#                     all_dates1 = dates_list(i[0],i[1])
+#                     dictionary+=all_dates1
+#                 professional=None
+#                 try:
+#                     professional=agg_hhc_service_professionals.objects.get(srv_prof_id=int(prof)) 
+#                     # professional=agg_hhc_service_professional_serializer(professional)
+#                 except:
+#                     return Response({'message':'professional not found'},status=404)
+#                                 # print("this is professional id",professional.request.data.get('srv_prof_id'))
+#                 print(professional, '..........')
+#                 if professional:
+#                     # prof_mo=professional.clg_ref_id.clg_Work_phone_number
+#                     base_url = "xl6mjq.api-in.infobip.com"
+#                     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+#                     # from_number = "918956193883"
+#                     # template_name = "professional_name_sms"
+#                     # order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+#                     pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=patient_id_is, status=1).last()
+#                     payload = json.dumps({
+#                         "messages": [
+#                             {
+#                                 "from": "918956193883",
+#                                 "to": f'91{professional.clg_ref_id.clg_Work_phone_number}',
+#                                 "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
+#                                 "content": {
+#                                     "templateName": "professional_name_sms",
+#                                     "templateData": {
+#                                         "body": {
+#                                             "placeholders": [
+#                                                 professional.prof_fullname,
+#                                                 pt.name,
+#                                                 pt.caller_id.phone,
+#                                                 pt.phone_no,
+#                                                 pt.address,
+#                                                 detailed_event_poc.eve_id.event_code,
+#                                                 detailed_event_poc.eve_poc_id.srv_id.service_title,
+#                                                 detailed_event_poc.eve_poc_id.sub_srv_id.recommomded_service,
+#                                                 f'{detailed_event_poc.eve_poc_id.start_date} to {detailed_event_poc.eve_poc_id.end_date}',
+#                                                 f'{detailed_event_poc.eve_poc_id.start_time} to {detailed_event_poc.eve_poc_id.end_time}'
+#                                             ]
+#                                         },                   
+#                                     },
+#                                     "language": "en"
+#                                 }
+#                             }
+#                         ]
+#                     })
+#                     headers = {
+#                         'Authorization': f'App {api_key}',
+#                         'Content-Type': 'application/json',
+#                         'Accept': 'application/json'
+#                     }
+
+#                     conn = http.client.HTTPSConnection(base_url)
+#                     conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+#                     res = conn.getresponse()
+#                     data = res.read()
+#                     conn.close()
+#                     print('yes')
+#                 print(dictionary, 'dictionary')
+#                 epoccc = agg_hhc_event_plan_of_care.objects.get(eve_id = event_id_is, status=1) 
+#                 print(professional,"professional")
+#                 pscd = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=professional,sub_srv_id=epoccc.sub_srv_id,Entry = 2).last()
+#                 for j in dictionary:
+#                     detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
+#                     detailed_event_poc.convinance_charges=int(dates[1])
+#                     detailed_event_poc.is_convinance=True
+#                     total_convi=total_convi+int(dates[1])
+#                     detailed_event_poc.srv_prof_id=professional#.srv_prof_id
+#                     detailed_event_poc.prof_cost_id = pscd
+#                     detailed_event_poc.status=1
+#                     detailed_event_poc.last_modified_by=clgref_id
+#                     detailed_event_poc.save()
+#                     event_id.event_status=2
+#                     event_id.status=1
+#                     event_id.last_modified_by=clgref_id
+#                     event_id.save()
+#             event_id.final_amount=event_id.final_amount+total_convi
+#             event_id.save()            
+#             event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=event_id, status=1)
+#             try:
+#                 msg = f"Dear  {professional.prof_fullname}\n\n Patient : {event_id.agg_sp_pt_id.name} \n\n Caller No: {event_id.caller_id.caller_fullname}\n Mob No: {event_id.agg_sp_pt_id.phone_no}\n\n Address: {event_id.agg_sp_pt_id.address}\n\n Event No:{event_id.event_code}\n Service : {event_plan_care.srv_id.service_title} \nSub-Service : {event_plan_care.sub_srv_id.recommomded_service}\n\n Date: {prof_dates} \n\n Reporting time: {event_plan_care.start_time}\n\n Message: Attend call\n\nSpero"
+#             except:
+#                 pass
+#             print('demos;;;;;;;;;;;;;;')
+#             poc=event_plan_care
+#             eve=event_id
+#             request_body={
+#                 "eve_id": event_id.eve_id,
+#                 "total_amount": event_id.final_amount,
+#                 "customerName": event_id.agg_sp_pt_id.name,
+#                 "customeremail": event_id.agg_sp_pt_id.patient_email_id,
+#                 "customerPhone": str(event_id.agg_sp_pt_id.phone_no),
+#                 "orderAmount": event_id.final_amount,
+#                 "Remaining_amount": 0
+#             }
+#             print(request_body,'request_body;;;;;;;;')
+#             factory = RequestFactory()
+#             request = factory.post('/web/multiple_allocate_api', data=json.dumps(request_body), content_type='application/json')
+
+#             # Pass the request to create_payment_url
+#             response  = create_payment_url_sms_new(request)
+#             print(response ,',,,,,,,,,,,,,,,,,,,,,,')
+#             # placeholder=[event_id.caller_id.caller_fullname,event_plan_care.srv_id.service_title,event_plan_care.sub_srv_id.recommomded_service,links['payment_link']]
+#             if isinstance(response, Response):
+#             # Decode the response content and parse as JSON
+#                 response_data = response.data
+#                 print(response_data, "<<< Data inside the response")
+#                 payment_link = response_data.get('payment_link')
+
+#                 if payment_link:
+#                     placeholder = [event_id.caller_id.caller_fullname, f'{event_plan_care.srv_id.service_title}({event_plan_care.sub_srv_id.recommomded_service})', event_id.event_code, payment_link]
+#                 else:
+#                     placeholder = [event_id.caller_id.caller_fullname, f'{event_plan_care.srv_id.service_title}({event_plan_care.sub_srv_id.recommomded_service})', event_id.event_code,'Payment Link is not Available. Please contact to Desk']
+
+#             whatsapp_sms(eve.caller_id.phone, 'caller_no',placeholder)
+
+#             return Response({'eve_id':event_id_is,'caller_id_is':caller_id_is,'agg_sp_pt_id':patient_id_is,'message':'professional Allocated sucessfully'})
         
 
+#         elif flag_id == 2:
+#             eve_id = request.data.get('eve_id')
+#             caller_id = request.data.get('caller_id')
+#             pt_id = request.data.get('agg_sp_pt_id')
+#             srv_prof_date_and_id = request.data.get('srv_prof_date_and_id',{})
+#             remark =  request.data.get('remark')
+            
+#             for srv_prof_id, date_range_list in srv_prof_date_and_id.items():
+#                 print(srv_prof_id,'srv_prof_id - keys')
+#                 print(date_range_list,'date_range_list -- values')
 
+#                 all_dates = []
+#                 for date_list in date_range_list:
+#                     if not date_list:
+#                         continue
+#                     sorted_dates = sorted(date_list, key=lambda date: datetime.strptime(date, '%Y-%m-%d'))
+#                     s_date = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
+#                     e_date = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
+#                     while s_date <= e_date:
+#                         all_dates.append(s_date.strftime('%Y-%m-%d'))
+#                         s_date += timedelta(days=1)
+                
+#                 # print(all_dates,'all_dates')
+#                 # print(type(int(srv_prof_id)),srv_prof_id)
+#                 prof_inst = agg_hhc_service_professionals.objects.get(srv_prof_id=int(srv_prof_id))
+#                 epoccc = agg_hhc_event_plan_of_care.objects.get(eve_id = eve_id, status=1) 
+#                 pscd = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=srv_prof_id,sub_srv_id=epoccc.sub_srv_id,Entry = 2).last()
+#                 all_sessons = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, actual_StartDate_Time__in = all_dates, status = 1)
+#                 for i in all_sessons:
+#                     i.srv_prof_id = prof_inst
+#                     i.prof_cost_id = pscd
+#                     i.remark=remark
+#                     i.save()
+#                 last_dtl = all_sessons.last()
+#                 if prof_inst:
+                 
+#                     base_url = "xl6mjq.api-in.infobip.com"
+#                     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+#                     pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=pt_id, status=1).last()
+#                     payload = json.dumps({
+#                         "messages": [
+#                             {
+#                                 "from": "918956193883",
+#                                 "to": f'91{prof_inst.clg_ref_id.clg_Work_phone_number}',
+#                                 "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
+#                                 "content": {
+#                                     "templateName": "professional_name_sms",
+#                                     "templateData": {
+#                                         "body": {
+#                                             "placeholders": [
+#                                                 prof_inst.prof_fullname,
+#                                                 pt.name,
+#                                                 pt.caller_id.phone,
+#                                                 pt.phone_no,
+#                                                 pt.address,
+#                                                 last_dtl.eve_id.event_code,
+#                                                 last_dtl.eve_poc_id.srv_id.service_title,
+#                                                 last_dtl.eve_poc_id.sub_srv_id.recommomded_service,
+#                                                 f'{last_dtl.eve_poc_id.start_date} to {last_dtl.eve_poc_id.end_date}',
+#                                                 f'{last_dtl.eve_poc_id.start_time} to {last_dtl.eve_poc_id.end_time}'
+#                                             ]
+#                                         },                   
+#                                     },
+#                                     "language": "en"
+#                                 }
+#                             }
+#                         ]
+#                     })
+#                     headers = {
+#                         'Authorization': f'App {api_key}',
+#                         'Content-Type': 'application/json',
+#                         'Accept': 'application/json'
+#                     }
+
+#                     conn = http.client.HTTPSConnection(base_url)
+#                     conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+#                     res = conn.getresponse()
+#                     data = res.read()
+#                     conn.close()
+#                     print('yes')
+            
+             
+
+            
+#             return Response({"msg":"Professional Rescheduled"})
+
+
+
+#         elif flag_id == 3:
+#             eve_id = request.data.get('eve_id')
+#             ref_date = request.data.get('session_date')
+#             session_date = datetime.strptime(ref_date, '%Y-%m-%d')
+#             ref_s_time = request.data.get('start_time')
+#             ref_e_time = request.data.get('end_time')
+#             sess_time = datetime.strptime(ref_s_time, "%H:%M").time()
+#             sese_time = datetime.strptime(ref_e_time, "%H:%M").time()
+            
+            
+#             srv_prof_date_and_id = request.data.get('srv_prof_date_and_id',{})
+#             remark =  request.data.get('remark')
+            
+#             for srv_prof_id, date_range_list in srv_prof_date_and_id.items():
+#                 print(srv_prof_id,'srv_prof_id - keys')
+#                 print(date_range_list,'date_range_list -- values')
+
+#                 all_dates = []
+#                 for date_list in date_range_list:
+#                     if not date_list:
+#                         continue
+#                     sorted_dates = sorted(date_list, key=lambda date: datetime.strptime(date, '%Y-%m-%d'))
+#                     s_date = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
+#                     e_date = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
+#                     while s_date <= e_date:
+#                         all_dates.append(s_date.strftime('%Y-%m-%d'))
+#                         s_date += timedelta(days=1)
+                
+#                 # print(all_dates,'all_dates')
+#                 # print(type(int(srv_prof_id)),srv_prof_id)
+#                 prof_inst = agg_hhc_service_professionals.objects.get(srv_prof_id=int(srv_prof_id))
+#                 epoccc = agg_hhc_event_plan_of_care.objects.get(eve_id = eve_id, status=1) 
+#                 pscd = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=srv_prof_id,sub_srv_id=epoccc.sub_srv_id,Entry = 2).last()
+#                 all_sessons = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, actual_StartDate_Time = session_date, status = 1)
+#                 if all_sessons:
+#                     # for index,i in all_sessons:
+#                     #     i.srv_prof_id = prof_inst
+#                     #     i.actual_StartDate_Time = all_dates[index]
+#                     #     i.remark=remark
+#                     #     i.save()
+#                     for index, i in enumerate(all_sessons):
+#                         if index < len(all_dates):
+#                             i.srv_prof_id = prof_inst
+#                             i.prof_cost_id = pscd
+#                             i.actual_StartDate_Time = all_dates[index]
+#                             i.start_time = sess_time
+#                             i.end_time = sese_time
+#                             i.remark = remark
+#                             i.save()
+
+#                     last_dtl = all_sessons.last()
+#                     if prof_inst and last_dtl:
+                    
+#                         base_url = "xl6mjq.api-in.infobip.com"
+#                         api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+#                         pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=last_dtl.eve_id.agg_sp_pt_id.agg_sp_pt_id, status=1).last()
+#                         payload = json.dumps({
+#                             "messages": [
+#                                 {
+#                                     "from": "918956193883",
+#                                     # "to": f'91{prof_inst.clg_ref_id.clg_Work_phone_number}',
+#                                     "to": f'917057807841',
+#                                     "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
+#                                     "content": {
+#                                         "templateName": "professional_name_sms",
+#                                         "templateData": {
+#                                             "body": {
+#                                                 "placeholders": [
+#                                                     prof_inst.prof_fullname,
+#                                                     pt.name,
+#                                                     pt.caller_id.phone,
+#                                                     pt.phone_no,
+#                                                     pt.address,
+#                                                     last_dtl.eve_id.event_code,
+#                                                     last_dtl.eve_poc_id.srv_id.service_title,
+#                                                     last_dtl.eve_poc_id.sub_srv_id.recommomded_service,
+#                                                     f'{last_dtl.eve_poc_id.start_date} to {last_dtl.eve_poc_id.end_date}',
+#                                                     f'{last_dtl.eve_poc_id.start_time} to {last_dtl.eve_poc_id.end_time}'
+#                                                 ]
+#                                             },                   
+#                                         },
+#                                         "language": "en"
+#                                     }
+#                                 }
+#                             ]
+#                         })
+#                         headers = {
+#                             'Authorization': f'App {api_key}',
+#                             'Content-Type': 'application/json',
+#                             'Accept': 'application/json'
+#                         }
+
+#                         conn = http.client.HTTPSConnection(base_url)
+#                         conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+#                         res = conn.getresponse()
+#                         data = res.read()
+#                         conn.close()
+#                         print('yes')
+#                     get_dtl_all_eve = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status = 1)
+#                     print(get_dtl_all_eve)
+#                     dates = get_dtl_all_eve.aggregate(
+#                         max_date=Max('actual_StartDate_Time'),
+#                         min_date=Min('actual_StartDate_Time')
+#                     )
+#                     epoccccc= agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id,status=1).last()
+#                     print(dates['max_date'],"dates['max_date']")
+#                     print(dates['min_date'],"ates['min_date']")
+#                     epoccccc.end_date = dates['max_date']
+#                     epoccccc.start_date = dates['min_date']
+#                     if epoccccc.save():
+#                         print("data save to eve poc")
+
+#                 else:
+#                     return Response({"msg":"Given Date has no any session"}, status = status.HTTP_404_NOT_FOUND)
+            
+            
+
+            
+#             return Response({"msg":"Session and Professional Rescheduled"})
 
 
 
@@ -8096,12 +11227,12 @@ from django.test import RequestFactory
 import http.client 
 
 class multiple_allocate_api(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def post(self,request):
         flag_id = request.data.get('flag_id')
-        # clgref_id = get_prof(request)[3]
-        clgref_id = "abc"
+        clgref_id = get_prof(request)[3]
+            # clgref_id = "abc"
         print(flag_id,'flag_id')
         if flag_id == 1:
             print('w3r')
@@ -8123,7 +11254,6 @@ class multiple_allocate_api(APIView):
             # ==========================================================================================================
             all_dates=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event_id_is, status=1).values_list('actual_StartDate_Time',flat=True)
             d=[l[0] for l in srv_prof_date_and_id_list.values()]
-            print(d)
             dates1=[]
             for x in d:
                 dates1+=x
@@ -8242,6 +11372,10 @@ class multiple_allocate_api(APIView):
                 print(professional,"professional")
                 pscd = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=professional,sub_srv_id=epoccc.sub_srv_id,Entry = 2).last()
                 print(pscd,'prof_sub_id')
+                # if request.data.get('ambs_id'):
+                #     amb=ambulance.objects.filter(ambs_id=request.data.get('ambs_id')).first()
+                # else:
+                #     amb=None
                 for j in dictionary:
                     amb=ambulance.objects.filter(ambs_id=dates[2]).first()
                     detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
@@ -8531,395 +11665,16 @@ class multiple_allocate_api(APIView):
 
 
 
-# import http.client 
-
-# class multiple_allocate_api(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def post(self,request):
-#         flag_id = request.data.get('flag_id')
-#         clgref_id = get_prof(request)[3]
-#             # clgref_id = "abc"
-#         if flag_id == 1:
-#             print('w3r')
-#             # clgref_id = get_prof(request)[3]
-#             clgref_id = "abc"
-#             request.data['last_modified_by'] = clgref_id
-#             # try:
-#             event_id=agg_hhc_events.objects.get(eve_id=request.data.get('eve_id'),status=1)
-#             event_serializer=agg_hhc_updateIDs_event_serializer(event_id)
-#             event_id_is=event_serializer.data.get('eve_id')
-#             caller_id_is=event_serializer.data.get('caller_id')
-#             patient_id_is=event_serializer.data.get('agg_sp_pt_id')
-#             # except Exception as e:
-#             #     return Response({'message':str(e)},status=404)
-#             srv_prof_date_and_id_list=request.data.get('srv_prof_date_and_id')
-#             # print(srv_prof_date_and_id_list.values())
-#             # print(srv_prof_date_and_id_list)
-#             # ==========================================================================================================
-#             # ==========================================================================================================
-#             all_dates=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event_id_is, status=1).values_list('actual_StartDate_Time',flat=True)
-#             d=[l[0] for l in srv_prof_date_and_id_list.values()]
-#             dates1=[]
-#             for x in d:
-#                 dates1+=x
-#             dictionary=[]
-#             for i in dates1:
-#                 # i=i.split(',')
-#             #     print(i, 'aSDF')
-#             # i=dates1
-#                 all_dates1 = dates_list(i[0],i[1])
-#                 dictionary+=all_dates1
-#             # print(dates1)
-#             # print(dictionary)
-#             dictionary = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in dictionary]
-#             # print(dictionary)
-#             # print(all_dates)
-#             if(int(len(all_dates))==len(dictionary)):
-#                 for i in all_dates:
-#                     if i in dictionary:
-#                         pass
-#                     else:
-#                         print(i, 'asdf')
-#                         return Response({'message':'Select proper dates'})
-#             else:
-#                 # print(len(dictionary))
-#                 # print(int(len(all_dates)))
-#                 return Response({'message':'Select proper dates'})
-#             # print('1')
-#             detailed_event_poc_round=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),status=1)
-#             for j in dictionary:
-#                 detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
-#                 if(detailed_event_poc.srv_prof_id!=None):
-#                     # date={}
-#                     date_list=[]
-#                     for dates in detailed_event_poc_round:
-#                         if(dates.srv_prof_id!=None):
-#                             # date[j]=str(dates.actual_StartDate_Time)
-#                             date_list.append(str(dates.actual_StartDate_Time))
-#                     return Response({'message':'professional already Allocated','date':date_list},status=404)
-#             # print('2')
-#             for prof, dates in srv_prof_date_and_id_list.items():
-#                 # print(dates[0], 'lk')
-#                 prof_dates=dates[0]
-#                 dates1=[]
-#                 # print(prof_dates, 'dates')
-#                 # for x in prof_dates:
-#                 #     print(x)
-#                 #     dates1+=x
-#                 dictionary=[]
-#                 for i in prof_dates:
-#                 #     print(i)
-#                 # i=prof_dates
-#                     # i=i[0].split(',')
-#                     # print(i, 'aSDF')
-#                     all_dates1 = dates_list(i[0],i[1])
-#                     dictionary+=all_dates1
-#                 professional=None
-#                 try:
-#                     professional=agg_hhc_service_professionals.objects.get(srv_prof_id=int(prof)) 
-#                     # professional=agg_hhc_service_professional_serializer(professional)
-#                 except:
-#                     return Response({'message':'professional not found'},status=404)
-#                                 # print("this is professional id",professional.request.data.get('srv_prof_id'))
-#                 print(professional, '..........')
-#                 if professional:
-#                     # prof_mo=professional.clg_ref_id.clg_Work_phone_number
-#                     base_url = "xl6mjq.api-in.infobip.com"
-#                     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
-#                     # from_number = "918956193883"
-#                     # template_name = "professional_name_sms"
-#                     # order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
-#                     pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=patient_id_is, status=1).last()
-#                     payload = json.dumps({
-#                         "messages": [
-#                             {
-#                                 "from": "918956193883",
-#                                 "to": f'91{professional.clg_ref_id.clg_Work_phone_number}',
-#                                 "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
-#                                 "content": {
-#                                     "templateName": "professional_name_sms",
-#                                     "templateData": {
-#                                         "body": {
-#                                             "placeholders": [
-#                                                 professional.prof_fullname,
-#                                                 pt.name,
-#                                                 pt.caller_id.phone,
-#                                                 pt.phone_no,
-#                                                 pt.address,
-#                                                 detailed_event_poc.eve_id.event_code,
-#                                                 detailed_event_poc.eve_poc_id.srv_id.service_title,
-#                                                 detailed_event_poc.eve_poc_id.sub_srv_id.recommomded_service,
-#                                                 f'{detailed_event_poc.eve_poc_id.start_date} to {detailed_event_poc.eve_poc_id.end_date}',
-#                                                 f'{detailed_event_poc.eve_poc_id.start_time} to {detailed_event_poc.eve_poc_id.end_time}'
-#                                             ]
-#                                         },                   
-#                                     },
-#                                     "language": "en"
-#                                 }
-#                             }
-#                         ]
-#                     })
-#                     headers = {
-#                         'Authorization': f'App {api_key}',
-#                         'Content-Type': 'application/json',
-#                         'Accept': 'application/json'
-#                     }
-
-#                     conn = http.client.HTTPSConnection(base_url)
-#                     conn.request("POST", "/whatsapp/1/message/template", payload, headers)
-#                     res = conn.getresponse()
-#                     data = res.read()
-#                     conn.close()
-#                     print('yes')
-#                 print(dictionary, 'dictionary')
-#                 for j in dictionary:
-#                     detailed_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),actual_StartDate_Time=j,status=1).first()
-#                     detailed_event_poc.convinance_charges=int(dates[1])
-#                     detailed_event_poc.is_convinance=True
-                    
-#                     detailed_event_poc.srv_prof_id=professional#.srv_prof_id
-#                     detailed_event_poc.status=1
-#                     detailed_event_poc.last_modified_by=clgref_id
-#                     detailed_event_poc.save()
-#                     event_id.event_status=2
-#                     event_id.status=1
-#                     event_id.last_modified_by=clgref_id
-#                     event_id.save()
-            
-            event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=event_id, status=1)
-            try:
-                msg = f"Dear  {professional.prof_fullname}\n\n Patient : {event_id.agg_sp_pt_id.name} \n\n Caller No: {event_id.caller_id.caller_fullname}\n Mob No: {event_id.agg_sp_pt_id.phone_no}\n\n Address: {event_id.agg_sp_pt_id.address}\n\n Event No:{event_id.event_code}\n Service : {event_plan_care.srv_id.service_title} \nSub-Service : {event_plan_care.sub_srv_id.recommomded_service}\n\n Date: {prof_dates} \n\n Reporting time: {event_plan_care.start_time}\n\n Message: Attend call\n\nSpero"
-            except:
-                pass
-            return Response({'eve_id':event_id_is,'caller_id_is':caller_id_is,'agg_sp_pt_id':patient_id_is,'message':'professional Allocated sucessfully'})
-        
-
-#         elif flag_id == 2:
-#             eve_id = request.data.get('eve_id')
-#             caller_id = request.data.get('caller_id')
-#             pt_id = request.data.get('agg_sp_pt_id')
-#             srv_prof_date_and_id = request.data.get('srv_prof_date_and_id',{})
-#             remark =  request.data.get('remark')
-            
-#             for srv_prof_id, date_range_list in srv_prof_date_and_id.items():
-#                 print(srv_prof_id,'srv_prof_id - keys')
-#                 print(date_range_list,'date_range_list -- values')
-
-#                 all_dates = []
-#                 for date_list in date_range_list:
-#                     if not date_list:
-#                         continue
-#                     sorted_dates = sorted(date_list, key=lambda date: datetime.strptime(date, '%Y-%m-%d'))
-#                     s_date = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
-#                     e_date = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
-#                     while s_date <= e_date:
-#                         all_dates.append(s_date.strftime('%Y-%m-%d'))
-#                         s_date += timedelta(days=1)
-                
-#                 # print(all_dates,'all_dates')
-#                 # print(type(int(srv_prof_id)),srv_prof_id)
-#                 prof_inst = agg_hhc_service_professionals.objects.get(srv_prof_id=int(srv_prof_id))
-#                 all_sessons = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, actual_StartDate_Time__in = all_dates, status = 1)
-#                 for i in all_sessons:
-#                     i.srv_prof_id = prof_inst
-#                     i.remark=remark
-#                     i.save()
-#                 last_dtl = all_sessons.last()
-#                 if prof_inst:
-                 
-#                     base_url = "xl6mjq.api-in.infobip.com"
-#                     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
-#                     pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=pt_id, status=1).last()
-#                     payload = json.dumps({
-#                         "messages": [
-#                             {
-#                                 "from": "918956193883",
-#                                 "to": f'91{prof_inst.clg_ref_id.clg_Work_phone_number}',
-#                                 "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
-#                                 "content": {
-#                                     "templateName": "professional_name_sms",
-#                                     "templateData": {
-#                                         "body": {
-#                                             "placeholders": [
-#                                                 prof_inst.prof_fullname,
-#                                                 pt.name,
-#                                                 pt.caller_id.phone,
-#                                                 pt.phone_no,
-#                                                 pt.address,
-#                                                 last_dtl.eve_id.event_code,
-#                                                 last_dtl.eve_poc_id.srv_id.service_title,
-#                                                 last_dtl.eve_poc_id.sub_srv_id.recommomded_service,
-#                                                 f'{last_dtl.eve_poc_id.start_date} to {last_dtl.eve_poc_id.end_date}',
-#                                                 f'{last_dtl.eve_poc_id.start_time} to {last_dtl.eve_poc_id.end_time}'
-#                                             ]
-#                                         },                   
-#                                     },
-#                                     "language": "en"
-#                                 }
-#                             }
-#                         ]
-#                     })
-#                     headers = {
-#                         'Authorization': f'App {api_key}',
-#                         'Content-Type': 'application/json',
-#                         'Accept': 'application/json'
-#                     }
-
-#                     conn = http.client.HTTPSConnection(base_url)
-#                     conn.request("POST", "/whatsapp/1/message/template", payload, headers)
-#                     res = conn.getresponse()
-#                     data = res.read()
-#                     conn.close()
-#                     print('yes')
-            
-             
-
-            
-#             return Response({"msg":"Professional Rescheduled"})
-
-
-
-#         elif flag_id == 3:
-#             eve_id = request.data.get('eve_id')
-#             ref_date = request.data.get('session_date')
-#             session_date = datetime.strptime(ref_date, '%Y-%m-%d')
-#             ref_s_time = request.data.get('start_time')
-#             ref_e_time = request.data.get('end_time')
-#             sess_time = datetime.strptime(ref_date, '%Y-%m-%d')
-            
-#             srv_prof_date_and_id = request.data.get('srv_prof_date_and_id',{})
-#             remark =  request.data.get('remark')
-            
-#             for srv_prof_id, date_range_list in srv_prof_date_and_id.items():
-#                 print(srv_prof_id,'srv_prof_id - keys')
-#                 print(date_range_list,'date_range_list -- values')
-
-#                 all_dates = []
-#                 for date_list in date_range_list:
-#                     if not date_list:
-#                         continue
-#                     sorted_dates = sorted(date_list, key=lambda date: datetime.strptime(date, '%Y-%m-%d'))
-#                     s_date = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
-#                     e_date = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
-#                     while s_date <= e_date:
-#                         all_dates.append(s_date.strftime('%Y-%m-%d'))
-#                         s_date += timedelta(days=1)
-                
-#                 # print(all_dates,'all_dates')
-#                 # print(type(int(srv_prof_id)),srv_prof_id)
-#                 prof_inst = agg_hhc_service_professionals.objects.get(srv_prof_id=int(srv_prof_id))
-#                 all_sessons = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, actual_StartDate_Time = session_date, status = 1)
-#                 if all_sessons:
-#                     # for index,i in all_sessons:
-#                     #     i.srv_prof_id = prof_inst
-#                     #     i.actual_StartDate_Time = all_dates[index]
-#                     #     i.remark=remark
-#                     #     i.save()
-#                     for index, i in enumerate(all_sessons):
-#                         if index < len(all_dates):
-#                             i.srv_prof_id = prof_inst
-#                             i.actual_StartDate_Time = all_dates[index]
-#                             i.remark = remark
-#                             i.save()
-
-#                     last_dtl = all_sessons.last()
-#                     if prof_inst and last_dtl:
-                    
-#                         base_url = "xl6mjq.api-in.infobip.com"
-#                         api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
-#                         pt=agg_hhc_patients.objects.filter(agg_sp_pt_id=last_dtl.eve_id.agg_sp_pt_id, status=1).last()
-#                         payload = json.dumps({
-#                             "messages": [
-#                                 {
-#                                     "from": "918956193883",
-#                                     # "to": f'91{prof_inst.clg_ref_id.clg_Work_phone_number}',
-#                                     "to": f'917057807841',
-#                                     "messageId": "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S"),
-#                                     "content": {
-#                                         "templateName": "professional_name_sms",
-#                                         "templateData": {
-#                                             "body": {
-#                                                 "placeholders": [
-#                                                     prof_inst.prof_fullname,
-#                                                     pt.name,
-#                                                     pt.caller_id.phone,
-#                                                     pt.phone_no,
-#                                                     pt.address,
-#                                                     last_dtl.eve_id.event_code,
-#                                                     last_dtl.eve_poc_id.srv_id.service_title,
-#                                                     last_dtl.eve_poc_id.sub_srv_id.recommomded_service,
-#                                                     f'{last_dtl.eve_poc_id.start_date} to {last_dtl.eve_poc_id.end_date}',
-#                                                     f'{last_dtl.eve_poc_id.start_time} to {last_dtl.eve_poc_id.end_time}'
-#                                                 ]
-#                                             },                   
-#                                         },
-#                                         "language": "en"
-#                                     }
-#                                 }
-#                             ]
-#                         })
-#                         headers = {
-#                             'Authorization': f'App {api_key}',
-#                             'Content-Type': 'application/json',
-#                             'Accept': 'application/json'
-#                         }
-
-#                         conn = http.client.HTTPSConnection(base_url)
-#                         conn.request("POST", "/whatsapp/1/message/template", payload, headers)
-#                         res = conn.getresponse()
-#                         data = res.read()
-#                         conn.close()
-#                         print('yes')
-#                     get_dtl_all_eve = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status = 1)
-#                     print(get_dtl_all_eve)
-#                     dates = get_dtl_all_eve.aggregate(
-#                         max_date=Max('actual_StartDate_Time'),
-#                         min_date=Min('actual_StartDate_Time')
-#                     )
-#                     epoccccc= agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id,status=1).last()
-#                     print(dates['max_date'],"dates['max_date']")
-#                     print(dates['min_date'],"ates['min_date']")
-#                     epoccccc.end_date = dates['max_date']
-#                     epoccccc.start_date = dates['min_date']
-#                     if epoccccc.save():
-#                         print("data save to eve poc")
-
-#                 else:
-#                     return Response({"msg":"Given Date has no any session"}, status = status.HTTP_404_NOT_FOUND)
-            
-#             if all_sessons: 
-#                 poc=all_sessons[-1].eve_poc_id
-#                 eve=all_sessons[-1].eve_id
-#                 request_body={
-#                     "eve_id": all_sessons[-1].eve_id,
-#                     "total_amount": all_sessons[-1].eve_id.final_amount,
-#                     "customerName": all_sessons[-1].eve_id.agg_sp_pt_id.name,
-#                     "customeremail": all_sessons[-1].eve_id.agg_sp_pt_id.patient_email_id,
-#                     "customerPhone": all_sessons[-1].eve_id.agg_sp_pt_id.phone_no,
-#                     "orderAmount": all_sessons[-1].eve_id.final_amount,
-#                     "Remaining_amount": 0
-#                 }
-#                 links=create_payment_url(request_body)
-#                 placeholder=[eve.caller_id.caller_fullname,poc.srv_id.service_title,poc.sub_srv_id.recommomded_service,links['payment_link']]
-#                 whatsapp_sms(eve.caller_id.phone, 'caller_no',placeholder)
-
-            
-#             return Response({"msg":"Session and Professional Rescheduled"})
-
-
-
 
 
 
 
 class temp_multiple_allocation_api(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
     def post(self,request):
-        ev_conv=0
-        clgref_id = get_prof(request)[3]
-        request.data['last_modified_by'] = clgref_id
+        # clgref_id = get_prof(request)[3]
+        # request.data['last_modified_by'] = clgref_id
         try:
             event_id=agg_hhc_events.objects.get(eve_id=request.data.get('eve_id'),status=1)
             event_serializer=agg_hhc_updateIDs_event_serializer(event_id)
@@ -8930,12 +11685,9 @@ class temp_multiple_allocation_api(APIView):
             return Response({'message':'event not found'},status=404)
         srv_prof_date_and_id_list=request.data.get('srv_prof_date_and_id')
         conve_list=[]
-        conv_dict={}
         for i in srv_prof_date_and_id_list:
-            if(srv_prof_date_and_id_list[i][-1]!=0):#temp if(srv_prof_date_and_id_list[i][-1]=="yes"):
+            if(srv_prof_date_and_id_list[i][-1]=="yes"):
                 conve_list.append(int(i))
-                print("data is ",srv_prof_date_and_id_list[i][-1])
-                conv_dict[i]=srv_prof_date_and_id_list[i][-1]
 #--------------------------------------------------------------------------------------message to professional start -------------------------------------
             service_professional=agg_hhc_service_professionals.objects.get(srv_prof_id=int(i))
             service_start_date=srv_prof_date_and_id_list[i][0]
@@ -8947,10 +11699,9 @@ class temp_multiple_allocation_api(APIView):
             except:
                 pass
 #--------------------------------------------------------------------------------------message to professional end -------------------------------------
-
         dictionary=date_function(srv_prof_date_and_id_list)
-        pr=[int(i) for i in srv_prof_date_and_id_list]
         all_dates=dates_list(request.data.get('start_date'),request.data.get('end_date'))
+        pr=[i for i in srv_prof_date_and_id_list]
         date_count=0
         for i in dictionary:
             date_count+=int(len(dictionary[str(i)]))
@@ -8970,16 +11721,10 @@ class temp_multiple_allocation_api(APIView):
                             # date[j]=str(dates.actual_StartDate_Time)
                             date_list.append(str(dates.actual_StartDate_Time))
                     return Response({'message':'professional already Allocated','date':date_list},status=404)
-                all_data=request.data.get('srv_prof_date_and_id')
                 if(int(i) in conve_list):
-                    print(all_data)
-                    print("all conve",conve_list)
-                    print("single day convience charge is ",conv_dict[str(i)])
-                    print("single day convience charge is ")
-                    detailed_event_poc.convinance_charges=int(conv_dict[str(i)])#int(i[-1])#temp int(request.data.get('conve_charge')) 
+                    detailed_event_poc.convinance_charges=int(request.data.get('conve_charge'))
                     detailed_event_poc.is_convinance=True
-                    ev_conv+=int(conv_dict[str(i)])
-                    event_id.final_amount+=int(conv_dict[str(i)])#int(i[-1])# temp   event_id.final_amount+=int(request.data.get('conve_charge'))
+                    event_id.final_amount+=int(request.data.get('conve_charge'))
                     event_id.save()
                 try:
                     professional=agg_hhc_service_professionals.objects.get(srv_prof_id=int(i))
@@ -8992,55 +11737,31 @@ class temp_multiple_allocation_api(APIView):
                 detailed_event_poc.last_modified_by=clgref_id
                 detailed_event_poc.save()
                 # print(i,"this is professional",j,"this is date")
-        event_id.total_convinance=ev_conv
+        event_id.day_convinance=int(request.data.get('conve_charge'))
         event_id.event_status=2
         event_id.status=1
         event_id.last_modified_by=clgref_id
         event_id.save()
+        print('1........')
         event_id=agg_hhc_event_plan_of_care.objects.filter(eve_id=request.data.get('eve_id'),status=1)
-        
-        # token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter().last(), is_login=True).last().token
-        # sf=agg_hhc_service_professionals.objects.filter(srv_prof_id__in=pr,status=1)
-        # clg_id1=[j.clg_ref_id for j in sf]
-        # coll=agg_com_colleague.objects.filter(clg_ref_id__in=clg_id1, status=1)
-        # token = (d.token for d in [DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[j.clg_ref_id for j in agg_hhc_service_professionals.objects.filter(srv_prof_id__in=pr,status=1)], status=1),is_login=True)])
-        # token = [d.token for d in [DeviceToken.objects.filter(clg_id__in=coll,is_login=True)]]
-        cred = credentials.Certificate(da)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        token=[d.token for d in DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[j.clg_ref_id for j in agg_hhc_service_professionals.objects.filter(srv_prof_id__in=pr,status=1)]),is_login=True)]
-        print(token,';;................')
-        # token=[d.token for d in [DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[j.clg_ref_id for j in agg_hhc_service_professionals.objects.filter(srv_prof_id__in=pr,status=1)]),is_login=True)]]
+        print('2........')
+        token=[d.token for d in [DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[j.clg_ref_id for j in agg_hhc_service_professionals.objects.filter(srv_prof_id__in=pr,status=1)], status=1),is_login=True)]]
+        print(token, ';;;;;;..........')
         for z in token:
         # detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
             body=f'Patient: {event_id.last().eve_id.agg_sp_pt_id.name}\nService: {event_id.last().sub_srv_id.recommomded_service}'
-            # notification={ 'title': 'You Have Allocated New Service', 'body': body }
-            title = 'You Have Allocated New Service'
-            # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': z,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
-            message = messaging.Message(
-                    token=z,
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body
-                        )
-                    )
-            response = messaging.send(message)
+            notification={ 'title': 'Approved request for session cancellation', 'body': body }
+            response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+            print(response, 'response............')
+        """if request.data.get('andriod_status')==1:
+            Notificationlist=NotificationList.objects.filter(is_active=True,is_accepted=False,noti_id=request.data.get('noti_id'))
+            for i in Notificationlist:
+                i.is_active=False
+                i.is_accepted=True
+                i.accepted_by=professional_id
+                i.save()
+                # print("we are working on andriod api ")"""
         return Response({'eve_id':event_id_is,'caller_id_is':caller_id_is,'agg_sp_pt_id':patient_id_is,'message':'professional Allocated sucessfully'})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -9058,14 +11779,11 @@ class Dashboard_enquiry_count_api(APIView):
             start_of_week = now - timezone.timedelta(days=now.weekday())
             start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
             last_day = calendar.monthrange(today.year, today.month)[1]
-            # month_end_date = today.replace(day=last_day)
-            month_end_date1 = today.replace(day=last_day)
-            month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
+            month_end_date = today.replace(day=last_day)
             start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
             if id == 1:
-                # td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-                td_all_event = agg_hhc_enquiry_follow_up.objects.filter(added_date__gte=start_of_day,follow_up_status=1)
+                td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
                 
                 td_eve_ids = td_all_event.values_list('event_id', flat=True)
                 td_all_eves = list(set(td_eve_ids))
@@ -9080,8 +11798,7 @@ class Dashboard_enquiry_count_api(APIView):
                 start_date = timezone.now().date()
                 start_datetime = datetime.combine(start_date - timedelta(days=start_date.weekday()), datetime.min.time())                
                 end_datetime = datetime.combine(start_date, datetime.max.time())
-                # ws_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_datetime,end_datetime),follow_up_status=1)
-                ws_all_event = agg_hhc_enquiry_follow_up.objects.filter(added_date__range=(start_datetime,end_datetime),follow_up_status=1)
+                ws_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_datetime,end_datetime),follow_up_status=1)
                 
                 ts_eve_ids = ws_all_event.values_list('event_id', flat=True)
                 ts_all_eves = list(set(ts_eve_ids))
@@ -9093,8 +11810,7 @@ class Dashboard_enquiry_count_api(APIView):
                 event_ids = ts_all_follow_up_enq.values_list('event_id', flat=True).distinct()
                 enquiry=agg_hhc_events.objects.filter(eve_id__in=event_ids)
             elif id == 3:
-                # ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-                ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(added_date__range=(start_of_month,month_end_date),follow_up_status=1)
+                ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
                 
                 ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
                 ts_all_eves = list(set(ts_eve_ids))
@@ -9141,12 +11857,97 @@ class Dashboard_enquiry_count_api(APIView):
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-         
-
-
-
-
         
+
+
+
+
+
+# class Dashboard_enquiry_count_api(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request, id):
+#         try:
+#             if id == 1:
+#                 print('1')
+#                 times = timezone.now().date()
+#                 print(times,"feegegahjklorgkgljljlf")
+#                 enquiry = agg_hhc_events.objects.filter(added_date__gte=times, status=1, enq_spero_srv_status=3)
+#                 # enquiry = agg_hhc_events.objects.all()#added_date=times
+#                 print("enquiry",enquiry)
+#                 for i in enquiry:
+#                     print(i.added_date, ';;;dates;;;')
+#                     print('t',type(i.added_date))
+#                     print('t',type(times))
+#                   # print(enquiry[0].added_date, ';;;;enquiry obj date')
+#             elif id == 2:
+#                 week_days = timezone.now().date() - timedelta(days=7)
+#                 print(week_days, 'date1')
+#                 enquiry = agg_hhc_events.objects.filter(added_date__gte=week_days,status=1,enq_spero_srv_status=3)
+#                 print(enquiry, ';;;;enquiry11')
+#             elif id == 3:
+#                 month = timezone.now().date()
+#                 month = month.replace(day=1)
+#                 print(month, 'date12')
+
+#                 enquiry = agg_hhc_events.objects.filter(added_date__gte=month,status=1,enq_spero_srv_status=3)
+#                 print(enquiry, ';;;;enquiry22')
+#             else:
+#                 raise Http404("Invalid ID")
+
+#             enquiry_count = len(enquiry)
+#             App = 0
+#             Social = 0
+#             Calls = 0
+#             Walk_in = 0
+#             for i in enquiry:
+#                 # caller_id = agg_hhc_events.objects.filter(pt_id=i.pt_id).first()
+#                 if i.patient_service_status == 1:
+#                     App += 1
+#                 elif i.patient_service_status == 2:
+#                     Social += 1
+#                 elif i.patient_service_status == 3:
+#                     Walk_in += 1
+#                 elif i.patient_service_status == 4:
+#                     Calls += 1
+
+#             if enquiry_count > 0:
+#                 App_percentage = (Walk_in / enquiry_count) * 100 if App > 0 else 0
+#                 Social_percentage = (Social / enquiry_count) * 100 if Social > 0 else 0
+#                 Calls_percentage = (Calls / enquiry_count) * 100 if Calls > 0 else 0
+#                 Walk_in_percentage = (Walk_in / enquiry_count) * 100 if Walk_in > 0 else 0
+#             else:
+#                 App_percentage = 0
+#                 Social_percentage = 0
+#                 Calls_percentage = 0
+#                 Walk_in_percentage = 0
+
+#             return Response({
+#                 'Total_enquiries': enquiry_count,
+#                 'App': App,
+#                 'Social': Social,
+#                 'Calls': Calls,
+#                 'Walk_in': Walk_in,
+#                 "App_percentage": round(App_percentage),
+#                 "Social_percentage": round(Social_percentage),
+#                 "Calls_percentage": round(Calls_percentage),
+#                 "Walk_in_percentage": round(Walk_in_percentage)
+#             })
+
+#         except Http404 as e:
+#             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+
+
+
+
+         
 class Dashboard_enquiry_status_count_api(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -9157,9 +11958,7 @@ class Dashboard_enquiry_status_count_api(APIView):
         start_of_week = now - timezone.timedelta(days=now.weekday())
         start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
         last_day = calendar.monthrange(today.year, today.month)[1]
-        # month_end_date = today.replace(day=last_day)
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
+        month_end_date = today.replace(day=last_day)
         start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         if(id==1):
@@ -9173,9 +11972,7 @@ class Dashboard_enquiry_status_count_api(APIView):
             ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
             ts_three = ts_all_follow_up_enq.filter(follow_up=3).count()
             ts_one = ts_all_follow_up_enq.filter(follow_up=1).count()
-            ts_two = ts_all_follow_up_enq.filter(follow_up=2).count()
-            ts_four = ts_all_follow_up_enq.filter(follow_up=4).count()
-            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three,'cancelled_srv':ts_two,'pending_srv':ts_four})   
+            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three})  
         elif(id==2):
             start_date = timezone.now().date()
             start_datetime = datetime.combine(start_date - timedelta(days=start_date.weekday()), datetime.min.time())                
@@ -9190,9 +11987,7 @@ class Dashboard_enquiry_status_count_api(APIView):
             ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
             ts_three = ts_all_follow_up_enq.filter(follow_up=3).count()
             ts_one = ts_all_follow_up_enq.filter(follow_up=1).count()
-            ts_two = ts_all_follow_up_enq.filter(follow_up=2).count()
-            ts_four = ts_all_follow_up_enq.filter(follow_up=4).count()
-            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three,'cancelled_srv':ts_two,'pending_srv':ts_four})  
+            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three})  
         
         elif(id==3):
             ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
@@ -9205,12 +12000,96 @@ class Dashboard_enquiry_status_count_api(APIView):
             ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
             ts_three = ts_all_follow_up_enq.filter(follow_up=3).count()
             ts_one = ts_all_follow_up_enq.filter(follow_up=1).count()
-            ts_two = ts_all_follow_up_enq.filter(follow_up=2).count()
-            ts_four = ts_all_follow_up_enq.filter(follow_up=4).count()
-            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three,'cancelled_srv':ts_two,'pending_srv':ts_four})   
-
-
-
+            return Response({'in_follow_up':ts_one,'converted_to_service':ts_three})    
+              
+# class Dashboard_enquiry_status_count_api(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def get(self,request,id):
+#         id=id
+#         if(id==1):
+#             enquiry_follow_up=agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__date=timezone.now().date())
+#             print('jjjjjjjjjjjjjj-------',enquiry_follow_up)
+#             in_follow_up=0
+#             converted_to_service=0
+#             for i in enquiry_follow_up:
+#                 if(i.follow_up=='1'):
+#                     in_follow_up+=1
+#                 elif(i.follow_up=='3'):
+#                     converted_to_service+=1
+#             total=in_follow_up+converted_to_service
+#             if(total>0):
+#                 if(in_follow_up>0):
+#                     in_follow_up_percentage=in_follow_up/total
+#                     in_follow_up_percentage*=100
+#                 else:
+#                     in_follow_up_percentage=0
+#                 if(converted_to_service>0):
+#                     converted_to_service_percentage=converted_to_service/total
+#                     converted_to_service_percentage*=100
+#                 else:
+#                     converted_to_service_percentage=0
+#             else:
+#                 in_follow_up_percentage=0
+#                 converted_to_service_percentage=0
+#             return Response({'in_follow_up':in_follow_up,'converted_to_service':converted_to_service,'in_follow_up_percentage':round(in_follow_up_percentage),'converted_to_service_percentage':round(converted_to_service_percentage)})    
+            
+#         elif(id==2):
+#             week=timezone.now().date()-timedelta(days=7)
+#             enquiry_follow_up=agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__date__gte=week)
+#             print(enquiry_follow_up)
+#             in_follow_up=0
+#             converted_to_service=0
+#             for i in enquiry_follow_up:
+#                 if(i.follow_up=='1'):
+#                     in_follow_up+=1
+#                 elif(i.follow_up=='3'):
+#                     converted_to_service+=1
+#             total=in_follow_up+converted_to_service
+#             if(total>0):
+#                 if(in_follow_up>0):
+#                     in_follow_up_percentage=in_follow_up/total
+#                     in_follow_up_percentage*=100
+#                 else:
+#                     in_follow_up_percentage=0
+#                 if(converted_to_service>0):
+#                     converted_to_service_percentage=converted_to_service/total
+#                     converted_to_service_percentage*=100
+#                 else:
+#                     converted_to_service_percentage=0
+#             else:
+#                 in_follow_up_percentage=0
+#                 converted_to_service_percentage=0
+#             return Response({'in_follow_up':in_follow_up,'converted_to_service':converted_to_service,'in_follow_up_percentage':round(in_follow_up_percentage),'converted_to_service_percentage':round(converted_to_service_percentage)})    
+            
+#         elif(id==3):
+#             month=timezone.now().date()
+#             month=month.replace(day=1)
+#             enquiry_follow_up=agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__date__gte=month)
+#             in_follow_up=0
+#             converted_to_service=0
+#             for i in enquiry_follow_up:
+#                 if(i.follow_up=='1'):
+#                     in_follow_up+=1
+#                 elif(i.follow_up=='3'):
+#                     converted_to_service+=1
+#             total=in_follow_up+converted_to_service
+#             if(total>0):
+#                 if(in_follow_up>0):
+#                     in_follow_up_percentage=in_follow_up/total
+#                     in_follow_up_percentage*=100
+#                 else:
+#                     in_follow_up_percentage=0
+#                 if(converted_to_service>0):
+#                     converted_to_service_percentage=converted_to_service/total
+#                     converted_to_service_percentage*=100
+#                 else:
+#                     converted_to_service_percentage=0
+#             else:
+#                 in_follow_up_percentage=0
+#                 converted_to_service_percentage=0
+#             return Response({'in_follow_up':in_follow_up,'converted_to_service':converted_to_service,'in_follow_up_percentage':round(in_follow_up_percentage),'converted_to_service_percentage':round(converted_to_service_percentage)})    
+            
 #vinayak api for dashboard
 
 class srv_canc_count(APIView):
@@ -9219,6 +12098,7 @@ class srv_canc_count(APIView):
     #serializer_class = srv_cancel_serializer
     def get(self, request, id):
         if id == 1:
+            
             today_datetime = timezone.now()
             today_date = today_datetime.date()
             # print("Today's Date:", today_date)
@@ -9227,12 +12107,11 @@ class srv_canc_count(APIView):
             # queryset = agg_hhc_cancellation_history.objects.filter(cancelled_date__date=today_date)
 
             current_date = date.today()
-
             # Create a queryset to filter records with cancelled_date equal to today
             # queryset = agg_hhc_cancellation_history.objects.filter(cancelled_date__date=current_date).order_by('cancelation_reason')
             queryset = agg_hhc_cancellation_history.objects.filter(cancelled_date__date=current_date)
 
-            
+            print(queryset, ';;;;;queryset')
             # Count the number of records in the queryset
             queryset_count = queryset.count()
 
@@ -9306,191 +12185,26 @@ class srv_canc_count(APIView):
 
 
 
-
 # ------------------------ Service Details API for dashboard --------
-
-                # seven_Days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, srv_prof_id__isnull =  False)
-                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 10, eve_id__event_status__in = [2], srv_prof_id__isnull =  False)
-                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2, srv_prof_id__isnull =  False)
-                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1], Session_jobclosure_status = 1, srv_prof_id__isnull =  False)
-
-class srv_dtl_dash(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    # serializer_class = srv_dtl_dash_serializer
-    def get(self, request, id, format=None):
-        try:
-            start_date = timezone.now().date()
-            if id == 1:
-                # Calculate the date for todays days
-                # start_date = timezone.now().date()
-                # start_datetime = datetime.combine(start_date, datetime.min.time())
-                
-                start_datetime = datetime.combine(start_date, datetime.min.time())
-                end_datetime = datetime.combine(start_date, datetime.max.time())
-                
-                # today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2, eve_id__event_status__in = [2])
-                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 1)
-                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1])
-                # print(start_date)
-                today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                on_going = today_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
-                completed_Services = today_data.filter(Q(Session_status=9)|Q(Session_status=2)|Q(Session_jobclosure_status=1))
-                Pending = today_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
-
-
-                # data = list(today_data.values())
-                # data = list(on_going.values())                
-                total_services_count = today_data.count()
-
-
-                on_going_count = on_going.count()
-
-                completed_Services_count = completed_Services.count()
-                
-                Pending_count = Pending.count()
-                # response_data = {
-                #     "Total_services": total_services_count,
-                #     "ongoing_services": on_going_count,
-                #     "Completed_services": completed_Services_count,
-                #     "Pending_services":Pending_count,
-                #     # "data": data
-                # }
-                response_data = {
-                    "Total_services": total_services_count,
-                    "Completed_services": {
-                        "completed_srv": completed_Services_count
-                    },
-                    "Pending_services": {
-                        "Pending_srv": Pending_count
-                    },
-                    "ongoing_services": {
-                        "Ongoing_srv": on_going_count
-                    }
-                }
-                
-                return Response(response_data, status=status.HTTP_200_OK)
-            
-            elif id == 2:
-                # Calculate the date for 7 days ago
-                # start_date = timezone.now().date() - timedelta(days=7)
-                # start_datetime = datetime.combine(start_date, datetime.min.time())
-                start_datetime = datetime.combine(start_date - timedelta(days=start_date.weekday()), datetime.min.time())                
-                end_datetime = datetime.combine(start_date, datetime.max.time())
-
-                # seven_Days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2, eve_id__event_status__in = [2])
-                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 1)
-                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1])
-
-
-                seven_Days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                on_going = seven_Days_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
-                completed_Services = seven_Days_data.filter(Q(Session_status=9)|Q(Session_status=2)|Q(Session_jobclosure_status=1))
-                Pending = seven_Days_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
-            
-                # data = list(seven_Days_data.values())
-
-                total_services_count = seven_Days_data.count()
-
-                completed_Services_count = completed_Services.count()
-                on_going_count = on_going.count() 
-                Pending_count = Pending.count()
-
-                # response_data = {
-                #     "Total_services": total_services_count,
-                #     "ongoing_services": on_going_count,
-                #     "Completed_services": completed_Services_count,
-                #     "Pending_services":Pending_count,                                       
-                #     # "data": data
-                # }
-                response_data = {
-                    "Total_services": total_services_count,
-                    "Completed_services": {
-                        "completed_srv": completed_Services_count
-                    },
-                    "Pending_services": {
-                        "Pending_srv": Pending_count
-                    },
-                    "ongoing_services": {
-                        "Ongoing_srv": on_going_count
-                    }
-                }                 
-                
-                return Response(response_data, status=status.HTTP_200_OK)
-
-            elif id == 3:
-                today = timezone.now().date()
-                last_day = calendar.monthrange(today.year, today.month)[1]
-                month_end_date = today.replace(day=last_day)
-               
-                start_datetime = datetime.datetime.combine(start_date.replace(day=1), datetime.datetime.min.time())                
-                end_datetime = datetime.datetime.combine(month_end_date, datetime.datetime.max.time())
-                
-                # thirty_days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 10, eve_id__event_status__in = [2])
-                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2)
-                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1], Session_jobclosure_status = 1)
-
-                thirty_days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
-                on_going = thirty_days_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
-                completed_Services = thirty_days_data.filter(Q(Session_status=9)|Q(Session_status=2)|Q(Session_jobclosure_status=1))
-                Pending = thirty_days_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
-
-                # print(thirty_days_data.count())
-                print(on_going.count())
-                # print(completed_Services.count())
-
-                # data = list(thirty_days_data.values())
-                total_services_count = thirty_days_data.count()
-
-                on_going_count = on_going.count()
-
-                completed_Services_count = completed_Services.count()                
-                Pending_count = Pending.count()                
-                # response_data = {
-                #     "Total_services": total_services_count,
-                #     "ongoing_services": on_going_count,
-                #     "Completed_services": completed_Services_count,
-                #     "Pending_services":Pending_count,                                           
-                #     # "data": data
-                # }
-                response_data = {
-                    "Total_services": total_services_count,
-                    "Completed_services": {
-                        "completed_srv": completed_Services_count
-                    },
-                    "Pending_services": {
-                        "Pending_srv": Pending_count
-                    },
-                    "ongoing_services": {
-                        "Ongoing_srv": on_going_count
-                    }
-                }                
-                
-                return Response(response_data, status=status.HTTP_200_OK)                        
-            else:
-                return Response({"detail": "Invalid ID"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 
 
+# ---------------- Old Vinayak Code -------------------------
 
 # class srv_dtl_dash(APIView):
-#     # renderer_classes = [UserRenderer]
-#     # permission_classes = [IsAuthenticated]
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
 #     # serializer_class = srv_dtl_dash_serializer
 #     def get(self, request, id, format=None):
 #         try:
-
+   
 #             if id == 1:
-#                 # print(timezone.now())
+#                 print(timezone.now())
 #                 today_data = agg_hhc_events.objects.filter(last_modified_date__date=timezone.now().date(),status=1).exclude(enq_spero_srv_status=3)
 #                 com_srv = pend_srv = on_srv = agg_hhc_events.objects.none()
 #                 schd_srv = agg_hhc_event_plan_of_care.objects.none().count()
-#                 # print("i am inside")
+#                 print("i am inside")
 #                 if today_data:
                     
 #                     com_srv = today_data.filter(event_status=3)
@@ -9503,7 +12217,8 @@ class srv_dtl_dash(APIView):
 #                     eve_ids = today_data.values_list('eve_id', flat=True)
 #                     sch_srv = agg_hhc_event_plan_of_care.objects.filter(eve_id__in = eve_ids, start_date__gte=tomorrow, status=1)
 
-#                     on_srv = today_data.filter(event_status=2)
+#                     on_srv = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,actual_StartDate_Time=timezone.now().date())
+#                     #today_data.filter(event_status=2)
                 
 #                     tatal_count = today_data.count()
 #                     # -------------- Completed Services -----------
@@ -9522,7 +12237,7 @@ class srv_dtl_dash(APIView):
 
 #                 com_srv_fk_list = com_srv.values_list('eve_id', flat=True)
 #                 com_srv_epoc = agg_hhc_event_plan_of_care.objects.filter(eve_id__in=com_srv_fk_list,status=1)
-#                 # print("i am inside 2 ")
+#                 print("i am inside 2 ")
 #                 comp_srv_dtl={
 #                     'count_physio': com_srv_epoc.filter(srv_id=1).count(),
 #                     'count_physician'  : com_srv_epoc.filter(srv_id=2).count(),
@@ -9533,7 +12248,7 @@ class srv_dtl_dash(APIView):
 #                     'count_patheylogy' : com_srv_epoc.filter(srv_id=6).count()
 
 #                 }
-#                 # print("i am inside 4 ")
+#                 print("i am inside 4 ")
 
 #                 pend_srv_fk_list = pend_srv.values_list('eve_id', flat=True)
 #                 pend_srv_epoc = agg_hhc_event_plan_of_care.objects.filter(eve_id__in=pend_srv_fk_list,status=1)
@@ -9547,7 +12262,7 @@ class srv_dtl_dash(APIView):
 
 #                 }
         
-#                 # print("i am inside 3 ")
+#                 print("i am inside 3 ")
 #                 ong_srv_fk_list = pend_srv.values_list('eve_id', flat=True)
 #                 ong_srv_epoc = agg_hhc_event_plan_of_care.objects.filter(eve_id__in=ong_srv_fk_list,status=1)
 
@@ -9560,7 +12275,7 @@ class srv_dtl_dash(APIView):
 #                     'count_patheylogy': ong_srv_epoc.filter(srv_id=6).count()
 #                 }
 
-#                 # print("i am inside 22 ")
+#                 print("i am inside 22 ")
 #                 Completed_services = {
 #                     'completed_srv': completed_srv if 'completed_srv' in locals() else 0,
 #                     'comp_srv_dtl': comp_srv_dtl
@@ -9579,15 +12294,13 @@ class srv_dtl_dash(APIView):
                     
 #                     'ong_srv_dtl' : ong_srv_dtl
 #                 }
-#                 today = timezone.now().date()
-#                 count_dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=today,status=1).count()
 
 #                 today = timezone.now().date()
 #                 count_dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=today,status=1).count()
-#                 # print("i am inside 23 ")
+#                 print("i am inside 23 ")
 #                 response_data = {
 #                     # 'Total_services': tatal_count if 'tatal_count' in locals() else 0,
-#                     'Total_services': tatal_count,
+#                     'Total_services':agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,actual_StartDate_Time=today).count(),
 #                     'Completed_services': Completed_services,
 #                     'Pending_services': Pending_services,
 #                     'ongoing_services': Ongoing_services,
@@ -9626,14 +12339,14 @@ class srv_dtl_dash(APIView):
                     
 #                     # -------------- Pending Services -----------
 #                     pending_srv = pend_srv.count()
-                    
+                   
 #                     # -------------- Ongoing Services -----------
 #                     ong_srv = on_srv.count()
                 
 #                     # # -------------- Schedule Services -----------
 #                     schd_srv = sch_srv.count()
-                    
-
+                   
+                
 
 #                 com_srv_fk_list = com_srv.values_list('eve_id', flat=True)
 #                 com_srv_epoc = agg_hhc_event_plan_of_care.objects.filter(eve_id__in=com_srv_fk_list,status=1)
@@ -9690,7 +12403,7 @@ class srv_dtl_dash(APIView):
                     
 #                     'ong_srv_dtl' : ong_srv_dtl
 #                 }
-                
+
 #                 response_data = {
 #                     'Total_services': tatal_count if 'tatal_count' in locals() else 0,#ch
 #                     'Completed_services': Completed_services,
@@ -9822,6 +12535,334 @@ class srv_dtl_dash(APIView):
 #             traceback.print_exc()
 #             return Response({"error": str(e)})
 
+# ---------------- Old Vinayak Code -------------------------
+
+# ---------------- HD Dashboard New Amit Code -------------------------
+class srv_dtl_dash(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, id, format=None):
+        try:
+            start_date = timezone.now().date()
+            if id == 1:
+                # Calculate the date for todays days
+                # start_date = timezone.now().date()
+                # start_datetime = datetime.combine(start_date, datetime.min.time())
+                
+                start_datetime = datetime.combine(start_date, datetime.min.time())
+                end_datetime = datetime.combine(start_date, datetime.max.time())
+                
+                # today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2, eve_id__event_status__in = [2])
+                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 1)
+                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1])
+                # print(start_date)
+                today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                on_going = today_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
+                completed_Services = today_data.filter(Session_jobclosure_status=1)
+                Pending = today_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
+
+
+                # data = list(today_data.values())
+                # data = list(on_going.values())                
+                total_services_count = today_data.count()
+
+
+                on_going_count = on_going.count()
+
+                completed_Services_count = completed_Services.count()
+                
+                Pending_count = Pending.count()
+                # response_data = {
+                #     "Total_services": total_services_count,
+                #     "ongoing_services": on_going_count,
+                #     "Completed_services": completed_Services_count,
+                #     "Pending_services":Pending_count,
+                #     # "data": data
+                # }
+                response_data = {
+                    "Total_services": total_services_count,
+                    "Completed_services": {
+                        "completed_srv": completed_Services_count
+                    },
+                    "Pending_services": {
+                        "Pending_srv": Pending_count
+                    },
+                    "ongoing_services": {
+                        "Ongoing_srv": on_going_count
+                    }
+                }
+                
+                return Response(response_data, status=status.HTTP_200_OK)
+            
+            elif id == 2:
+                # Calculate the date for 7 days ago
+                # start_date = timezone.now().date() - timedelta(days=7)
+                # start_datetime = datetime.combine(start_date, datetime.min.time())
+                start_datetime = datetime.combine(start_date - timedelta(days=start_date.weekday()), datetime.min.time())                
+                end_datetime = datetime.combine(start_date, datetime.max.time())
+
+                # seven_Days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2, eve_id__event_status__in = [2])
+                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 1)
+                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1])
+
+
+                seven_Days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                on_going = seven_Days_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
+                completed_Services = seven_Days_data.filter(Session_jobclosure_status=1)
+                Pending = seven_Days_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
+            
+                # data = list(seven_Days_data.values())
+
+                total_services_count = seven_Days_data.count()
+
+                completed_Services_count = completed_Services.count()
+                on_going_count = on_going.count() 
+                Pending_count = Pending.count()
+
+                # response_data = {
+                #     "Total_services": total_services_count,
+                #     "ongoing_services": on_going_count,
+                #     "Completed_services": completed_Services_count,
+                #     "Pending_services":Pending_count,                                       
+                #     # "data": data
+                # }
+                response_data = {
+                    "Total_services": total_services_count,
+                    "Completed_services": {
+                        "completed_srv": completed_Services_count
+                    },
+                    "Pending_services": {
+                        "Pending_srv": Pending_count
+                    },
+                    "ongoing_services": {
+                        "Ongoing_srv": on_going_count
+                    }
+                }                 
+                
+                return Response(response_data, status=status.HTTP_200_OK)
+
+            elif id == 3:
+                # Calculate the date for 30 days ago
+                # start_date = timezone.now().date() - timedelta(days=30)
+                # start_datetime = datetime.combine(start_date, datetime.min.time())
+
+                # start_datetime = datetime.combine(start_date.replace(day=1), datetime.min.time())                
+                # end_datetime = datetime.combine(start_date, datetime.max.time())
+
+                
+                today = timezone.now().date()
+                last_day = calendar.monthrange(today.year, today.month)[1]
+                month_end_date = today.replace(day=last_day)
+               
+                start_datetime = datetime.combine(start_date.replace(day=1), datetime.min.time())                
+                end_datetime = datetime.combine(month_end_date, datetime.max.time())
+                
+                
+                # thirty_days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                # on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 10, eve_id__event_status__in = [2])
+                # completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, Session_jobclosure_status = 2)
+                # Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1, eve_id__event_status__in = [1], Session_jobclosure_status = 1)
+
+                thirty_days_data = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3) , actual_StartDate_Time__range=(start_datetime, end_datetime), status=1)
+                on_going = thirty_days_data.filter(Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1)
+                completed_Services = thirty_days_data.filter(Session_jobclosure_status=1)
+                Pending = thirty_days_data.filter(Session_jobclosure_status=2).exclude(Q(Session_status=8)|Q(Session_status=2)|Q(Session_status=9))
+
+                # print(thirty_days_data.count())
+                print(on_going.count())
+                # print(completed_Services.count())
+
+                # data = list(thirty_days_data.values())
+                total_services_count = thirty_days_data.count()
+                
+                on_going_count = on_going.count()
+
+                completed_Services_count = completed_Services.count()                
+                Pending_count = Pending.count()                
+                # response_data = {
+                #     "Total_services": total_services_count,
+                #     "ongoing_services": on_going_count,
+                #     "Completed_services": completed_Services_count,
+                #     "Pending_services":Pending_count,                                           
+                #     # "data": data
+                # }
+                response_data = {
+                    "Total_services": total_services_count,
+                    "Completed_services": {
+                        "completed_srv": completed_Services_count
+                    },
+                    "Pending_services": {
+                        "Pending_srv": Pending_count
+                    },
+                    "ongoing_services": {
+                        "Ongoing_srv": on_going_count
+                    }
+                }                
+                
+                return Response(response_data, status=status.HTTP_200_OK)                        
+            else:
+                return Response({"detail": "Invalid ID"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ---------------- HD Dashboard New Amit Code -------------------------
+
+
+
+class Create_Get_User_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, format=None):
+        users = agg_com_colleague.objects.filter(is_active=True).exclude(Q(grp_id=2) | Q(grp_id=3) | Q(grp_id=None)).order_by('-added_date')
+        serializer = Create_User_serializer(users, many=True)
+        return Response(serializer.data)
+
+class group_and_type_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
+    def get(self, request, format=None):
+        users = agg_mas_group.objects.filter(grp_status=1)
+        serializer = group_and_type_serializer(users, many=True)
+        return Response(serializer.data)
+
+
+import traceback
+logger = logging.getLogger(__name__)
+
+class Create_Post_User_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
+    # def get(self, request, format=None):
+    #     users = agg_com_colleague.objects.all()
+    #     serializer = Create_User_POST_serializer(users, many=True)
+    #     return Response(serializer.data)
+
+    def post(self, request, format=None):
+        try: 
+            data = request.data
+            mobile_no = data.get('clg_mobile_no')
+            grp_id = data.get('grp_id')
+            clg_email = data.get('clg_email')
+            clg_user = data.get('clg_ref_id')
+
+
+            current_date = datetime.now().strftime('%Y%m%d')
+
+            # Check for the existence of clg_mobile_no and grp_id separately
+            mobile_exists = agg_com_colleague.objects.filter(clg_mobile_no=mobile_no).exists()
+            group_exists = agg_com_colleague.objects.filter(grp_id=grp_id).exists()
+            mail_exists = agg_com_colleague.objects.filter(clg_email=clg_email).exists()
+            user_exists = agg_com_colleague.objects.filter(clg_ref_id=clg_user).exists()
+
+            if mobile_exists and group_exists and mail_exists and user_exists:
+                return Response({"error": "Mobile number and group ID and Email id already exist."}, status=status.HTTP_409_CONFLICT)
+            elif mobile_exists:
+                return Response({"error": "Mobile number already exists."}, status=status.HTTP_409_CONFLICT)
+            elif user_exists:
+                return Response({"error": "User Name already exists."}, status=status.HTTP_409_CONFLICT)
+            elif mail_exists:
+                return Response({"error": "Mail ID already exists."}, status=status.HTTP_409_CONFLICT)
+
+            last_user = agg_com_colleague.objects.all().order_by('id').last()
+
+            if last_user:
+                last_code = last_user.clg_Emplyee_code
+                if last_code and last_code.startswith(f'EMP{current_date}') and last_code[len(f'EMP{current_date}'):].isdigit():
+                    # Increment the existing code if it matches the current date
+                    new_code = f'EMP{current_date}' + str(int(last_code[len(f'EMP{current_date}'):]) + 1).zfill(6)
+                else:
+                    # Start the sequence for the new date
+                    new_code = f'EMP{current_date}000001'
+            else:
+                # First code creation
+                new_code = f'EMP{current_date}000001'
+
+            
+            data['clg_Emplyee_code'] = new_code
+            
+            serializer = Create_User_POST_serializer(data=data)
+            # try:
+            if serializer.is_valid():
+                user = serializer.save()
+                user.set_password('1234')  # Set the default password to "1234"
+                user.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_409_CONFLICT)             
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            logger.error(f"An error occurred: {str(e)}\nTraceback: {error_trace}")
+            return Response({
+                'error1': str(e),
+                'traceback': error_trace
+            }, status=status.HTTP_400_BAD_REQUEST)     
+
+
+
+
+
+class Edit_User_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
+    def get(self, request, clg_id, format=None):
+        users = agg_com_colleague.objects.get(pk=clg_id)
+        serializer = User_Edit_serializer(users)
+        return Response(serializer.data)
+    
+    def put(self, request, clg_id, format=None):
+        try:
+            user = agg_com_colleague.objects.get(pk=clg_id)
+        except agg_com_colleague.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        data = request.data
+        
+        # Check if another user with the same mobile number and group ID already exists
+        mobile_no = data.get('clg_mobile_no')
+        grp_id = data.get('grp_id')
+        if agg_com_colleague.objects.filter(clg_mobile_no=mobile_no, grp_id=grp_id).exclude(pk=clg_id).exists():
+            raise ValidationError("Another user with the same mobile number and group ID already exists.")
+        
+        serializer = User_Edit_serializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class active_inActive_User_Views(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]    
+    def get(self, request, clg_id, format=None):
+        users = agg_com_colleague.objects.get(pk=clg_id)
+        serializer = active_inActive_User_serializer(users)
+        return Response(serializer.data)
+    
+    def put(self, request, clg_id, format=None):
+        try:
+            user = agg_com_colleague.objects.get(pk=clg_id)
+        except agg_com_colleague.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        data = request.data
+        
+        # Check if another user with the same mobile number and group ID already exists
+        # mobile_no = data.get('clg_mobile_no')
+        # grp_id = data.get('grp_id')
+        # if agg_com_colleague.objects.filter( grp_id=grp_id).exclude(pk=clg_id).exists():
+        #     raise ValidationError("Another user with the same mobile number and group ID already exists.")
+        
+        serializer = active_inActive_User_serializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# -------------------------------------Amit Rasale--------------------------------------------------------------- 
 
 
 
@@ -9936,7 +12977,7 @@ class FindProfessionalSubService(APIView):
             # print(prof_available.srv_prof_id.clg_ref_id.clg_is_login,';;professional ids;;')
             if prof_available.srv_prof_id.clg_ref_id.clg_is_login:
                 # print(prof_available.srv_prof_id.srv_prof_id, prof_available.srv_prof_id.prof_fullname,';;;;;')
-                prof_date=agg_hhc_professional_availability.objects.filter(srv_prof_id=prof_available.srv_prof_id).order_by('day')
+                prof_date=agg_hhc_professional_availability.objects.filter(srv_prof_id=prof_available.srv_prof_id).order_by('date')
                 # for dates in prof_date:
                 #     print(dates,'dates')
                 if prof_date.count()==0:
@@ -10030,7 +13071,7 @@ class FindProfessionalSubService(APIView):
         for broadcast in Broadcast_To:
             # print(broadcast)
             self.send_notification(broadcast,sub_service, address, notif_id)
-        return Response({'b':Broadcast_To})
+        return Response({'b':Broadcast_To})        
 
 
 # from fcm_django.models import FCMDevice
@@ -10157,13 +13198,17 @@ class add_consultant(APIView):
         phone=request.data['mobile_no']
         # consultant = agg_hhc_doctors_consultants.objects.filter(mobile_no=phone, status=1)
         # if consultant
-        doc_counsultant = agg_hhc_doctors_consultants_add_serializer(data=request.data)
-        try:
-            if doc_counsultant.is_valid():
-                doc_counsultant.save()
-                return Response(doc_counsultant.data)
-        except Exception as e:
-            return Response({"error":e}, status=400)
+        consultants=agg_hhc_doctors_consultants.objects.filter(mobile_no=phone,status=1)
+        if consultants:
+            return Response({'error':'consultant already exist'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            doc_counsultant = agg_hhc_doctors_consultants_add_serializer(data=request.data)
+            try:
+                if doc_counsultant.is_valid():
+                    doc_counsultant.save()
+                    return Response(doc_counsultant.data)
+            except Exception as e:
+                return Response({"error":e}, status=400)
    
 # ------------------------------------------------------------------------------------------------------
 class agg_hhc_consultant_HD_api(APIView):
@@ -10182,6 +13227,7 @@ class agg_hhc_consultant_HD_api(APIView):
         return Response(consultants)
 # ------------------------------------------------------------------------------------------------------
 
+from django.core.files.uploadedfile import UploadedFile
 
 class concent_upload_discharge_summery_document_signature(APIView):
     serializer_class = get_ptn_data_for_concent
@@ -10198,35 +13244,57 @@ class concent_upload_discharge_summery_document_signature(APIView):
 
     def post(self, request, *args, **kwargs):
         # clgref_id = get_prof(request)[3]
-
-        eve_id = request.data.get('eve_id')
-        is_aggree = request.data.get('is_aggree')
-        sign = request.data.get('sign')
-        clg_id = request.data.get('clg_id')
-
-        # Retrieve agg_hhc_events instance based on eve_id
         try:
-            event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
-        except agg_hhc_events.DoesNotExist:
-            return Response("Event does not exist", status=status.HTTP_404_NOT_FOUND)
+            eve_id = request.data.get('eve_id')
+            is_aggree = request.data.get('is_aggree')
+            sign = request.data.get('sign')
+            clg_id = request.data.get('clg_id')
+            print(type(sign),"Type of signature")
+            print(sign,"sign")
+            if not isinstance(sign, UploadedFile):
+                return Response("Signature file is missing or invalid", status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieve multiple files sent in the request
-        discharge_files = request.FILES.getlist('Discharge_summ_docs')
 
-        # Create agg_hhc_concent_form_details instance
-        form_instance = agg_hhc_concent_form_details.objects.create(eve_id=event_instance, is_aggree=is_aggree,
-                                                                    sign=sign)
+            # Retrieve agg_hhc_events instance based on eve_id
+            try:
+                event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
+            except agg_hhc_events.DoesNotExist:
+                return Response("Event does not exist", status=status.HTTP_404_NOT_FOUND)
 
-        # Loop through and create DischargeFile instances for each file
-        for discharge_file in discharge_files:
-            discharge_file_instance = DischargeFile.objects.create(file=discharge_file)
-            form_instance.Discharge_summ_docs.add(discharge_file_instance)
+            # Retrieve multiple files sent in the request
+            discharge_files = request.FILES.getlist('Discharge_summ_docs')
+            print(discharge_files,"discharge_files")
+            for file in discharge_files:
+                if not isinstance(file, UploadedFile):
+                    return Response("Discharge files contain non-file data", status=status.HTTP_400_BAD_REQUEST)
+
+            for idx, discharge_file in enumerate(discharge_files):
+                print(f"File {idx+1}: {type(discharge_file)}")
+            
+
+            # Create agg_hhc_concent_form_details instance
+            form_instance = agg_hhc_concent_form_details.objects.create(eve_id=event_instance, is_aggree=is_aggree,
+                                                                        sign=sign)
+
+            # Loop through and create DischargeFile instances for each file
+            for discharge_file in discharge_files:
+                discharge_file_instance = DischargeFile.objects.create(file=discharge_file)
+                form_instance.Discharge_summ_docs.add(discharge_file_instance)
+            
+            event_instance.consent_submited = 1
+            event_instance.save()
+
+            # data = {
+            #     'eve_id': eve_id,
+            #     'is_aggree': is_aggree,
+            #     'sign': sign,
+            #     'discharge_files': [file for file in discharge_files]  # Include file names in response
+            # } 
+            return Response("Data successfully created", status=status.HTTP_201_CREATED)
+            # return Response({"data":data}, status=status.HTTP_201_CREATED)
+        except:
+            return Response({"error":"something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        event_instance.consent_submited = 1
-        event_instance.save()
-
-        return Response("Data successfully created", status=status.HTTP_201_CREATED)
-    
 
 class call_back_notification_api(APIView):
     renderer_classes = [UserRenderer]
@@ -10295,11 +13363,14 @@ class enquiry_Service_Notification_count(APIView):
        ##     d1.save()
        ## print(d1.data)
 # -------------------------------------------------------------------------------------------------------------
-        enquiry = agg_hhc_events.objects.filter(Q(enq_spero_srv_status=3),status=1, event_status=1)
+        enquiry = agg_hhc_events.objects.filter(Q(enq_spero_srv_status=3),Q(purp_call_id=2),status=1, event_status=1)
+        
         enquiry=enquiry.order_by('eve_id')
         enquiry_count=0
         for i in enquiry:
+            # print(i.eve_id, ';;;;;;fddffd;;;')
             follow_up_count=agg_hhc_enquiry_follow_up.objects.filter(event_id=i.eve_id).count()
+            print(follow_up_count, ';;;;;;llll;;;;demo', i.eve_id)
             if follow_up_count == 1:
                 enquiry_count=enquiry_count+1
         data={
@@ -10309,8 +13380,8 @@ class enquiry_Service_Notification_count(APIView):
         return Response(data)
     
 class Ongoing_Eve(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     # def get(self, request):
     #     # if(int(hosp_id)==0):
     #     data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),status=1)
@@ -10319,98 +13390,7 @@ class Ongoing_Eve(APIView):
     #     serialize_data=Ongoing_Eve_serializer(data, many=True) 
     #     return Response(serialize_data.data)
 
-
-    # def get(self, request):
-    #     # if(int(hosp_id)==0):
-    #     print('hiii')
-    #     eve_ids = []
-    #     print(eve_ids,'eve')
-
-    #     if eve_code:= request.GET.get('eve_code'):
-    #         eve_idss = agg_hhc_events.objects.filter(event_code=eve_code, status=1)
-    #         for eve_id in eve_idss:
-    #             eve_ids.append(eve_id.eve_id) 
-    #     elif (cl_no:= request.GET.get('caller_no'))  and (date := request.GET.get('date')):
-    #         print('condition in cl number and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=date, status = 1)
-    #         cl_dt = agg_hhc_callers.objects.filter(phone__icontains=cl_no)
-
-    #         eve_ids_lst = list(set(dtl_data.values_list('eve_id', flat=True)))
-    #         # print(eve_ids_lst,'eve_ids_lst')
-    #         eve_idss = agg_hhc_events.objects.filter(eve_id__in=eve_ids_lst, caller_id__in=cl_dt, status=1)
-    #         for eve_id in eve_idss:
-    #             eve_ids.append(eve_id.eve_id) 
-    #     elif (cl_name:= request.GET.get('caller_name'))  and (date := request.GET.get('date')):
-    #         print('condition in cl name and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=date, status = 1)
-    #         cl_dt = agg_hhc_callers.objects.filter(caller_fullname__icontains=cl_name)
-    #         eve_ids_lst = list(set(dtl_data.values_list('eve_id', flat=True)))
-    #         eve_idss = agg_hhc_events.objects.filter(eve_id__in=eve_ids_lst, caller_id__in=cl_dt, status=1)
-    #         for eve_id in eve_idss:
-    #             eve_ids.append(eve_id.eve_id)
-    #     elif (pt_no:= request.GET.get('patient_no')) and (date := request.GET.get('date')):
-    #         print('condition in patient no and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=date, status = 1)
-    #         pt_dt = agg_hhc_patients.objects.filter(phone_no__icontains=pt_no)
-    #         eve_ids_lst = list(set(dtl_data.values_list('eve_id', flat=True)))
-    #         eve_idss = agg_hhc_events.objects.filter(eve_id__in=eve_ids_lst, agg_sp_pt_id__in=pt_dt, status=1)
-    #         for eve_id in eve_idss:
-    #             eve_ids.append(eve_id.eve_id)
-    #     elif (pt_name:= request.GET.get('patient_name')) and (date := request.GET.get('date')):
-    #         print('condition in patient name and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=date, status = 1)
-    #         pt_dt = agg_hhc_patients.objects.filter(name__icontains=pt_name)
-    #         eve_ids_lst = list(set(dtl_data.values_list('eve_id', flat=True)))
-    #         eve_idss = agg_hhc_events.objects.filter(eve_id__in=eve_ids_lst, agg_sp_pt_id__in=pt_dt, status=1)
-    #         for eve_id in eve_idss:
-    #             eve_ids.append(eve_id.eve_id)
-    #     elif (s_month:= request.GET.get('s_month')) and (e_month:= request.GET.get('e_month')):
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(s_month,e_month), status = 1)
-    #         eve_list = [i.eve_id for i in dtl_data]
-    #         unique_eve = set(eve_list)
-    #         for eve_id in unique_eve:
-    #            eve_ids.append(eve_id.eve_id)
-    #     elif (prof_name:=request.GET.get('prof_name')) and (date := request.GET.get('date')):
-    #         print('condition in prof name and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time = date,srv_prof_id__prof_fullname=prof_name, status = 1)
-    #         eve_list = [i.eve_id for i in dtl_data]
-    #         unique_eve = set(eve_list)
-    #         for eve_id in unique_eve:
-    #            eve_ids.append(eve_id.eve_id)
-    #     elif (srv_id:=request.GET.get('srv_id')) and (date := request.GET.get('date')):
-    #         print('condition in service name and date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time = date, eve_poc_id__srv_id=srv_id, status = 1)
-    #         eve_list = [i.eve_id for i in dtl_data]
-    #         unique_eve = set(eve_list)
-    #         for eve_id in unique_eve:
-    #            eve_ids.append(eve_id.eve_id)
-    #     elif date := request.GET.get('date'):
-    #         print(date,'date')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=date, status = 1)
-    #         eve_list = [i.eve_id for i in dtl_data]
-    #         unique_eve = set(eve_list)
-    #         for eve_id in unique_eve:
-    #             eve_ids.append(eve_id.eve_id)
-    #     else:
-    #         print('condition else')
-    #         dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=timezone.now().date(), status = 1)
-    #         eve_list = [i.eve_id for i in dtl_data]
-    #         unique_eve = set(eve_list)
-    #         for eve_id in unique_eve:
-    #             eve_ids.append(eve_id.eve_id)
-        
-        
-    #     print('hii2')
-    #     if not eve_ids:
-    #         return Response({"msg":"data not foundf"})
-    #     else:
-    #         print(eve_ids,'eve_ids')
-    #         data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),eve_id__in=eve_ids,status=1)
-    #         # else:
-    #         #     data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),status=1,added_from_hosp=hosp_id)
-    #         serialize_data=Ongoing_Eve_serializer(data, many=True) 
-    #         return Response(serialize_data.data)
-
+    
     def get(self, request):
         # if(int(hosp_id)==0):
         print('hiii')
@@ -10507,23 +13487,24 @@ class Ongoing_Eve(APIView):
         else:
             print('condition else')
             dtl_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=timezone.now().date(), status = 1)
-            # eve_list = [i.eve_id fors i in dtl_data]
+            # eve_list = [i.eve_id for i in dtl_data]
             eve_list = [i.eve_id for i in dtl_data if i.eve_id is not None]
             unique_eve = set(eve_list)
             for eve_id in unique_eve:
                 eve_ids.append(eve_id.eve_id)
         
-        
+         
         print('hii2')
         if not eve_ids:
             return Response({"msg":"data not foundf"})
         else:
             print(eve_ids,'eve_ids')
             data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),eve_id__in=eve_ids,status=1)
-            # else:
+            # else: 
             #     data =  agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),status=1,added_from_hosp=hosp_id)
             serialize_data=Ongoing_Eve_serializer(data, many=True) 
             return Response(serialize_data.data)
+      
 
 
     def post(self, request):
@@ -10542,10 +13523,10 @@ class Ongoing_Eve(APIView):
         else:
             return Response(serializer.errors)
         
-  
+        
 class SingleRecord(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def get(self, request, eve_id):
         completed_payment_list = []
         professional_list = []
@@ -10630,7 +13611,6 @@ class SingleRecord(APIView):
                                 per_prof_amount_is = (per_prof_amount * 1)  # or add conv_first if needed
                                 professiona_proper_info = {
                                     'professional_name': j.srv_prof_id.prof_fullname,
-                                    'ambs_id':j.ambs_id.ambs_no if j.ambs_id else j.ambs_id,
                                     'start_time': str(j.start_time),
                                     'end_time': str(j.end_time),
                                     'start_date': professional_name_date[0],
@@ -10653,7 +13633,6 @@ class SingleRecord(APIView):
                                         per_prof_amount_is2 = (per_prof_amount * session_count)  # or add conv_first if needed
                                         professiona_proper_info = {
                                             'professional_name': j.srv_prof_id.prof_fullname,
-                                            'ambs_id':j.ambs_id.ambs_no if j.ambs_id else j.ambs_id,
                                             'start_time': str(j.start_time),
                                             'end_time': last_time[-1],
                                             'start_date': new_start_date,
@@ -10670,7 +13649,6 @@ class SingleRecord(APIView):
                                         per_prof_amount_is3 = (per_prof_amount * session_count)  # or add conv_first if needed
                                         professiona_proper_info = {
                                             'professional_name': j.srv_prof_id.prof_fullname,
-                                            'ambs_id':j.ambs_id.ambs_no if j.ambs_id else j.ambs_id,
                                             'start_time': str(j.start_time),
                                             'end_time': last_time[-1],
                                             'start_date': new_start_date,
@@ -10767,7 +13745,6 @@ class SingleRecord(APIView):
 
 
 
-
 class all_session_details(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -10776,7 +13753,7 @@ class all_session_details(APIView):
             all_session_data=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status=1).order_by('actual_StartDate_Time')
             all_session_list=[]
             for i in all_session_data:
-                sesssion={'professional_name':i.srv_prof_id.prof_fullname,'start_date':str(i.actual_StartDate_Time),'end_date':str(i.actual_EndDate_Time),'start_time':str(i.start_time),'end_time':str(i.end_time),'ambs':i.ambs_id.ambs_no if i.ambs_id else i.ambs_id}
+                sesssion={'professional_name':i.srv_prof_id.prof_fullname,'start_date':str(i.actual_StartDate_Time),'end_date':str(i.actual_EndDate_Time),'start_time':str(i.start_time),'end_time':str(i.end_time)}
                 all_session_list.append(sesssion)
             return Response({"all_session_details":all_session_list})
         except Exception as e:
@@ -10784,173 +13761,7 @@ class all_session_details(APIView):
 
 
 
-# class hd_invoce_eventwise(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def get(self,request,eve_id):
-#         # caller=get_prof(request)[2]
-#         # caller=3
-#         completed_payment_list=[]
-#         professional_list=[]
-#         professional=[]
-#         professional_amount={}
-#         current_year = datetime.datetime.now().year
-#         previous_year = current_year - 1
-#         try:
-#             get_event = agg_hhc_events.objects.filter(eve_id = eve_id)
-#             events=get_event.filter(Q(event_status=2) | Q(event_status=3),Q(enq_spero_srv_status=1)|Q(enq_spero_srv_status=2),status=1)
-#             print("data")
-#             print(events)
-#             for i in events:
-#                 eve_id=i.eve_id
-#                 conv_data=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1,is_convinance=True).order_by('actual_StartDate_Time')
-#                 if conv_data:
-#                     total_conv_charge_is=0
-#                     for o in conv_data:
-#                         total_conv_charge_is=total_conv_charge_is+o.convinance_charges
-#                     # conv_first=conv_first.convinance_charges
-#                 else:
-#                     conv_first=0
-#                     total_conv_charge_is=0
-#                 Total_amount=int(i.Total_cost)
-#                 Final_amount=int(i.final_amount)
-#                 discount_type=i.discount_type
-#             #_________________________________________________discount type and given discount start__________________
-#                 if(i.discount_type==1 or i.discount_type==2):
-#                     discount_value = int(i.discount_value) if i.discount_value is not None else None
-#                 else:
-#                     discount_value=None
-#             #_________________________________________________discount type and given discount end__________________
-#                 payment_date=None
-#                 Tran_number=None
-#                 print("tr_num")
-#                 detaile_event_plan_of_care=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).order_by('actual_StartDate_Time')
-#                 # per_prof_amount=Total_amount//detaile_event_plan_of_care.filter().count()
-#                 per_prof_amount= int(detaile_event_plan_of_care.last().eve_poc_id.sub_srv_id.cost)
-#                 sessions=0
-#                 for j in detaile_event_plan_of_care:
-#                     professional_name_date=[]
-#                     if j.srv_prof_id is not None:
-#                         if(str(j.srv_prof_id.prof_fullname) in professional_list):
-#                             print("n0")
-#                         else:
-#                             get_dtl_data=detaile_event_plan_of_care.filter(eve_id=i.eve_id,srv_prof_id=j.srv_prof_id,status=1)
-# #----------------------------all dates is appended to the list -------------------------------------
-#                             for k in get_dtl_data:
-#                                 professional_name_date.append(str(k.actual_StartDate_Time))
-# #----------------------------all dates is appended to the list end -------------------------------------
-#                             if len(professional_name_date)==1:
-#                                     per_prof_amount_is=(per_prof_amount*1)#+(conv_first*1)
-#                                     professiona_proper_info={'professional_name':j.srv_prof_id.prof_fullname,'start_time':str(j.start_time),'end_time':str(j.end_time),'start_date':str(datetime.datetime.strptime(professional_name_date[0], '%Y-%m-%d').strftime('%d-%m-%Y')),'end_date':str(datetime.datetime.strptime(professional_name_date[0], '%Y-%m-%d').strftime('%d-%m-%Y')),'sessions':1,'amount':per_prof_amount_is}
-#                                     professional.append(professiona_proper_info)
-#                             else:
-#                                 len_count=1#len(professional_name_date)
-#                                 new_start_date=professional_name_date[0]
-#                                 session_count=1
-#                                 for l in professional_name_date:
-#                                     start_date_name=str(datetime.datetime.strptime(l, '%Y-%m-%d').date()+datetime.timedelta(days=1))
-#                                     print(len_count,"new",len(professional_name_date))
-#                                     if(len_count==len(professional_name_date)):
-#                                         per_prof_amount_is2=(per_prof_amount*session_count)#+(conv_first*session_count)
-#                                         professiona_proper_info={'professional_name':j.srv_prof_id.prof_fullname,'start_time':str(j.start_time),'end_time':str(j.end_time),'start_date':str(datetime.datetime.strptime(new_start_date, '%Y-%m-%d').strftime('%d-%m-%Y')),'end_date':str(datetime.datetime.strptime(professional_name_date[-1], '%Y-%m-%d').strftime('%d-%m-%Y')),'sessions':session_count,'amount':per_prof_amount_is2}
-#                                         professional.append(professiona_proper_info)
-#                                     elif(start_date_name==professional_name_date[len_count]):
-#                                         session_count+=1
-#                                     else:
-#                                         per_prof_amount_is3=(per_prof_amount*session_count)#+(conv_first*session_count)
-#                                         professiona_proper_info={'professional_name':j.srv_prof_id.prof_fullname,'start_time':str(j.start_time),'end_time':str(j.end_time),'start_date':str(datetime.datetime.strptime(new_start_date, '%Y-%m-%d').strftime('%d-%m-%Y')),'end_date':str(datetime.datetime.strptime(l, '%Y-%m-%d').strftime('%d-%m-%Y')),'sessions':session_count,'amount':per_prof_amount_is3}
-#                                         professional.append(professiona_proper_info)
-#                                         new_start_date=professional_name_date[len_count]
-#                                         session_count=1
-#                                     len_count+=1
-#                             professional_list.append(str(j.srv_prof_id.prof_fullname))
-#                     sessions+=1
-#                 payments=agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status='SUCCESS').last()
-#                 if payments:
-#                     print("paid")
-#                     amount_paid=int(payments.amount_paid)
-#                     amount_remaining=int(payments.amount_remaining)
-#                     payment_mode=payments.mode
-#                     payment_date=str(payments.added_date)
-#                 else:
-#                     amount_paid=0
-#                     amount_remaining=i.final_amount
-#                     payment_mode=None
-#                 patient_name=i.agg_sp_pt_id.name
-#                 patient_number=i.agg_sp_pt_id.phone_no
-#                 patient_address=i.agg_sp_pt_id.address
-#                 patient_google_address=i.agg_sp_pt_id.google_address
-#                 print("finding event ",i.eve_id)
-#                 event_plan_of_care=agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
-#                 print("event_plan_of_care.start_date")
-#                 event_date=event_plan_of_care.start_date
-#                 last_modified_date = event_plan_of_care.last_modified_date
-#                 service_name=event_plan_of_care.srv_id.service_title
-#                 sub_service_name=event_plan_of_care.sub_srv_id.recommomded_service
-#                 # professional = sorted(professional, key=lambda x: x['start_date'] if x['start_date'] else '')
-#                 if(amount_remaining<=0):
-#                     print("here",i.eve_id)
-#                     payment_details={'Total_amount':Total_amount,
-#                                      'Final_amount':Final_amount,
-#                                      'payment_date':payment_date,
-#                                      'payment_mode':payment_mode,
-#                                      'amount_paid':amount_paid,
-#                                      'patient_name':patient_name,
-#                                      'service_name':service_name,
-#                                      'sub_service_name':sub_service_name,
-#                                      'Tran_number':Tran_number,
-#                                      'eve_id':eve_id,
-#                                      'hospital_code':i.agg_sp_pt_id.preferred_hosp_id.hospital_short_code,
-#                                      'invoice_id':i.Invoice_ID,
-#                                      'years_range': f"{previous_year}-{current_year}",
-#                                      'event_code':i.event_code,
-#                                      'event_date':str(event_date),
-#                                      'last_modified_date':str(last_modified_date),
-#                                      'patient_number':patient_number,
-#                                      'conveniance_charges':total_conv_charge_is,
-#                                      'sessions':sessions,
-#                                      'patient_address':patient_address,
-#                                      'patient_google_address':patient_google_address,
-#                                      'amount_remaining':amount_remaining,
-#                                      'professional_amount':professional,
-#                                      'discount_value':discount_value,
-#                                      'discount_type':discount_type
-#                                      }
-#                     completed_payment_list.append(payment_details)
-#                 else:
-#                     payment_details={'Total_amount':Total_amount,
-#                                      'Final_amount':Final_amount,
-#                                      'payment_date':payment_date,
-#                                      'payment_mode':payment_mode,
-#                                      'amount_paid':amount_paid,
-#                                      'patient_name':patient_name,
-#                                      'service_name':service_name,
-#                                      'sub_service_name':sub_service_name,
-#                                      'Tran_number':Tran_number,
-#                                      'eve_id':eve_id,
-#                                      'event_code':i.event_code,
-#                                      'hospital_code':i.agg_sp_pt_id.preferred_hosp_id.hospital_name,
-#                                      'invoice_id':i.Invoice_ID,
-#                                      'years_range': f"{previous_year}-{current_year}",
-#                                      'event_date':str(event_date),
-#                                      'last_modified_date':str(last_modified_date),
-#                                      'patient_number':patient_number,
-#                                      'conveniance_charges':total_conv_charge_is,
-#                                      'sessions':sessions,
-#                                      'patient_address':patient_address,
-#                                      'patient_google_address':patient_google_address,
-#                                      'amount_remaining':amount_remaining,
-#                                      'professional_amount':professional,
-#                                      'discount_value':discount_value,
-#                                      'discount_type':discount_type
-#                                      }
-#                     completed_payment_list.append(payment_details)
-#             return Response({"Event_Invoice":completed_payment_list})
-#         except Exception as e:
-#             import traceback
-#             traceback.print_exc()
-#             return Response({"error": str(e)})
-#             # return Response({"error": str(e)})
+
 
 
 
@@ -11084,7 +13895,7 @@ class hd_invoce_eventwise(APIView):
                                      'Final_amount':Final_amount if discount_type not in (3,) else 0,
                                      'payment_date':payment_date,
                                      'payment_mode':payment_mode,
-                                     'amount_paid':amount_paid,
+                                     'amount_paid':int(amount_paid),
                                      'patient_name':patient_name,
                                      'service_name':service_name,
                                      'sub_service_name':sub_service_name,
@@ -11115,7 +13926,7 @@ class hd_invoce_eventwise(APIView):
                                      'Final_amount':Final_amount if discount_type not in (3,) else 0,
                                      'payment_date':payment_date,
                                      'payment_mode':payment_mode,
-                                     'amount_paid':amount_paid,
+                                     'amount_paid':int(amount_paid),
                                      'patient_name':patient_name,
                                      'service_name':service_name,
                                      'sub_service_name':sub_service_name,
@@ -11151,41 +13962,8 @@ class hd_invoce_eventwise(APIView):
 
 
 
-
-
-
         
 class patient_last_feedback(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self,request,pt_id):
-        try:
-            event = agg_hhc_events.objects.filter(agg_sp_pt_id=pt_id,status=1).order_by('-eve_id')
-            for i in event:
-                feed_back=agg_hhc_feedback_media_note.objects.filter(eve_id=i.eve_id,status=1,feedback_by=2).last()
-                if feed_back:
-                    try:
-                        rating=feed_back.rating
-                        comment=feed_back.additional_comment
-                    except:
-                        rating=None
-                        comment=None
-                    return Response({'rating':rating,'comment':comment})
-            return Response({'rating':None,'comment':None})
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-
-
-
-
-
-
-
-class HD_feedback(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get(self,request,pt_id):
@@ -11204,6 +13982,11 @@ class HD_feedback(APIView):
             return Response({'rating':None,'comment':None})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 
 
 
@@ -11235,7 +14018,7 @@ class get_reschedule_cancle_request(APIView):
         # get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(is_deleted=2, last_modified_date__date=timezone.now().date())
         serializer_req = reschedule_cancle_request_pro_seri(get_all_req, many= True)
         return Response(serializer_req.data)
-    
+
 
 #-------------------mayank permission--------------------
 
@@ -11253,6 +14036,7 @@ class get_reschedule_cancle_request(APIView):
 #             module_name = module_data["name"]
 #             group = module_data["group"]
 #             group_name = module_data["group_name"]
+#             # source_id = module_data["Source_id"]
 
 #             submodules = [submodule for submodule in permission_serializer.data if submodule["module"] == module_id]
 
@@ -11261,6 +14045,7 @@ class get_reschedule_cancle_request(APIView):
 #                 "name": module_name,
 #                 "group": group,
 #                 "group_name":group_name,
+#                 # "Source_id": source_id,
 #                 "submodules": submodules
 #             }
 
@@ -11271,6 +14056,8 @@ class get_reschedule_cancle_request(APIView):
 #         return Response(final_data)
 
 class CombinedAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
         permission_modules = Permission_module.objects.filter()
         modules_serializer = Mmoduleserializer(permission_modules, many=True)
@@ -11278,23 +14065,23 @@ class CombinedAPIView(APIView):
         permission_objects = permission.objects.filter()
         permission_serializer = permission_sub_Serializer(permission_objects, many=True)
 
-        # Group modules by their group ID
+        
         grouped_modules = {}
         for module_data in modules_serializer.data:
-            group_id = module_data["group"]
-            if group_id not in grouped_modules:
-                grouped_modules[group_id] = {
-                    "group": group_id,
-                    "group_name": module_data["group_name"],
+            r_m_id = module_data["r_m_id"]
+            if r_m_id not in grouped_modules:
+                grouped_modules[r_m_id] = {
+                    "r_m_id": r_m_id,
+                    "r_m_name": module_data["r_m_name"],
                     "modules": []
                 }
-            grouped_modules[group_id]["modules"].append({
+            grouped_modules[r_m_id]["modules"].append({
                 "module_id": module_data["module_id"],
                 "name": module_data["name"],
                 "submodules": []
             })
 
-        # Add submodules to their respective modules
+        
         for submodule_data in permission_serializer.data:
             module_id = submodule_data["module"]
             for group_data in grouped_modules.values():
@@ -11307,8 +14094,9 @@ class CombinedAPIView(APIView):
         return Response(final_data)
 
 
-
 class CreatePermissionAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     serializer_class = SavePermissionSerializer
 
     def post(self, request):
@@ -11319,6 +14107,8 @@ class CreatePermissionAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UpdatePermissionAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     serializer_class = SavePermissionSerializer
 
     def put(self, request, id):
@@ -11334,88 +14124,22 @@ class UpdatePermissionAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
 
 class GetPermissionAPIView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     serializer_class = SavePermissionSerializer
 
     def get(self, request, group, *args, **kwargs):
         permissions = agg_save_permissions.objects.filter(role=group)
         serializer = self.serializer_class(permissions, many=True)
         return Response(serializer.data)
-
-# --------------------------------mayank Inventory--------------------
-class AddInventoryAPIView(APIView):
-    def post(self, request, format=None):
-        serializer = Add_inventory(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class InventoryNameGetAPIView(APIView):
-    def get(self, request, format=None):
-        inventory_items = agg_Add_inventory.objects.all()
-        serializer = inventory_name_get(inventory_items, many=True)
-        return Response(serializer.data)
-    
-class AddStocksAPIView(APIView):
-    def post(self, request, format=None):
-        serializer = Add_stocks(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class AddRequestAPIView(APIView):
-    def post(self, request, format=None):
-        serializer = Add_request_approve_post(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class AddMaterialRequest_PUT_APIView(APIView):
-    def put(self, request, material_request_id):
-        try:
-            material_request = agg_Add_material_request.objects.get(material_request_id=material_request_id)
-        except agg_Add_material_request.DoesNotExist:
-            return Response({"error": "Material request does not exist"}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = Add_request_approve_put(instance=material_request, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
     
 class HHC_Module_GetAPIView(APIView):
-    def get(self, request, group ,format=None):
-        
-        group_list = agg_mas_group.objects.all()
-        inventory_items = Permission_module.objects.filter(group=group)
+    def get(self, request, format=None):
+        inventory_items = agg_mas_group.objects.all()
+        # print(inventory_items)
         serializer = HHC_Module(inventory_items, many=True)
-        return Response(serializer.data, group_list)
+        return Response(serializer.data)
 
-
-class Add_DR_RequestAPIView(APIView):
-    def post(self, request, format=None):
-        serializer = Add_DR_request_approve_post(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class Add_DR_MaterialRequest_PUT_APIView(APIView):
-    def put(self, request, request_id):
-        try:
-            material_request = agg_doctor_inventory_request.objects.get(request_id=request_id)
-        except agg_Add_material_request.DoesNotExist:
-            return Response({"error": "Material request does not exist"}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = Add_DR_request_approve_put(instance=material_request, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 
 
@@ -11424,6 +14148,7 @@ class job_closure_questions_web_form(APIView):
         questions = agg_hhc_job_closure_questions.objects.filter(srv_id = srv_id, status = 1)
         serialzer = jc_qustions_serializer(questions, many = True)
         return Response(serialzer.data)
+        
 
 class job_closure_questions(APIView):
     renderer_classes = [UserRenderer]
@@ -11432,6 +14157,7 @@ class job_closure_questions(APIView):
         questions = agg_hhc_job_closure_questions.objects.filter(srv_id = srv_id, status = 1)
         serialzer = jc_qustions_serializer(questions, many = True)
         return Response(serialzer.data)
+        
 
 
 class request_approvals_get_ptn(APIView):
@@ -11465,146 +14191,438 @@ class request_approvals_get_ptn(APIView):
            
 
 
+
+# class request_approvals(APIView):
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ServiceCancellationSerializer
+#     serializer_class2 = post_in_cancellation_history
+#     def post(self, request, res_can, srv_sess):
+#         clgref_id = get_prof(request)[3]
+#         request.data['last_modified_by'] = clgref_id
+#         eve_id = request.data.get('eve_id')
+#         remark = request.data.get('remark')
+#         sess_pk = request.data.get('session_id')
+#         # eve_id = request.data.get('eve_id')
+
+
+        
+#         if res_can == 1 and srv_sess == 1:
+#             get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = eve_id, is_deleted=2,is_srv_sesn=1, is_canceled=1)
+#             data = {
+#                 "event_id": eve_id, 
+#                 "cancellation_by": 1, 
+#                 "reason": 2, 
+#                 "remark": remark, 
+#                 "last_modified_by": clgref_id
+#                 # "last_modified_by": "abc5"
+#                 }   
+#             serializer = self.serializer_class(data=data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 for req in get_all_req:
+#                     req.is_deleted = 1
+#                     req.save()
+#                 return Response({'msg':'Service cancelled Done'})
+
+#         elif res_can == 1 and srv_sess == 2:
+            
+#             get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = eve_id, dtl_eve_id = sess_pk, is_deleted=2,is_srv_sesn=2, is_canceled=1).first()
+#             print(get_all_req,"get_all_req")
+#             get_eve_poc = agg_hhc_event_plan_of_care.objects.get(eve_id = eve_id)
+#             start_date_time = get_all_req.dtl_eve_id.actual_StartDate_Time
+#             end_date_time = get_all_req.dtl_eve_id.actual_EndDate_Time
+#             sub_srv_id = get_eve_poc.srv_id.srv_id
+
+#             print(get_eve_poc,"get_eve_poc")
+#             print(start_date_time,"start_date_time")
+#             print(end_date_time,"end_date_time")
+#             print(sub_srv_id,"sub_srv_id")
+
+#             print("error 1")
+           
+            
+#             if eve_id is None or start_date_time is None:
+#                 return Response({'error': 'Please provide eve_id and start_date_time'}, status=status.HTTP_200_OK)
+        
+
+#             get_event_data = agg_hhc_events.objects.get(eve_id=eve_id, status=1)
+#             epoc_model = agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id, status=1)
+
+#             try:
+                
+#                 if end_date_time:
+                    
+#                     record = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                         eve_id=eve_id,
+#                         actual_StartDate_Time__range=(start_date_time, end_date_time),status=1
+#                     )
+                    
+            
+#             except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+#                 return Response({'error': 'Record not found'}, status=status.HTTP_200_OK)
+#             except agg_hhc_events.DoesNotExist:
+#                 return Response({'error': 'agg_hhc_events Record not found'}, status=status.HTTP_200_OK)
+#             except agg_hhc_event_plan_of_care.DoesNotExist:
+#                 return Response({'error': 'agg_hhc_event_plan_of_care Record not found'}, status=status.HTTP_200_OK)
+
+            
+
+#             get_total_cancel_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                     eve_id=eve_id,
+#                     actual_StartDate_Time__range=(start_date_time, end_date_time),
+#                     status = 1
+#             )
+
+#             get_total_wout_cancel_session = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                     eve_id=eve_id,
+#                     status = 1
+#             ).exclude(actual_StartDate_Time__range=(start_date_time, end_date_time))
+
+#             get_sub_srv_data = agg_hhc_sub_services.objects.get(sub_srv_id=sub_srv_id)
+#             per_session_amt = int(get_sub_srv_data.cost)
+#             get_total_cancel_sessions_now = get_total_cancel_sessions.count() * per_session_amt
+#             wout_cancel_ses = get_total_wout_cancel_session.count() * per_session_amt
+            
+#             con_charge = get_total_cancel_sessions.aggregate(total_convinance_charges=Coalesce(Sum('convinance_charges'), Value(0)))['total_convinance_charges']
+#             con_chrg_wot_cancl = get_total_wout_cancel_session.aggregate(total_convinance_charges=Coalesce(Sum('convinance_charges'), Value(0)))['total_convinance_charges']
+        
+
+#             eve_total_cost = get_event_data.Total_cost
+          
+
+#             cancl_ses_amt = (eve_total_cost - get_total_cancel_sessions_now) + con_charge
+#             wout_cancl_ses_amt = eve_total_cost - wout_cancel_ses
+
+
+#             disc_type = get_event_data.discount_type
+#             disc_value = get_event_data.discount_value
+
+#             if disc_value is not None:
+#                 disc_value = Decimal(disc_value)
+              
+#             else:
+#                 disc_value = 0
+
+            
+#             if disc_type == 1:
+#                 discounted_amt_wout_cncel = int(((disc_value)/100)*int(wout_cancel_ses))
+
+#             elif disc_type == 2:
+#                 discounted_amt_wout_cncel = int(disc_value)
+                
+#             else:
+#                 discounted_amt_wout_cncel = 0
+            
+#             discounted_amt_wout_cncel1 = int(wout_cancel_ses) - discounted_amt_wout_cncel
+
+            
+#             with_con_chrg = discounted_amt_wout_cncel1 + con_chrg_wot_cancl
+
+#             final_amt_w_con_charge = discounted_amt_wout_cncel1 + con_chrg_wot_cancl
+           
+        
+#             get_event_data.final_amount = final_amt_w_con_charge
+            
+
+#             get_event_data.last_modified_by = clgref_id
+#             get_event_data.Total_cost = wout_cancel_ses
+            
+#             if con_charge is None:
+#                 con_charge = 0
+            
+#             if con_chrg_wot_cancl is None:
+#                 con_chrg_wot_cancl = 0
+
+            
+#             total_cancel_amt = int(per_session_amt * get_total_cancel_sessions_now)
+
+#             f_amount  = int(get_event_data.final_amount - total_cancel_amt)
+        
+
+            
+#             get_payment_status = agg_hhc_payment_details.objects.filter(eve_id = eve_id, 
+#                                                                         overall_status = 'SUCCESS', 
+#                                                                         status = 1)
+#             if get_payment_status.count() != 0:
+#                 sesson_amt = per_session_amt
+#             else:
+#                 sesson_amt = 0
+
+#             for dtl_id in record:
+#                 con_chrg_fron_dtl = agg_hhc_detailed_event_plan_of_care.objects.get(agg_sp_dt_eve_poc_id = dtl_id.agg_sp_dt_eve_poc_id)
+#                 cancel_history = {
+#                     'event_id': eve_id,
+#                     'cancellation_by': 2,
+#                     'can_amt': sesson_amt,
+#                     'convineance_chrg':con_chrg_fron_dtl.convinance_charges,
+#                     'remark': remark,
+#                     'agg_sp_dt_eve_poc_id':dtl_id.agg_sp_dt_eve_poc_id,
+#                     # 'reason': request.data.get('reason'),
+#                     'reason': 1,
+#                     'last_modified_by': clgref_id
+#                 }
+#                 serialized2_data = self.serializer_class2(data=cancel_history)  
+
+#                 if serialized2_data.is_valid():
+#                     serialized2_data.save()
+#                 else:
+#                     return Response(serialized2_data.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+#             print("near to set dtl ")
+#             for records in record:
+#                 print("in dtl seting")
+#                 records.status = 2
+#                 records.is_cancelled = 1
+#                 records.remark = remark 
+#                 records.last_modified_by = clgref_id
+#                 records.save()
+            
+
+#             get_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                 eve_id=eve_id,
+#                 status=1  
+#             )
+#             print("near set epoc dates")      
+#             depoc_start_date = get_sessions.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))['min_actual_StartDate_Time']
+          
+#             # Retrieve the maximum actual start date
+#             depoc_end_date = get_sessions.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))['max_actual_StartDate_Time']
+
+#             epoc_model.start_date = depoc_start_date
+#             print("set start")
+#             epoc_model.end_date = depoc_end_date
+#             print("set end")
+#             epoc_model.last_modified_by = clgref_id
+#             epoc_model.save()
+            
+#             serialized_data = self.serializer_class(record).data
+
+#             data = {
+#                 'dtl_data': serialized_data,
+#                 'cancel_data': serialized2_data.data
+#             }
+
+#             if get_sessions.count()==0:
+#                 epoc_model.status=2
+#                 get_event_data.status=2
+#                 epoc_model.save()
+#                 get_event_data.save()
+#             get_event_data.save()
+            
+#             get_all_req.is_deleted = 1
+#             get_all_req.save()
+            
+
+#             token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
+#             detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
+#             body=f'Patient: {detail.eve_id.agg_sp_pt_id.name}\nService: {detail.eve_poc_id.sub_srv_id.recommomded_service}\nDate: {detail.actual_StartDate_Time} {detail.start_time}'
+#             notification={ 'title': 'Approved request for session cancellation', 'body': body }
+#             response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+
+#             return Response({"msg":"ok"}, status=status.HTTP_200_OK)
+            
+
+
+#         elif res_can == 2 and srv_sess == 1:
+
+#             get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = eve_id, is_deleted=2, is_srv_sesn=1, is_reschedule=1).first()
+#             print(get_all_req)
+#             date = get_all_req.reschedule_date
+#             start_date_str = date.strftime('%Y-%m-%d')
+
+#             start_time = date.strftime('%H:%M')
+
+#             dtl_date_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=start_date_str,
+#                                                                                start_time= start_time,
+#                                                                                end_time = start_time,
+#                                                                                srv_prof_id = get_all_req.dtl_eve_id.srv_prof_id,
+#                                                                                status = 1)
+#             if dtl_date_data.exists():
+#                 return Response({"msg":"Professional has Already A session On that Time"}, stauts = status.HTTP_406_NOT_ACCEPTABLE)
+            
+
+
+#             start_time_obj_abc = datetime.strptime(start_time, '%H:%M')
+#             end_time_obj_abc = start_time_obj_abc + timedelta(hours=2)
+#             end_time = end_time_obj_abc.strftime('%H:%M')
+#             # end_time = date.strftime('%H:%M')
+    
+#             try:
+#                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+#                 start_time_obj = datetime.strptime(start_time, '%H:%M')
+#                 end_time_obj = datetime.strptime(end_time, '%H:%M')
+
+#                 queryset =  agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
+#                 pros=set([i.srv_prof_id for i in queryset])
+#                 get_count_dtl = queryset.count()
+#                 queryset2 =  agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
+                
+#                 history_tracker=agg_hhc_event_plan_of_care_H_T_Serializer(data=queryset2, many=True)
+#                 if history_tracker.is_valid():
+#                     history_tracker.save()
+           
+#                 new_end_date = start_date + timedelta(days=get_count_dtl)
+#                 new_end_date -= timedelta(days=1)
+            
+#                 queryset2.update(start_date=start_date_str, end_date=new_end_date, start_time=start_time_obj, end_time=end_time_obj, remark=remark, service_reschedule=1, last_modified_by=clgref_id)
+
+#                 for i, obj in enumerate(queryset):
+#                     new_start_date = start_date + timedelta(days=i)
+#                     new_end_date = new_end_date + timedelta(days=i)
+                
+#                     obj.actual_StartDate_Time = new_start_date.date()
+#                     obj.actual_EndDate_Time = new_start_date.date()
+                
+#                     obj.start_time = start_time_obj
+#                     obj.end_time = end_time_obj
+#                     obj.last_modified_by = clgref_id
+#                     obj.save()
+#                     get_all_req.is_deleted = 1
+#                     get_all_req.save()
+#                     # for req in get_all_req:
+#                     #     req.is_deleted = 1
+#                     #     req.save()
+#                 tokn=[j.token for j in DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[pro.clg_ref_id for pro in pros]), is_login=True)]
+#                 eve_poc_id=agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id, status=1).last() 
+#                 body=f'Patient: {eve_poc_id.eve_id.agg_sp_pt_id.name}\nService: {eve_poc_id.sub_srv_id.recommomded_service}\nStart DateTime:\n {eve_poc_id.start_date} {eve_poc_id.start_time}\nEnd DateTime:\n {eve_poc_id.end_date} {eve_poc_id.end_time}'
+#                 notification={ 'title': 'Approved request for service rescheduling.', 'body': body }
+#                 for tk in token:
+#                     response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': tk,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+
+
+#                 serializer = Detailed_EPOC_serializer(queryset, many=True)
+#                 return Response(serializer.data, status=status.HTTP_200_OK)
+#             except  agg_hhc_event_plan_of_care.DoesNotExist:
+#                 return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+
+#         elif res_can == 2 and srv_sess == 2:
+       
+#             try:
+#                 get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = eve_id, dtl_eve_id = sess_pk, is_deleted=2, is_srv_sesn=2, is_reschedule=1).first()
+#                 print(get_all_req,'get_all_req')
+                
+#                 session_date_str = get_all_req.dtl_eve_id.actual_StartDate_Time
+#                 session_reschedule_date_str = get_all_req.reschedule_date
+            
+#                 session_date_component = session_date_str
+            
+
+#                 resch_session_date_component = session_reschedule_date_str.date()
+#                 resch_session_time_component = session_reschedule_date_str.time()
+#                 end_time = datetime.datetime.combine(resch_session_date_component, resch_session_time_component) + timedelta(hours=2)
+#                 print(end_time.time(),'end_time')
+
+                
+
+#                 get_session_data = agg_hhc_detailed_event_plan_of_care.objects.get(eve_id=eve_id,actual_StartDate_Time=session_date_component,status=1)
+#                 dtl_date_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=resch_session_date_component,
+#                                                                                start_time= resch_session_time_component,
+#                                                                                end_time = resch_session_time_component,
+#                                                                                srv_prof_id = get_session_data.dtl_eve_id.srv_prof_id,
+#                                                                                status = 1)
+#                 if dtl_date_data.exists():
+#                     return Response({"msg":"Professional has Already A session On that Time"}, stauts = status.HTTP_406_NOT_ACCEPTABLE)
+                
+
+
+#                 new_session = agg_hhc_detailed_event_plan_of_care(
+#                     eve_poc_id = get_session_data.eve_poc_id,
+#                     eve_id = get_session_data.eve_id,
+#                     index_of_Session = get_session_data.index_of_Session,
+#                     srv_prof_id = get_session_data.srv_prof_id,
+#                     actual_StartDate_Time = resch_session_date_component,
+#                     actual_EndDate_Time = resch_session_date_component,
+#                     start_time = resch_session_time_component,
+#                     end_time = end_time.time(),
+#                     service_cost = get_session_data.service_cost,
+#                     amount_received = get_session_data.amount_received,
+#                     status=1,
+#                     remark = remark,
+#                     Reschedule_status=1,
+#                     last_modified_by = clgref_id
+#                 )
+#                 new_session.save()
+                
+#                 get_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                     eve_id=eve_id,
+#                     status=1  
+#                 )
+#                 epoc_model = agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id, status=1)
+
+#                 depoc_start_date = get_sessions.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))['min_actual_StartDate_Time']
+
+#                 # Retrieve the maximum actual start date
+#                 depoc_end_date = get_sessions.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))['max_actual_StartDate_Time']
+
+#                 epoc_model.start_date = depoc_start_date
+#                 epoc_model.end_date = depoc_end_date
+#                 epoc_model.last_modified_by = clgref_id
+#                 epoc_model.save()
+                
+#                 get_session_data.status = 2
+#                 get_session_data.save()
+#                 # for req in get_all_req:
+#                 #     req.is_deleted = 1
+#                 #     req.save()
+#                 get_all_req.is_deleted = 1
+#                 get_all_req.save()
+#                 token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
+#                 detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
+#                 body=f'Patient: {detail.eve_id.agg_sp_pt_id.name}\nService: {detail.eve_poc_id.sub_srv_id.recommomded_service}\nDate: {detail.actual_StartDate_Time} {detail.start_time}'
+#                 notification={ 'title': 'Approved request for session Reschedule', 'body': body }
+#                 response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+
+#                 return Response("Success: Record updated and new record created", status=status.HTTP_200_OK)
+
+#             except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+#                 # Handle the case where the existing session record does not exist
+#                 return Response("Message: Record with given session not found", status=status.HTTP_200_OK)
+#             except Exception as e:
+#                 # Handle other exceptions that might occur during this process
+#                 return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+
+
+
 class request_approvals(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     serializer_class = ServiceCancellationSerializer
     serializer_class2 = post_in_cancellation_history
-
-    def finds(self, pros, eve_id,event_poc_queryset):
-        # pros=get_all_req.last().agg_sp_pt_id.agg_sp_pt_id if get_all_req.last().agg_sp_pt_id else None
-        print(pros, 'pros........')
-        cred = credentials.Certificate(da)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        tokn=[j.token for j in DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[pro.clg_ref_id for pro in pros]), is_login=True)]
-        event_poc_queryset=agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=event_poc_queryset.eve_poc_id).last() 
-        # print(eve_id.eve_id, ';;...................')
-        # print(eve_poc_id, ';;...................')
-        body=f'Patient: {eve_id.agg_sp_pt_id.name}\nService: {event_poc_queryset.sub_srv_id.recommomded_service}\nStart DateTime:\n {event_poc_queryset.start_date} {event_poc_queryset.start_time}\nEnd DateTime:\n {event_poc_queryset.end_date} {event_poc_queryset.end_time}'
-        # notification={ 'title': 'Approved request for service cancellation.', 'body': body }
-        title='Approved request for service cancellation.'
-        for tk in tokn:    
-            # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': tk,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
-            message = messaging.Message(
-            token=tk,
-            notification=messaging.Notification(
-                title=title,
-                body=body
-                )
-            )
-            response = messaging.send(message)
-
     def post(self, request, req_id, res_can, srv_sess):
         clgref_id = get_prof(request)[3]
         request.data['last_modified_by'] = clgref_id
         eve_id = request.data.get('eve_id')
         remark = request.data.get('remark')
         sess_pk = request.data.get('session_id')
-        print(eve_id, ';[]..........')
+        
         # eve_id = request.data.get('eve_id')
 
 
+        
         if res_can == 1 and srv_sess == 1:
             get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(req_id = req_id, eve_id = eve_id, is_deleted=2,is_srv_sesn=1, is_canceled=1)
-            # print(get_all_req, ';;;;;;;;;;;;')
-            data1 = {
-                "event_id": eve_id,
-                "cancellation_by": 1,
+            data = {
+                "event_id": eve_id, 
+                "cancellation_by": 1, 
                 "reason": 2,
-                "remark": remark,
-                "last_modified_by": clgref_id,
-                # "srv_prof_id":get_all_req.last().srv_prof_id.srv_prof_id if get_all_req.last().srv_prof_id else None,
-                # "agg_sp_pt_id":get_all_req.last().agg_sp_pt_id.agg_sp_pt_id if get_all_req.last().agg_sp_pt_id else None
+                "remark": remark, 
+                "last_modified_by": clgref_id
                 # "last_modified_by": "abc5"
-                }
-            print('11')
-            # ==================================================================================================
-            
-        # def get_event_id(self, obj):
-            # print(obj)
-            # try:
-            #     prof=obj.get('srv_prof_id')
-            # except:
-            #     prof=None
-            # try:
-            #     pt=obj.get('agg_sp_pt_id')
-            # except:
-            #     pt=None
-            # pt=obj.get('agg_sp_pt_id')
-            prof=get_all_req.last().srv_prof_id
-            # event_id1=obj.event_id
-            detaileves=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status=1)
-            # print(detaileves.count(), ';;;;..............')
-            # print(obj.event_id, ';;;;..............')
-            # print(detaileves.count(), ';;;;..............')
-            eve=agg_hhc_events.objects.filter(eve_id=detaileves.last().eve_id.eve_id, status=1).last()
-            eveplp=agg_hhc_event_plan_of_care.objects.filter(eve_id=detaileves.last().eve_id, status=1).last()
-            # print(eveplp, ';fdd/.........')
-            if prof:
-                pw=sorted(detaileves.filter(srv_prof_id=prof),key=lambda x: x.actual_StartDate_Time)
-                print(pw, 'pw.........')
-                for eve in pw:
-                    eve.status=2
-                    eve.is_deleted = 1
-                    # print(pw, 'pw..............')
-                    eve.save()
-                # print(detaileves.count(), pw.count(), 'all count................')
-                if detaileves.count()!=len(pw):
-                    print(pw)
-                    exc=[i.dtl_eve_id for i in pw]
-                    print(exc)
-                    dd=sorted(detaileves.exclude(dtl_eve_id__in=exc), key=lambda x: x.actual_StartDate_Time)
-                    eveplp.start_date=dd[0].actual_StartDate_Time
-                    eveplp.end_date=dd[-1].actual_EndDate_Time
-                    eveplp.start_time=dd[-1].start_time
-                    eveplp.end_time=dd[-1].end_time
-                    eveplp.save()
-                    # eve.status=2
-                    eve.save()
-                else:
-                    
-                    eveplp.status=2
-                    eveplp.save()
-                    eve.status=2
-                    # print(eveplp, 'eveplp.........')
-                    # print(eve, 'eve.........')
-                    eve.save()
-                self.finds([prof],eve.eve_id,eveplp)
-                # return event_id
-            else:
-                pro=set([i.srv_prof_id for i in detaileves])
-                # print(pro)
-                for eve in detaileves:
-                    eve.status=2
-                    eve.is_deleted = 1
-                    # print(eve, 'eve...........')
-                    eve.save()
-                eveplp.status=2
-                eveplp.save()
-                eve.status=2
-                eve.save()
-                # print(eveplp, 'eveplp.........')
-                # print(eve, 'eve.........')
-                self.finds(pro,eve.eve_id,eveplp)
-                # return event_id
-            # ==================================================================================================
-            serializer = NewServiceCancellationSerializer(data=data1)
-
-            print('22')
+                }   
+            serializer = self.serializer_class(data=data)
             if serializer.is_valid():
-                print('3')
                 serializer.save()
-                # print(serializer.data)
                 for req in get_all_req:
                     req.is_deleted = 1
                     req.save()
-            else:
-                print('5')
-                return Response('done')
-            print('4')
 
-            print(serializer.data)    
+                
             return Response({'msg':'Service cancelled Done'})
                 
 
@@ -11796,33 +14814,13 @@ class request_approvals(APIView):
             get_all_req.is_deleted = 1
             get_all_req.save()
             
-            cred = credentials.Certificate(da)
-            if not firebase_admin._apps:
-                firebase_admin.initialize_app(cred)
+
             token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
             detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
             body=f'Patient: {detail.eve_id.agg_sp_pt_id.name}\nService: {detail.eve_poc_id.sub_srv_id.recommomded_service}\nDate: {detail.actual_StartDate_Time} {detail.start_time}'
-            # notification={ 'title': 'Approved request for session cancellation', 'body': body }
-            title = 'Approved request for session cancellation'
-            # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
-            message = messaging.Message(
-                    token=token,
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body
-                        )
-                    )
-            response = messaging.send(message)
-            message = messaging.Message(
-            token=token,
-            notification=messaging.Notification(
-                title=notification,
-                body=body
-                )
-            )
-            response = messaging.send(message)
+            notification={ 'title': 'Approved request for session cancellation', 'body': body }
+            response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
 
-            
             return Response({"msg":"ok"}, status=status.HTTP_200_OK)
             
 
@@ -11832,6 +14830,7 @@ class request_approvals(APIView):
         elif res_can == 2 and srv_sess == 1:
 
             get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(req_id=req_id, eve_id = eve_id, is_deleted=2, is_srv_sesn=1, is_reschedule=1).first()
+            print(get_all_req, 'ge_all_req..............')
             date = get_all_req.reschedule_date
             start_date_str = date.strftime('%Y-%m-%d')
 
@@ -11846,15 +14845,15 @@ class request_approvals(APIView):
                 return Response({"msg":"Professional has Already A session On that Time"}, stauts = status.HTTP_406_NOT_ACCEPTABLE)
             
 
-            start_time_obj_abc = datetime.datetime.strptime(start_time, '%H:%M')
+            start_time_obj_abc = datetime.strptime(start_time, '%H:%M')
             end_time_obj_abc = start_time_obj_abc + timedelta(hours=2)
             end_time = end_time_obj_abc.strftime('%H:%M')
             # end_time = date.strftime('%H:%M')
     
             try:
-                start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
-                start_time_obj = datetime.datetime.strptime(start_time, '%H:%M')
-                end_time_obj = datetime.datetime.strptime(end_time, '%H:%M')
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                start_time_obj = datetime.strptime(start_time, '%H:%M')
+                end_time_obj = datetime.strptime(end_time, '%H:%M')
 
                 queryset =  agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
                 pros=set([i.srv_prof_id for i in queryset])
@@ -11886,26 +14885,13 @@ class request_approvals(APIView):
                     # for req in get_all_req:
                     #     req.is_deleted = 1
                     #     req.save()
-                cred = credentials.Certificate(da)
-                if not firebase_admin._apps:
-                    firebase_admin.initialize_app(cred)
                 tokn=[j.token for j in DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[pro.clg_ref_id for pro in pros]), is_login=True)]
                 eve_poc_id=agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id, status=1).last() 
                 body=f'Patient: {eve_poc_id.eve_id.agg_sp_pt_id.name}\nService: {eve_poc_id.sub_srv_id.recommomded_service}\nStart DateTime:\n {eve_poc_id.start_date} {eve_poc_id.start_time}\nEnd DateTime:\n {eve_poc_id.end_date} {eve_poc_id.end_time}'
-                # notification={ 'title': 'Approved request for service rescheduling.', 'body': body }
-                title='Approved request for service rescheduling.'
+                notification={ 'title': 'Approved request for service rescheduling.', 'body': body }
                 for tk in tokn:
-                    # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': tk,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+                    response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': tk,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
 
-                    message = messaging.Message(
-                    token=tk, 
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body
-                        )
-                    )
-                    response = messaging.send(message)
-            
                 serializer = Detailed_EPOC_serializer(queryset, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except  agg_hhc_event_plan_of_care.DoesNotExist:
@@ -11915,101 +14901,90 @@ class request_approvals(APIView):
 
         elif res_can == 2 and srv_sess == 2:
        
-            try:
-                get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(req_id=req_id, eve_id = eve_id, dtl_eve_id = sess_pk, is_deleted=2, is_srv_sesn=2, is_reschedule=1).first()
-                print(get_all_req,'get_all_req')
+            # try:
+            get_all_req = agg_hhc_cancellation_and_reschedule_request.objects.filter(req_id=req_id, eve_id = eve_id, dtl_eve_id = sess_pk, is_deleted=2, is_srv_sesn=2, is_reschedule=1).first()
+            print(get_all_req,'get_all_req')
 
-                
-                
-                session_date_str = get_all_req.dtl_eve_id.actual_StartDate_Time
-                session_reschedule_date_str = get_all_req.reschedule_date
             
-                session_date_component = session_date_str
+            
+            session_date_str = get_all_req.dtl_eve_id.actual_StartDate_Time
+            session_reschedule_date_str = get_all_req.reschedule_date
+        
+            session_date_component = session_date_str
+        
+
+            resch_session_date_component = session_reschedule_date_str.date()
+            resch_session_time_component = session_reschedule_date_str.time()
+            end_time = datetime.combine(resch_session_date_component, resch_session_time_component) + timedelta(hours=2)
+            print(end_time.time(),'end_time')
+
+            
+            # print(eve_id, 'eve_id..............')
+            get_session_data = agg_hhc_detailed_event_plan_of_care.objects.get(eve_id=eve_id,actual_StartDate_Time=session_date_component,status=1)
+            print(get_session_data,'get_session_data..........')
+            dtl_date_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=resch_session_date_component,
+                                                                            start_time= resch_session_time_component,
+                                                                            end_time = resch_session_time_component,
+                                                                            srv_prof_id = get_session_data.srv_prof_id,
+                                                                            status = 1)
+            if dtl_date_data.exists():
+                return Response({"msg":"Professional has Already A session On that Time"}, stauts = status.HTTP_406_NOT_ACCEPTABLE)
             
 
-                resch_session_date_component = session_reschedule_date_str.date()
-                resch_session_time_component = session_reschedule_date_str.time()
-                end_time = datetime.combine(resch_session_date_component, resch_session_time_component) + timedelta(hours=2)
-                print(end_time.time(),'end_time')
+            new_session = agg_hhc_detailed_event_plan_of_care(
+                eve_poc_id = get_session_data.eve_poc_id,
+                eve_id = get_session_data.eve_id,
+                index_of_Session = get_session_data.index_of_Session,
+                srv_prof_id = get_session_data.srv_prof_id,
+                actual_StartDate_Time = resch_session_date_component,
+                actual_EndDate_Time = resch_session_date_component,
+                start_time = resch_session_time_component,
+                end_time = end_time.time(),
+                service_cost = get_session_data.service_cost,
+                amount_received = get_session_data.amount_received,
+                status=1,
+                remark = remark,
+                Reschedule_status=1,
+                last_modified_by = clgref_id
+            )
+            new_session.save()
+            
+            get_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
+                eve_id=eve_id,
+                status=1  
+            )
+            epoc_model = agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id, status=1)
 
-                
+            depoc_start_date = get_sessions.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))['min_actual_StartDate_Time']
 
-                get_session_data = agg_hhc_detailed_event_plan_of_care.objects.get(eve_id=eve_id,actual_StartDate_Time=session_date_component,status=1)
-                dtl_date_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=resch_session_date_component,
-                                                                               start_time= resch_session_time_component,
-                                                                               end_time = resch_session_time_component,
-                                                                               srv_prof_id = get_session_data.srv_prof_id,
-                                                                               status = 1)
-                if dtl_date_data.exists():
-                    return Response({"msg":"Professional has Already A session On that Time"}, stauts = status.HTTP_406_NOT_ACCEPTABLE)
-                
+            # Retrieve the maximum actual start date
+            depoc_end_date = get_sessions.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))['max_actual_StartDate_Time']
 
-                new_session = agg_hhc_detailed_event_plan_of_care(
-                    eve_poc_id = get_session_data.eve_poc_id,
-                    eve_id = get_session_data.eve_id,
-                    index_of_Session = get_session_data.index_of_Session,
-                    srv_prof_id = get_session_data.srv_prof_id,
-                    actual_StartDate_Time = resch_session_date_component,
-                    actual_EndDate_Time = resch_session_date_component,
-                    start_time = resch_session_time_component,
-                    end_time = end_time.time(),
-                    service_cost = get_session_data.service_cost,
-                    amount_received = get_session_data.amount_received,
-                    status=1,
-                    remark = remark,
-                    Reschedule_status=1,
-                    last_modified_by = clgref_id
-                )
-                new_session.save()
-                
-                get_sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(
-                    eve_id=eve_id,
-                    status=1  
-                )
-                epoc_model = agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id, status=1)
+            epoc_model.start_date = depoc_start_date
+            epoc_model.end_date = depoc_end_date
+            epoc_model.last_modified_by = clgref_id
+            epoc_model.save()
+            
+            get_session_data.status = 2
+            get_session_data.save()
+            # for req in get_all_req:
+            #     req.is_deleted = 1
+            #     req.save()
+            get_all_req.is_deleted = 1
+            get_all_req.save()
+            token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
+            detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
+            body=f'Patient: {detail.eve_id.agg_sp_pt_id.name}\nService: {detail.eve_poc_id.sub_srv_id.recommomded_service}\nDate: {detail.actual_StartDate_Time} {detail.start_time}'
+            notification={ 'title': 'Approved request for session Reschedule', 'body': body }
+            response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+            return Response("Success: Record updated and new record created", status=status.HTTP_200_OK)
 
-                depoc_start_date = get_sessions.aggregate(min_actual_StartDate_Time=Min('actual_StartDate_Time'))['min_actual_StartDate_Time']
-
-                # Retrieve the maximum actual start date
-                depoc_end_date = get_sessions.aggregate(max_actual_StartDate_Time=Max('actual_StartDate_Time'))['max_actual_StartDate_Time']
-
-                epoc_model.start_date = depoc_start_date
-                epoc_model.end_date = depoc_end_date
-                epoc_model.last_modified_by = clgref_id
-                epoc_model.save()
-                
-                get_session_data.status = 2
-                get_session_data.save()
-                # for req in get_all_req:
-                #     req.is_deleted = 1
-                #     req.save()
-                get_all_req.is_deleted = 1
-                get_all_req.save()
-                cred = credentials.Certificate(da)
-                if not firebase_admin._apps:
-                    firebase_admin.initialize_app(cred)
-                token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
-                detail=agg_hhc_detailed_event_plan_of_care.objects.filter(agg_sp_dt_eve_poc_id=sess_pk).last()
-                body=f'Patient: {detail.eve_id.agg_sp_pt_id.name}\nService: {detail.eve_poc_id.sub_srv_id.recommomded_service}\nDate: {detail.actual_StartDate_Time} {detail.start_time}'
-                # notification={ 'title': 'Approved request for session Reschedule', 'body': body }
-                title='Approved request for session Reschedule'
-                # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
-                message = messaging.Message(
-                    token=tk,
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body
-                        )
-                    )
-                response = messaging.send(message)
-                return Response("Success: Record updated and new record created", status=status.HTTP_200_OK)
-
-            except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
-                # Handle the case where the existing session record does not exist
-                return Response("Message: Record with given session not found", status=status.HTTP_200_OK)
-            except Exception as e:
-                # Handle other exceptions that might occur during this process
-                return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+            #     # Handle the case where the existing session record does not exist
+            #     return Response("Message: Record with given session not found", status=status.HTTP_200_OK)
+            # except Exception as e:
+            #     # Handle other exceptions that might occur during this process
+            #     return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         elif res_can == 2 and srv_sess == 3:
             try:
@@ -12030,6 +15005,7 @@ class request_approvals(APIView):
                     print(get_all_req,'get_all_req')
                     get_atn = agg_hhc_attendance.objects.get(att_id = get_all_req.atten_id.att_id)
                     get_atn.approve_status = 1
+                    # get_all_req.atten_id.att_id = 1
                     get_all_req.is_deleted = 1
                     get_all_req.remark=remark
                     get_atn.save()
@@ -12043,6 +15019,9 @@ class request_approvals(APIView):
 
 
       
+
+
+        
 class request_rejection(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -12055,51 +15034,24 @@ class request_rejection(APIView):
         get_req.is_deleted = 1
         get_req.save()
         dteve=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=get_req.eve_id, status=1)
-        cred = credentials.Certificate(da)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
         token = DeviceToken.objects.filter(clg_id=agg_com_colleague.objects.filter(clg_ref_id=dteve.last().srv_prof_id.clg_ref_id).last(), is_login=True).last().token
         body=f'Patient: {dteve.last().eve_id.agg_sp_pt_id.name}\nService: {dteve.last().eve_poc_id.sub_srv_id.recommomded_service}\nDate: {dteve.last().actual_StartDate_Time} {dteve.last().start_time}'
         if get_req.is_canceled==1:
             s='Cancellation'
         elif get_req.is_reschedule==1:
             s='Reschedule'
-        else:s=''  
+        else:s=''
         if get_req.is_srv_sesn==1:
-            # notification={ 'title': f'Service {s} Request rejected.', 'body': body }
-            title = f'Service {s} Request rejected.'
+            notification={ 'title': f'Service {s} Request rejected.', 'body': body }
         elif get_req.is_srv_sesn==2:
-            # notification={ 'title': f'Session {s} Request rejected.', 'body': body }
-            title = f'Session {s} Request rejected.'
+            notification={ 'title': f'Session {s} Request rejected.', 'body': body }
         else:
-            # notification={ 'title': 'Request rejected.', 'body': body }
-            title = 'Request rejected.'
+            notification={ 'title': 'Request rejected.', 'body': body }
 
 
-        # response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
-        message = messaging.Message(
-                    token=token,
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body
-                        )
-                    )
-        response = messaging.send(message)
+        response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': token,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
+
         return Response({"done":"Professional request Rejected"}, status=status.HTTP_202_ACCEPTED)
-        # except Exception as e:
-        #         return Response(f"Error: {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -12136,6 +15088,8 @@ class get_selected_job_closure_question(APIView):
             serialzier = get_selected_job_clousre_que_serializer(data, many=True)
             return Response(serialzier.data)
 
+
+
 class get_selected_job_closure_question_prof_app(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -12143,9 +15097,6 @@ class get_selected_job_closure_question_prof_app(APIView):
         data = agg_hhc_events_wise_jc_question.objects.filter(eve_id = eve_id, status = 1)
         serialzier = get_selected_job_clousre_que_serializer(data, many=True)
         return Response(serialzier.data)
-    
-
-
 
 
 
@@ -12157,11 +15108,12 @@ class job_closure_srv_sess_wise(APIView):
     def post(self, request, srv_prof_id, dtl_eve_id):
         try:
             clgref_id = get_prof(request)[3]
-            
+
             instance = agg_hhc_detailed_event_plan_of_care.objects.get(agg_sp_dt_eve_poc_id=dtl_eve_id)
 
             all_detail_event_plan = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=instance.eve_id, status=1).count()
             detail_event = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=instance.eve_id, status=1, Session_jobclosure_status=1).count()
+            
             if all_detail_event_plan == detail_event:
                 event_plan_care = agg_hhc_event_plan_of_care.objects.get(eve_id=instance.eve_id)
                 event_plan_care.service_status = 4
@@ -12172,12 +15124,13 @@ class job_closure_srv_sess_wise(APIView):
                 event.save()
                 print("donnnnnnneeeeeeeeeeeeeeeeeeeeeeeeeeeeeee job close")
             
+            
             serializer1 = deteailed_session_st_ed_time_date(instance=instance, data={
                 "prof_session_start_date": request.data.get("prof_session_start_date"),
                 "prof_session_end_date": request.data.get("prof_session_end_date"),
                 "prof_session_start_time": request.data.get("prof_session_start_time"),
                 "prof_session_end_time": request.data.get("prof_session_end_time")
-            }, partial=True)                                                            
+            }, partial=True)
             
             if serializer1.is_valid():
                 serializer1.save()
@@ -12213,36 +15166,14 @@ class job_closure_srv_sess_wise(APIView):
                 instance.Session_jobclosure_status = 1
                 instance.Session_status = 9
                 instance.save()
-                all_detail_event_plan=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=instance.eve_id,status=1).count()
-                detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=instance.eve_id,status=1,Session_jobclosure_status=1).count()
-                if (all_detail_event_plan==detail_event):
-                    event_plan_care=agg_hhc_event_plan_of_care.objects.get(eve_id=instance.eve_id)
-                    event_plan_care.service_status=4
-                    event_plan_care.save()
-                    event=agg_hhc_events.objects.get(eve_id=instance.eve_id.eve_id)
-                    event.event_status=3
-                    event.save()
                 return Response({'serializer': serializer.data, 'success': 'True'})
             else:
                 return Response({'serializer': serializer.errors, 'success': 'False'})
         except Exception as e:
             return Response({'error':str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    
-            
-class update_receipt_no(APIView):
-    def get(self, request):
-        last_receipt=agg_hhc_payment_details.objects.filter(overall_status='SUCCESS').order_by('pay_dt_id')
-        print(last_receipt)
-        for i in range((len(last_receipt))):
-            last_receipt[i].receipt_no=i+1
-            last_receipt[i].save()
-            print(last_receipt[i].receipt_no)
-            print(last_receipt[i].pay_dt_id,'done')
-        return Response({'status':'success'})
 
 
-        
 class feedback_complent_dashbord_count(APIView):
     complaint_counts_serializer = dash_complaint_counts_serializer
     feedback_count_serialzer = dash_feedback_counts_serializer
@@ -12354,7 +15285,7 @@ class feedback_complent_dashbord_count(APIView):
             
 
 
-    # def post(self, request, is_fc):
+    # def post(self, request, is_fc,is_twm):
     #     today = timezone.now().date()
 
     #     # Check if a record with today's date already exists
@@ -12367,6 +15298,7 @@ class feedback_complent_dashbord_count(APIView):
     #     # If record exists, return a message
     #     if existing_record:
     #         return Response({"msg": "Record for today already exists"})
+        
     #     if is_fc == 1 :
     #         request.data['is_feed_comp'] = 1
     #         serialize_feed = self.feedback_count_serialzer(data = request.data)
@@ -12380,9 +15312,6 @@ class feedback_complent_dashbord_count(APIView):
     #             serialize_com.save()
     #         return Response({"msg":"Done, Today Complaint count save"})
 
-
-
-    
     def post(self, request, is_fc,is_twm):
 
         today = timezone.now().date()
@@ -12423,21 +15352,30 @@ class feedback_complent_dashbord_count(APIView):
                 if serialize_com.is_valid():
                     serialize_com.save()
                 return Response({"msg": "Done, Today Complaint count saved"})
+            
+class update_receipt_no(APIView):
+    def get(self, request):
+        last_receipt=agg_hhc_payment_details.objects.filter(overall_status='SUCCESS').order_by('pay_dt_id')
+        print(last_receipt)
+        for i in range(len(last_receipt)):
+            last_receipt[i].receipt_no=i+1
+            last_receipt[i].save()
+            print(last_receipt[i].receipt_no)
+            print(last_receipt[i].pay_dt_id,'done')
+        return Response({'status':'success'})
+    
+class update_invoice_id(APIView):
+    def get(self, request):
+        eve = agg_hhc_events.objects.filter(purp_call_id=1).order_by('eve_id')
+        # eve = agg_hhc_events.objects.all().order_by('eve_id')
+        # [print(i.purp_call_id, i.eve_id, i.enq_spero_srv_status) for i in eve]
+        # print(eve.last().eve_id,';;asdf')
+        for i in range(len(eve)):
+            eve[i].Invoice_ID=i+1
+            # eve[i].Invoice_ID=None
+            eve[i].save()
+        return Response({'status':'done'})
 
-class cancel_service(APIView):
-    def post(self, request,eve_id):
-        event=agg_hhc_events.objects.filter(eve_id=eve_id, status=1).lsat()
-        if event:
-            dt_eve=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_it=eve_id, status=1)
-            for i in dt_eve:
-                i.status=2
-                i.save()
-            eve_poc=agg_hhc_event_plan_of_care.objects.filter(eve_id=eve_id, status=1).last()
-            eve_poc.status=2
-            eve_poc.save()
-            return Response({"status":"service request cancelled"})
-        else:
-            return Response({"status":"already cancelled"})
 
 
 class test_case_service_deactivate(APIView):
@@ -12459,2231 +15397,10 @@ class test_case_service_deactivate(APIView):
             get_payment_dtl = agg_hhc_payment_details.objects.filter(eve_id = i)
             for pay in get_payment_dtl:
                 pay.status = 3
-                pay.save()
         
         return Response({'msg':"event deactivated from events, event plan of care, detailed event plan of care model"})
     
-
-from django.http import StreamingHttpResponse
-import csv
-
-
-
-
-class service_count(APIView):
-    def get(self, request, from_date, to_date, hos_id):
-        # get_event_data = agg_hhc_event_plan_of_care.objects.filter(hosp_id = hosp_id, eve_id__added_date__range=(from_date,to_date),eve_id__status = 1, status = 1)
-        get_session = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id__hosp_id = hos_id, actual_StartDate_Time__range = (from_date,to_date),eve_id__event_status=2 or 3, eve_id__status = 1, eve_poc_id__status = 1, status = 1)
-        sub_service_wise_professional_services = []
-        for index, i in enumerate(get_session, start=1):
-            data = {
-                "sr_no":index,
-                "patient_name":i.eve_id.agg_sp_pt_id.name,
-                "service_name":i.eve_poc_id.srv_id.service_title,
-                "sub_service_name":i.eve_poc_id.sub_srv_id.recommomded_service,
-                "service_time": i.start_time,
-                "start_date":i.actual_StartDate_Time,
-                "end_date":i.actual_EndDate_Time,
-                "professional_name":i.srv_prof_id.prof_fullname
-            }
-            sub_service_wise_professional_services.append(data)
-        # return Response({'data':sub_service_wise_professional_services})
-        csv_data = self.serialize_to_csv(sub_service_wise_professional_services)
-        response = StreamingHttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="Accout_invoice.csv"'
-        return response
-
-    def serialize_to_csv(self, data):
-        header = ['sr_no', 'patient_name','service_name','sub_service_name','service_time','start_date','end_date','professional_name']  # Add other fields here #  CSV file header name of table fields names 
-        # Initialize the CSV writer
-        csv_stream = (self.generate_csv_row(header, data_row) for data_row in data)
-        # Yield header
-        yield ','.join(header) + '\n'
-        # Yield data
-        for row in csv_stream:
-            yield row + '\n'
-
-    def generate_csv_row(self, header, data_row):
-        # used to Generate a row of CSV data based on the serializer data
-        row = []
-        for field in header:
-            print("record",field)
-            if (',' in str(data_row.get(field, ''))):
-                string_data=str(data_row.get(field, ''))
-                string_data = string_data.replace(',', '')
-                row.append(string_data)#str(data_row.get(field, ''))
-            else:
-                row.append(str(data_row.get(field, '')))
-        return ','.join(row)
-
     
-
-        
-        
-#-------------------------attendance module API (Mayank)-------------------------
-
-class AggHHCAttendanceAPIView(APIView):
-    def get(self, request, format=None):
-        
-        srv_filter = request.GET.get('srv_id')
-        
-        if srv_filter:
-            attendance_records = agg_hhc_service_professionals.objects.filter(Job_type=2, srv_id=srv_filter)
-        else:
-            attendance_records = agg_hhc_service_professionals.objects.filter(Job_type=2)  
-                  
-        serializer = AggHHCAttendanceSerializer(attendance_records, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-from rest_framework.exceptions import ValidationError
-
-# class PostAggHHCAttendanceAPIView(APIView):
-#     def post(self, request, format=None):
-#         serializer = POST_AggHHCAttendanceSerializer(data=request.data)
-        
-#         try:
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-#             else:
-#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         except ValidationError as e:
-#             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-#         except Exception as e:
-#             return Response({'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        
-#-------------------------get Transaction--------------------------------------------
-
-# import requests
-# import json
-# from django.views.decorators.csrf import csrf_exempt
-# from rest_framework.decorators import api_view
-# from rest_framework.response import Response
-# from rest_framework import status
-# import uuid
-
-# @csrf_exempt
-# @api_view(['POST'])
-# def get_settlement_reconciliation(request):
-#     url = "https://api.cashfree.com/pg/settlement/recon"
-#     headers = {
-#         # "accept": "application/json",
-#         # "content-type": "application/json",
-#         "x-api-version": "2022-09-01",
-#         "x-client-id": "20453165a737ebd97e430fcabc135402",  # Replace with your actual client ID
-#         "x-client-secret": "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215", # Replace with your actual client secret
-#     }
-    
-#     # Extract the required filters from the request data
-#     pagination = request.data.get('pagination', {"limit": 10})
-#     filters = request.data.get('filters', {})
-    
-#     payload = {
-#         "pagination": pagination,
-#         "filters": filters
-#     }
-
-#     try:
-#         response = requests.request("POST", url, headers=headers, json=payload)
-#         response.raise_for_status()  # Raise an exception for HTTP errors
-
-#         if response.status_code == 200:
-#             data = response.json()
-#             return Response(data, status=status.HTTP_200_OK)
-#         else:
-#             return Response({"error": "Failed to fetch settlement details"}, status=response.status_code)
-#     except requests.exceptions.HTTPError as e:
-#         return Response({"error": f"HTTP error occurred: {str(e)}"}, status=response.status_code)
-#     except requests.exceptions.RequestException as e:
-#         return Response({"error": f"Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-import requests
-import json
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-# from datetime import datetime, timedelta
-from .models import agg_hhc_save_settlement_events, agg_hhc_payment_details
-
-@csrf_exempt
-@api_view(['POST'])
-def get_settlement_reconciliation(request):
-    url = "https://api.cashfree.com/pg/settlement/recon"
-    headers = {
-        "x-api-version": "2022-09-01",
-        "x-client-id": "20453165a737ebd97e430fcabc135402",  # Replace with your actual client ID
-        "x-client-secret": "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215", # Replace with your actual client secret
-    }
-
-    # Get today's date range
-    today = timezone.now().date()
-    tomorrow = today + timedelta(days=1)
-
-    # Fetch today's settlement UTRs from the database
-    today_settlement_utrs = agg_hhc_save_settlement_events.objects.filter(
-        added_date__gte=today,
-        added_date__lt=tomorrow
-    ).values_list('utr', flat=True)
-    
-    # Convert the queryset to a list
-    settlement_utrs_list = list(today_settlement_utrs)
-
-    # If there are no settlement UTRs for today, return an empty response
-    if not settlement_utrs_list:
-        return Response({"message": "No settlements for today"}, status=status.HTTP_200_OK)
-
-    payload = {
-        "pagination": {"limit": 40},
-        "filters": {
-            "settlement_utrs": settlement_utrs_list
-        }
-    }
-
-    try:
-        response = requests.request("POST", url, headers=headers, json=payload)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-
-        if response.status_code == 200:
-            data = response.json()
-
-            # Update the agg_hhc_payment_details table
-            for item in data.get('data', []):
-                order_id = item.get('order_id')
-                settlement_utr = item.get('settlement_utr')
-                
-                if order_id and settlement_utr:
-                    agg_hhc_payment_details.objects.filter(order_id=order_id).update(utr=settlement_utr)
-
-            return Response(data, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Failed to fetch settlement details"}, status=response.status_code)
-    except requests.exceptions.HTTPError as e:
-        return Response({"error": f"HTTP error occurred: {str(e)}"}, status=response.status_code)
-    except requests.exceptions.RequestException as e:
-        return Response({"error": f"Request failed: {str(e)}"}, status=500)
-
-
-
-
-
-from .models import Payment_mode_enum, payment_status_enum, status_enum
-class collectamtprof(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, format=None):
-        clgref_id = get_prof(request)[3]
-        eve_id = request.data.get('eve_id')
-        print(eve_id)
-        pt_dtl = agg_hhc_payment_details.objects.filter(eve_id=eve_id, status=status_enum.Active.value)
-        last_record = pt_dtl.last()
-        print(last_record)
-
-        if last_record:
-            eve_id_value = last_record.eve_id.eve_id if last_record.eve_id else None
-            srv_prof_id_value = request.data.get('srv_prof_id')
-
-            try:
-                srv_prof_instance = agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id_value)
-            except agg_hhc_service_professionals.DoesNotExist:
-                raise Http404("Invalid srv_prof_id - object does not exist.")
-
-            data = {
-                "eve_id": eve_id_value,
-                "srv_prof_id": srv_prof_instance.srv_prof_id if srv_prof_instance else None,
-                "Total_cost": last_record.Total_cost,
-                "paid_by": last_record.paid_by,
-                "amount_paid": last_record.amount_paid,
-                "amount_remaining": last_record.amount_remaining,
-                # "pay_recived_by": last_record.pay_recived_by,
-                "receipt_no": last_record.receipt_no,
-                "mode": last_record.mode.value if last_record.mode else None,
-                "bank_name": last_record.bank_name,
-                "cheque_number": last_record.cheque_number,
-                "cheque_status": last_record.cheque_status.value if last_record.cheque_status else None,
-                "cheque_date": last_record.cheque_date,
-                "card_no": last_record.card_no,
-                "transaction_id": last_record.transaction_id,
-                "note": last_record.note,
-                "order_id": last_record.order_id,
-                "order_currency": last_record.order_currency,
-                "order_note": last_record.order_note,
-                "customer_email": last_record.customer_email,
-                "customer_phone": last_record.customer_phone,
-                "payment_status": last_record.payment_status.value if last_record.payment_status else None,
-                "transaction_status": last_record.transaction_status,
-                "utr":last_record.utr,
-                "overall_status": last_record.overall_status,
-                "cf_token": last_record.cf_token,
-                "online_payment_by": last_record.online_payment_by.value if last_record.online_payment_by else None,
-                "Remark": last_record.Remark,
-                "status": last_record.status.value if last_record.status else None,
-                "added_by": last_record.added_by,
-                "last_modified_by": last_record.last_modified_by
-            }
-            print(data)
-            serializer = collectAmtProfSerializer(data=data)
-
-            if serializer.is_valid():
-                serializer.save()
-
-                if request.data['mode'] == Payment_mode_enum.Cheque.value:
-                    last_record.cheque_number = request.data.get('cheque_number')
-                    last_record.cheque_date = request.data.get('cheque_date')
-                    last_record.bank_name = request.data.get('bank_name')
-                elif request.data['mode'] == Payment_mode_enum.Card.value:
-                    last_record.card_no = request.data.get('card_no')
-                    last_record.transaction_id = request.data.get('transaction_id')
-                elif request.data['mode'] == Payment_mode_enum.qr_code.value:
-                    last_record.transaction_id = request.data.get('transaction_id')
-                elif request.data['mode'] == Payment_mode_enum.NEFT.value:
-                    last_record.transaction_id = request.data.get('transaction_id')
-
-                last_record.Total_cost = request.data.get('Total_cost')
-                last_record.paid_by = request.data.get('paid_by')
-                last_record.amount_paid = request.data.get('amount_paid')
-                last_record.mode = Payment_mode_enum(request.data.get('mode'))
-                last_record.Remark = request.data.get('Remark')
-                last_record.utr = request.data.get('utr')
-                last_record.srv_prof_id = srv_prof_instance
-                last_record.last_modified_by = clgref_id
-                last_record.payment_status = payment_status_enum.Amount_paid_from_Desk
-                last_record.payment_to_desk_date=datetime.now().date()
-                last_record.save()
-
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                print("error")
-                print(f"Serializer errors: {serializer.errors}")
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"error": "No record found"}, status=status.HTTP_404_NOT_FOUND)
-
-        
-        return Response({"error": f"Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-
-
-
-#=========================== settelment webhook GET from cashfree  (mayank)================================
-import json
-import re
-
-
-@csrf_exempt
-@require_POST
-def update_transaction_status_settlement_webhook(request):
-    try:
-        
-        request_body = request.body.decode('utf-8')
-        
-        # Fix JSON formatting issues
-        request_body = re.sub(r'null\.', 'null', request_body)
-        # Load JSON content from the request body
-        request_data = json.loads(request_body)
-        
-        # Extract payment details
-        settlement_data = request_data.get('data', {}).get('settlement', {})
-        amount_settled = settlement_data.get('amount_settled')
-        settlement_id = settlement_data.get('settlement_id')
-        status = settlement_data.get('status')
-        utr = settlement_data.get('utr')
-        
-        # Validate extracted details
-        if not amount_settled:
-            raise ValueError('amount_settled not found in the request payload')
-        if not settlement_id:
-            raise ValueError('settlement_id not found in the request payload')
-        if not status:
-            raise ValueError('status not found in the request payload')
-        if not utr:
-            raise ValueError('utr not found in the request payload')
-
-        # Use atomic transaction to ensure data integrity
-        with transaction.atomic():
-            # Create a new payment record
-            payment_record = agg_hhc_save_settlement_events.objects.create(
-                amount_settled=amount_settled,
-                settlement_id=settlement_id,
-                status=status,
-                utr=utr,
-                settlement_json=request_data,
-            )
-            payment_record.save()
-        
-        return JsonResponse({'message': 'Settlement status updated successfully'}, status=200)
-
-    except ValueError as ve:
-        return JsonResponse({'error': str(ve)}, status=400)
-    except Exception as e:
-        # Log the exception here using Django's logging framework if needed
-        return JsonResponse({'error': str(e)}, status=500)
-class hospital_dashboard_srv_count(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self, request, hosp_id, id):
-        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
-        # print(clg.clg_hos_id.hospital_name)
-        if  id==1:
-            start_datetime=datetime.now().date()
-            end_datetime=datetime.now().date()
-        elif id==2:
-            start_datetime=datetime.now().date() - timedelta(days=7)
-            end_datetime=datetime.now().date()
-        elif id==3:
-            start_datetime=datetime.now().date() - timedelta(days=30)
-            end_datetime=datetime.now().date() 
-        else:return Response({'error':'please select correct id'})
-        # print(s_date)
-        # eve_poc=agg_hhc_event_plan_of_care.objects.filter((Q(start_date__gte=s_date) | Q(end_date__lte=e_date)),hosp_id=clg.clg_hos_id, status=1).values_list('eve_poc_id')
-        # d=[j[0] for j in eve_poc]
-        # # d1=[j[1] for j in eve_poc] 
-        # print(d)
-        # # for i in d:
-        # #     print(i)
-        # dt_eve=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id__in=d,status=1)
-        # print(dt_eve)
-        try:
-            today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1).count()
-            on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1, Session_jobclosure_status = 2, eve_id__event_status__in = [2]).count()
-            completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1, Session_jobclosure_status = 1).count()
-            Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime), status=1,eve_poc_id__hosp_id=hosp_id, eve_id__event_status__in = [1]).count()
-
-            response_data = {
-                    "Total_services": today_data,
-                    "Completed_services": {
-                        "completed_srv": completed_Services
-                    },
-                    "Pending_services": {
-                        "Pending_srv": Pending
-                    },
-                    "ongoing_services": {
-                        "Ongoing_srv": on_going
-                    }
-                }
-
-            return Response(response_data)
-        except:
-            return Response({'error':'something went wrong'})
-
-class hospital_dashboard_enquiry_count(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self, request, hosp_id, id):
-        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
-        # print(clg.clg_hos_id.hospital_name)
-        if  id==1:
-            start_datetime=datetime.now().date()
-        elif id==2:
-            start_datetime=datetime.now().date() - timedelta(days=7)
-        elif id==3:
-            start_datetime=datetime.now().date() - timedelta(days=30)
-
-        enquiry = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,status=1,eve_id__enq_spero_srv_status=3)
-        # print(enquiry[0].eve_id.added_date)
-        App = 0
-        Social = 0
-        Calls = 0
-        Walk_in = 0
-        for i in enquiry:
-            # caller_id = agg_hhc_events.objects.filter(pt_id=i.pt_id).first()
-            if i.eve_id.patient_service_status == 1:
-                App += 1
-            elif i.eve_id.patient_service_status == 2:
-                Social += 1
-            elif i.eve_id.patient_service_status == 3:
-                Walk_in += 1
-            elif i.eve_id.patient_service_status == 4:
-                Calls += 1
-        # print()
-        return Response({'Total_enquiries': enquiry.count(),'App': App,'Social': Social,'Calls': Calls,'Walk_in': Walk_in})
-    
-class hospital_dashboard_enquiry_follow_up_count(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated] 
-    def get(self, request, hosp_id, id):
-        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
-        if  id==1:
-            start_datetime=datetime.now().date()
-        elif id==2:
-            start_datetime=datetime.now().date() - timedelta(days=7)
-        elif id==3:
-            start_datetime=datetime.now().date() - timedelta(days=30)
-        # enq = agg_hhc_enquiry_follow_up.objects.filter(follow_up__in=[1,3,4], status=1)
-        enq = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,eve_id__enq_spero_srv_status=3,status=1).count()
-        conv_enq = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,eve_id__enq_spero_srv_status=1,status=1).count()
-        result={
-            "enquiry_converted":conv_enq,
-            "enquiry_in_follow_up":enq
-        }
-        return Response(result)
-class hospital_dashboard_service_details(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated] 
-    def get(self, request, hosp_id, id):
-        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
-
-        if  id==1:
-            start_datetime=datetime.now().date()
-            end_datetime=datetime.now().date()
-        elif id==2:
-            start_datetime=datetime.now().date() - timedelta(days=7)
-            end_datetime=datetime.now().date()
-        elif id==3:
-            start_datetime=datetime.now().date() - timedelta(days=30)
-            end_datetime=datetime.now().date() 
-        else:return Response({'error':'please select correct id'})
-
-        # srv = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id,eve_id__enq_spero_srv_status__in=[1,2],status=1).values('eve_id__agg_sp_pt_id__name', 'eve_poc_id__srv_id__service_title','eve_poc_id__sub_srv_id__recommomded_service','eve_poc_id__start_date', 'eve_poc_id__end_date', 'eve_poc_id__start_time','eve_poc_id__end_time').order_by('eve_poc_id')
-
-        srv = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id,eve_id__enq_spero_srv_status__in=[1,2],status=1,srv_prof_id__isnull=False).values(('eve_poc_id'),patient_name=F('eve_id__agg_sp_pt_id__name'),service_name=F('eve_poc_id__srv_id__service_title'),sub_service_name=F('eve_poc_id__sub_srv_id__recommomded_service'),s_start_date=F('eve_poc_id__start_date'),s_end_date=F('eve_poc_id__end_date'),s_start_time=F('eve_poc_id__start_time'),s_end_time=F('eve_poc_id__end_time')).order_by('eve_poc_id').distinct()
-        # data1=DashboardSerializer(srv,many=True)
-        print(srv)
-        data = []
-        for item in srv:
-            record = {
-                'eve_poc_id': item['eve_poc_id'],
-                'patient_name': str(item['patient_name']),  # Cast datetime to string
-                'service_name': item['service_name'],
-                'sub_service_name': item['sub_service_name'],
-                's_start_date': str(item['s_start_date']),  # Cast datetime to string
-                's_end_date': str(item['s_end_date']),      # Cast datetime to string
-                's_start_time': str(item['s_start_time']),  # Cast datetime to string
-                's_end_time': str(item['s_end_time']),      # Cast datetime to string
-            }
-            data.append(record)
-        print(data)
-        # d=list(set([i['eve_poc_id'] for i in srv]))
-        # d1=[i['eve_id__agg_sp_pt_id__name'] for i in srv]
-        # plan=agg_hhc_event_plan_of_care.objects.filter(eve_poc_id__in=d, status=1).order_by('eve_poc_id')
-        # result={}
-        # for i in range(0,len(plan)+1):
-        #     data= {
-        #         "patient_name":d[i],
-        #         "service":plan[i],
-        #         "sub_service":plan[i],
-        #         "start_date":plan[i],
-        #         "end_date":plan[i]
-        #     }
-        #     result.['data']
-        # print(result)
-        # print(d1) 
-
-        # return Response(srv)
-        # serialized_data = list(srv)
-
-        # Serialize the data to JSON
-        # json_data = DjangoJSONEncoder().encode(serialized_data)
-
-        # Return the response
-        return Response(data)
-        
-       
-class get_payment_with_prof_eve_detail(APIView):
-    def get(self,request, eve_id):
-        event=agg_hhc_events.objects.filter(eve_id=eve_id, status=1).last()
-        # payment_dt= agg_hhc_payment_details.objects.filter(eve_id=event).last().srv_prof_id.prof_fullname
-        payment_dt = getattr(agg_hhc_payment_details.objects.filter(eve_id=event, status=1, overall_status='SUCCESS').last(), 'pay_recived_by', None)
-        prof_id=agg_hhc_service_professionals.objects.filter(clg_ref_id=payment_dt, status=1).last()
-        prof_id_id = getattr(prof_id, 'srv_prof_id', None)
-        prof_name=getattr(prof_id, 'prof_fullname', None)
-        # if payment_dt:
-        #     payment_dt_Fname=payment_dt.clg_first_name
-        #     payment_dt_Mname=payment_dt.clg_mid_name
-        #     payment_dt_Lname=payment_dt.clg_last_name
-        #     name=None
-        #     if payment_dt_Fname:
-        #         name=payment_dt_Fname
-        #     if payment_dt_Mname:
-        #         name=f'{name} {payment_dt_Mname}'
-        #     if payment_dt_Lname:
-        #         name=f'{name} {payment_dt_Lname}'
-        # else:return Response({"pay_recived_by":prof_name, "prof_id":prof_id})
-        # print(payment_dt)
-        return Response({"pay_recived_by":prof_name, "prof_id":prof_id_id})
-    
-class get_event_dates(APIView):
-    def get(self, request, eve_id):
-        detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status=1)
-        c_dates=sorted([i.actual_StartDate_Time for i in detail_events])
-        # d=[]
-        # dd=[]
-        # for i in c_dates:
-        #     if not d:
-        #         d.append(i)
-        #     else:
-        #         if d[-1] == i - timedelta(days=1):
-        #             d.append(i)
-        #         else:
-        #             dd.append(d)
-        #             d = [i]
-        # if d:
-        #     dd.append(d)
-        # d1 = [f'{i[0]},{i[-1]}' for i in dd]
-        # result = [d1]
-        # print(result)
-        return Response({'dates':c_dates})
-
-class get_service_details(APIView):
-    def get(self, request, eve_id):
-        event=agg_hhc_events.objects.filter(eve_id=eve_id, status=1).last()
-        if event:
-            details=GetEventDetailsSetializer(event)
-        else: return Response({'status':'event does not exist'})
-        return Response({"data":details.data})
-
-class get_help(APIView):
-    def post(self, request):
-        datas=PostFile1(data=request.data)
-        print()
-        if datas.is_valid():
-            datas.save()
-            print(datas.data)
-            return Response({'status':'done'})
-        else:
-            return Response({'errors':datas.errors})
-
-    def get(self, request):
-        file=HeplFiles.objects.filter(is_active=True)
-        fileserializer=PostFile(file, many=True)
-        return Response({'appuse':fileserializer.data})
-
-
-
-
-
-class Prof_names_eve_wise_view(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self, request,eve_id):
-        daily_Report = agg_hhc_detailed_event_plan_of_care.objects.filter(
-            (Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3)) , eve_id=eve_id,
-            eve_id__status=1).order_by('srv_prof_id').distinct('srv_prof_id')
-        if not daily_Report:
-            return Response({"detail": "No data found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = prof_names_eve_wise_serializer(daily_Report, many=True)
-        return Response(serializer.data)
-
-
-
-
-
-
-#===================================== Totral enquiry count=========================== Vinayak
-
-class Calculate_Total_enquiry(APIView):
-    def get(self, request, *args, **kwargs):
-        now = timezone.now()
-        today = timezone.now().date()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        # month_end_date = today.replace(day=last_day)
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)    
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-# ----------------- Last month
-        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
-        hospital_id = request.GET.get('hosp_id')
-        if hospital_id:
-            ls_all_event = ls_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
-        ls_all_eves = list(set(ls_eve_ids))
-        ls_enq_id = []
-        for i in ls_all_eves:
-            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
-        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
-
-# ------------------ This month
-
-        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-        if hospital_id:
-            ts_all_event = ts_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
-        ts_all_eves = list(set(ts_eve_ids))
-        ts_enq_id = []
-        for i in ts_all_eves:
-            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
-        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
-
-
-# ----------------- today
-    
-        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-        if hospital_id:
-            td_all_event = td_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        td_eve_ids = td_all_event.values_list('event_id', flat=True)
-        td_all_eves = list(set(td_eve_ids))
-        td_enq_id = []
-        for i in td_all_eves:
-            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            td_enq_id.append(td_get_enq.enq_follow_up_id)
-        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
-
-    
-        return Response({
-            'total_enq_today': td_all_follow_up_enq.count(),
-            'total_enq_week': 0,
-            'total_enq_month': ts_all_follow_up_enq.count(),
-            'total_enq_till_date': ls_all_follow_up_enq.count()
-        }, status=status.HTTP_200_OK)
-    
-#================================== Total infollow up count ==========================================
-
-class Calculate_infollow_up_service(APIView):
-    def get(self, request, *args, **kwargs):
-        hospital_id = request.GET.get('hosp_id')
-        now = timezone.now()
-        today = timezone.now().date()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        # month_end_date = today.replace(day=last_day)
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-
-# ----------------- Last month
-        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
-        hospital_id = request.GET.get('hosp_id')
-        if hospital_id:
-            ls_all_event = ls_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
-        ls_all_eves = list(set(ls_eve_ids))
-        ls_enq_id = []
-        for i in ls_all_eves:
-            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
-        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
-
-        ls_one = ls_all_follow_up_enq.filter(follow_up=1)
-# ------------------ This month
-
-        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-        if hospital_id:
-            ts_all_event = ts_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
-        ts_all_eves = list(set(ts_eve_ids))
-        ts_enq_id = []
-        for i in ts_all_eves:
-            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
-        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
-
-        ts_one = ts_all_follow_up_enq.filter(follow_up=1)
-
-# ----------------- today
-    
-        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-        if hospital_id:
-            td_all_event = td_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        td_eve_ids = td_all_event.values_list('event_id', flat=True)
-        td_all_eves = list(set(td_eve_ids))
-        td_enq_id = []
-        for i in td_all_eves:
-            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            td_enq_id.append(td_get_enq.enq_follow_up_id)
-        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
-        td_one = td_all_follow_up_enq.filter(follow_up=1)
-
-        return Response({
-            'total_follow_today': td_one.count(),
-            'total_follow_week': 0,
-            'total_follow_month': ts_one.count(),
-            'total_follow_tll_date': ls_one.count()
-        }, status=status.HTTP_200_OK)
-
-    
-    
-    
-#==================QR code ===============================================
-# create_QR_CODE
-
-
-import requests
-from urllib.parse import quote
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from io import BytesIO
-import qrcode
-import base64
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
-
-@csrf_exempt
-@api_view(['POST'])
-def create_payment_url(request):
-    url = "https://api.cashfree.com/api/v1/order/create"
-
-    # Auto-generate the order ID date-wise
-    order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
-    phone_no = request.data['customerPhone'][-10:]
-    amount = request.data['orderAmount']
-    name = request.data['customerName']
-    email = request.data['customeremail']
-    remaining = request.data['Remaining_amount']
-
-    eve_id = request.data.get('eve_id')
-    mode = 3
-    total_amount = request.data.get('total_amount')
-    payment_status = 3
-
-    payload = {
-        "appId": "2045315bd01ed984f26100c6fd135402",
-        "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
-        "orderId": order_id,
-        "orderAmount": amount,
-        "Remainingamount": remaining,
-        "orderCurrency": "INR",
-        "orderNote": "HII",
-        "customerName": name,
-        "customeremail": email,
-        "customerPhone": phone_no,
-        "returnUrl": "https://payments-test.cashfree.com/links/response",
-    }
-
-    response = requests.post(url, data=payload)
-    d = response.json()
-
-    # Assuming the response contains the payment link
-    payment_link = d.get('paymentLink')
-
-    # Generate QR code for the payment link
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(payment_link)
-    qr.make(fit=True)
-    img = qr.make_image(fill='black', back_color='white')
-
-    # Save QR code image to a bytes buffer
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-
-    # Encode the image to base64 for data URL
-    img_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-    # Send QR code image via WhatsApp
-    api_key = "c27d7fa6-292c-4534-8dc4-a0dd28e7d7e3"
-    msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {amount}. Scan the QR code to pay."
-    encoded_msg = quote(msg)
-    whatsapp_url = f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={api_key}&phone={phone_no}&content={encoded_msg}&fileName=payment_qr.png&caption=Scan the QR code to pay&contentType=1"
-
-    try:
-        files = {
-            'file': ('payment_qr.png', buffer.getvalue(), 'image/png')
-        }
-        response = requests.post(whatsapp_url, files=files)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error occurred while hitting the URL: {e}")
-
-    # Save payment record to the database
-    try:
-        event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
-        payment_record = agg_hhc_cashfree_online_payment.objects.create(
-            order_id=order_id,
-            amount_paid=payload['orderAmount'],
-            amount_remaining=payload['Remainingamount'],
-            Total_cost=total_amount,
-            order_currency=payload['orderCurrency'],
-            order_note=payload['orderNote'],
-            paid_by=payload['customerName'],
-            customer_email=payload['customeremail'],
-            customer_phone=payload['customerPhone'],
-            eve_id=event_instance,
-            mode=mode,
-            payment_status=payment_status,
-        )
-    except Exception as e:
-        print(f"Error saving payment record: {e}")
-
-    # Return the payment link and QR code base64 in the API response
-    data = {
-        'payment_link': payment_link,
-        'qr_code_base64': img_base64,
-    }
-    return Response(data)
-
-
-#======================================attendance=============================================
-
-from rest_framework.exceptions import ValidationError
-from django.utils.dateparse import parse_date
-
-
-class PostAggHHCAttendanceAPIView(APIView):
-    def post(self, request, format=None):
-        serializer = POST_AggHHCAttendanceSerializer(data=request.data)
-        
-        try:
-            if serializer.is_valid():
-                attnd_status = request.data.get("attnd_status")
-                
-                if attnd_status != "Present":
-                    professional_id = request.data.get("Professional_iid")
-                    attnd_date = request.data.get("attnd_date")
-                    
-                    attnd_date = parse_date(attnd_date)
-
-                    # Query the agg_hhc_detailed_event_plan_of_care table
-                    try:
-                        event_plans = agg_hhc_detailed_event_plan_of_care.objects.filter(
-                            srv_prof_id=professional_id,
-                            actual_StartDate_Time=attnd_date  # Assuming actual_StartDate_Time is a datetime field
-                        )
-                        
-                        event_plans_of_care  = agg_hhc_event_plan_of_care.objects.filter(
-                           srv_prof_id=professional_id,
-                           start_date = attnd_date 
-                        )
-                        
-                        # if event_plans.exists():
-                        #     response_data = []
-                        #     for event_plan in event_plans:
-                        #         for event_plan_of_care in event_plans_of_care:
-                        #             response_data.append({
-                        #                 "eve_id": event_plan.eve_id.eve_id,
-                        #                 "service": event_plan.eve_poc_id.srv_id.service_title,
-                        #                 "sub_service": event_plan.eve_poc_id.sub_srv_id.recommomded_service,
-                        #                 "patient": event_plan.eve_id.agg_sp_pt_id.name,
-                        #                 "actual_StartDate_Time": event_plan.actual_StartDate_Time,
-                        #                 "eve_code": event_plan.eve_id.event_code,
-                        #                 "professional_name": event_plan.srv_prof_id.prof_fullname,
-                        #                 "eve_poc_id": event_plan_of_care.eve_poc_id,
-                        #                 "dtl_eve_id": event_plan.agg_sp_dt_eve_poc_id
-                        #             })
-                        #     return Response(response_data, status=status.HTTP_200_OK)
-                        
-                            # event_plans_of_care = agg_hhc_event_plan_of_care.objects.filter(
-                        #     srv_prof_id=professional_id,
-                        #     start_date=attnd_date
-                        # )
-                        
-                        if event_plans.exists():
-                            response_data = [{
-                                "eve_id": event_plan.eve_id.eve_id,
-                                "service": event_plan.eve_poc_id.srv_id.service_title,
-                                "sub_service": event_plan.eve_poc_id.sub_srv_id.recommomded_service,
-                                "patient": event_plan.eve_id.agg_sp_pt_id.name,
-                                "actual_StartDate_Time": event_plan.actual_StartDate_Time,
-                                "eve_code": event_plan.eve_id.event_code,
-                                "professional_name": event_plan.srv_prof_id.prof_fullname
-                                
-                                # "eve_poc_id": event_plan_of_care.eve_poc_id
-                            } for event_plan in event_plans]
-                            return Response(response_data, status=status.HTTP_200_OK)
-                        else:
-                            # Save the data if no matching event is found
-                            serializer.save()
-                            return Response({"error": "No matching event found, but record saved"}, status=status.HTTP_201_CREATED)
-                    except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
-                        # This block is not necessary as filter will not raise DoesNotExist exception
-                        pass
-                else:
-                    # Save the data if attnd_status is "Present"
-                    serializer.save()
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_605_BAD_REQUEST)
-        except ValidationError as e:
-            return Response({'error': str(e)}, status=status.HTTP_301_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'Something went wrong', 'msg': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#=========================================GET saved detailed=================================
-        
-from django.shortcuts import get_object_or_404
-
-class GetAggHHCAttendanceAPIView(APIView):
-    def get(self, request, pro_id, format=None):
-        # Retrieve the attendance record using the provided att_id
-        attendance_records = agg_hhc_attendance.objects.filter(Professional_iid=pro_id)
-        
-        # Serialize the attendance record
-        if attendance_records.exists():
-            # Serialize the attendance records
-            serializer = GET_AggHHCAttendanceSerializer(attendance_records, many=True)
-            # Return the serialized data with a 200 OK response
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            # If no records found, return a 404 Not Found response
-            return Response({"error": "No attendance records found"}, status=status.HTTP_404_NOT_FOUND)
-    
-#============================================Update saved details================================
-
-class UpdateAggHHCAttendanceAPIView(APIView):
-    def put(self, request, format=None):
-        try:
-            # Get the att_id from query params
-            att_id = request.query_params.get("att_id")
-            if not att_id:
-                return Response({"error": "att_id query parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Try to get the instance to update
-            try:
-                instance = agg_hhc_attendance.objects.get(att_id=att_id)
-            except agg_hhc_attendance.DoesNotExist:
-                return Response({"error": "Attendance record does not exist for att_id: " + str(att_id)}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Serialize the updated data
-            serializer = Put_AggHHCAttendanceSerializer(instance, data=request.data)
-            
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'Something went wrong','msg': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-#================ professional count================================
-
-class CountProfessionals(APIView):
-    def get(self, request, format=None):
-        try:
-            # Count the professionals with status 1
-            professional_count = agg_hhc_service_professionals.objects.filter(status=1).count()
-            return Response({'count': professional_count}, status=status.HTTP_200_OK)
-        except agg_hhc_service_professionals.DoesNotExist:
-            return Response({"error": "Professionals do not exist"}, status=status.HTTP_404_NOT_FOUND)
-
-
-#=================== professional Present \\ absent\\ week-of  Count==========================
-
-class CountProfessionalsAttendanceStatus(APIView):
-    def get(self, request, format=None):
-        try:
-            # Get today's date
-            today = timezone.now().date()
-
-            # Get the start of the current month
-            month_start_date = today.replace(day=1)
-
-            # Count for today
-            professional_A_count_today = agg_hhc_attendance.objects.filter(attnd_status='Absent', attnd_date__date=today).count()
-            professional_P_count_today = agg_hhc_attendance.objects.filter(attnd_status='Present', attnd_date__date=today).count()
-            professional_WO_count_today = agg_hhc_attendance.objects.filter(attnd_status='Week Off', attnd_date__date=today).count()
-
-            # Count for the current month
-            professional_A_count_month = agg_hhc_attendance.objects.filter(attnd_status='Absent', attnd_date__date__gte=month_start_date, attnd_date__date__lte=today).count()
-            professional_P_count_month = agg_hhc_attendance.objects.filter(attnd_status='Present', attnd_date__date__gte=month_start_date, attnd_date__date__lte=today).count()
-            professional_WO_count_month = agg_hhc_attendance.objects.filter(attnd_status='Week Off', attnd_date__date__gte=month_start_date, attnd_date__date__lte=today).count()
-
-            return Response({
-                'professional_A_count_today': professional_A_count_today,
-                'professional_P_count_today': professional_P_count_today,
-                'professional_WO_count_today': professional_WO_count_today,
-                'professional_A_count_month': professional_A_count_month,
-                'professional_P_count_month': professional_P_count_month,
-                'professional_WO_count_month': professional_WO_count_month
-            }, status=status.HTTP_200_OK)
-
-        except agg_hhc_attendance.DoesNotExist:
-            return Response({"error": "Attendance records do not exist"}, status=status.HTTP_404_NOT_FOUND)
-        
-        
-#=============== deallocate and save attendance =======================================
-
-from django.db.models import F
-
-class Deallocate_AggHHCAttendanceAPIView(APIView):
-    def post(self, request, *args, **kwargs):
-        if not isinstance(request.data, list):
-            return Response({"error": "Expected a list of objects"}, status=status.HTTP_400_BAD_REQUEST)
-
-        first_object = request.data[0]  # Assuming the attendance record should be created based on the first object
-        attendance_serializer = Deallocate_and_POST_AggHHCAttendanceSerializer(data=first_object)
-        
-        if attendance_serializer.is_valid():
-            attendance_record = attendance_serializer.save()
-            
-            print(request.data, 'isdijiwdkj')
-
-            for obj in request.data:
-                cancellation_data = {
-                    'eve_id': obj.get('eve_id'),
-                    'epoc_id': obj.get('eve_poc_id'),
-                    'dtl_eve_id': obj.get('dt_eve_poc_id'),
-                    'is_canceled': 2,
-                    'is_srv_sesn': 3,
-                    'is_reschedule': 1,
-                    'reschedule_date': attendance_record.attnd_date,
-                    'req_resson': 'urgent leave',
-                    'remark': 'Apply for professional reschedule',
-                    'professional_request_status': 3,
-                    'atten_id': attendance_record.att_id,
-                    'req_rejection_remark': 'urgent leave',
-                    'is_deleted': 2,
-                    'added_by': obj.get('added_by', first_object.get('added_by')),
-                    'last_modified_by': obj.get('added_by', first_object.get('added_by')),
-                }
-
-                cancellation_serializer = AggHHCCancellationAndRescheduleRequestSerializer(data=cancellation_data)
-                if cancellation_serializer.is_valid():
-                    cancellation_serializer.save()
-                else:
-                    return Response(cancellation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response(attendance_serializer.data, status=status.HTTP_201_CREATED)
-        
-        return Response(attendance_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-    
-#============================ session count for spero website======================================
-
-class session_count_view(APIView):
-    def post(self, request, *args, **kwargs):
-        try:
-            # Count the professionals with status 1
-            old_count = 249055
-            service_count = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1).count()
-            total_count = old_count + service_count
-            
-            # Save the total_count into the service_count_save_for_website table
-            service_count_entry = service_count_save_for_website.objects.create(today_session_count=total_count)
-            service_count_entry.save()
-            
-            return Response({"total_count": total_count}, status=status.HTTP_200_OK)
-
-        except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
-            return Response({"error": "Data not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-class LatestServiceCountView(APIView):
-    def get(self, request, format=None):
-        latest_record = service_count_save_for_website.objects.order_by('-added_date').first()
-        if latest_record:
-            serializer = ServiceCountSaveForWebsiteSerializer(latest_record)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response({'error': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    
-class TotalAmountReceivedView(APIView):
-
-    def get(self, request, format=None):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the previous month
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # End of the previous month
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-
-        
-        # Base query
-        payment_details = agg_hhc_payment_details.objects.all()
-        
-        if hospital_id:
-            payment_details = payment_details.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        
-        # Calculate totals
-        total_today = payment_details.filter(date__gte=start_of_day).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        total_week = payment_details.filter(date__gte=start_of_week).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        total_month = payment_details.filter(date__gte=start_of_month).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        total_last_month = payment_details.filter(date__gte=start_of_previous_month, date__lte=end_of_previous_month).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-
-        return Response({
-            'total_amount_received_today': total_today,
-            'total_amount_received_week': total_week,
-            'total_amount_received_month': total_month,
-            'total_amount_received_last_month': total_last_month
-        }, status=status.HTTP_200_OK)
-        
-        
-class PendingAmountReceivedView(APIView):
-
-    def get(self, request, format=None):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # Base query
-        payment_details = agg_hhc_payment_details.objects.all()
-        
-        if hospital_id:
-            payment_details = payment_details.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        
-        # Calculate totals
-        total_today = payment_details.filter(date__gte=start_of_day, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        total_week = payment_details.filter(date__gte=start_of_week, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        total_month = payment_details.filter(date__gte=start_of_month, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
-        
-        return Response({
-            'total_amount_received_today': total_today,
-            'total_amount_received_week': total_week,
-            'total_amount_received_month': total_month
-        }, status=status.HTTP_200_OK)
-        
-        
-#============================ unpaid ammount conunt ======================================
-
-class CalculateUNpaidAmount(APIView):
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_event_plan_of_care.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_amount1 = all_event.objects.filter(date__gte=start_of_day, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
-        total_amount2 = all_event.objects.filter(date__gte=start_of_week, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
-        total_amount3 = all_event.objects.filter(date__gte=start_of_month, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
-
-
-
-        return Response({
-            'total_Unpaid_amount_today': total_amount1,
-            'total_Unpaid_amount_week': total_amount2,
-            'total_Unpaid_amount_month': total_amount3
-        }, status=status.HTTP_200_OK)
-        
-#===================================== Totral enquiry count===========================
-
-class Calculate_Total_enquiry(APIView):
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_events.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_enq1 = all_event.filter(enquiry_added_date__gte=start_of_day, status=1, enq_spero_srv_status_enum=3)
-        total_enq2 = all_event.filter(enquiry_added_date__gte=start_of_week, status=1, enq_spero_srv_status_enum =3)
-        total_enq3 = all_event.filter(enquiry_added_date__gte=start_of_month, status=1, enq_spero_srv_status_enum=3)
-        total_enq4 = all_event.filter(status=1, enq_spero_srv_status_enum=3)
-
-
-
-
-        return Response({
-            'total_enq_today': total_enq1,
-            'total_enq_week': total_enq2,
-            'total_enq_month': total_enq3,
-            'total_enq_till_date': total_enq4
-        }, status=status.HTTP_200_OK)
-        
-#================================== Total infollow up count ==========================================
-
-class Calculate_infollow_up_service(APIView):
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_enquiry_follow_up.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up__in=[1,4,5])
-        total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up__in =[1,4,5])
-        total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up__in=[1,4,5])
-        total_enq4 = all_event.filter(follow_up__in=[1,4,5])
-
-
-
-        return Response({
-            'total_follow_today': total_enq1,
-            'total_follow_week': total_enq2,
-            'total_follow_month': total_enq3,
-            'total_follow_tll_date': total_enq4
-        }, status=status.HTTP_200_OK)
-        
-#========================== Total cancelled enq ==============================
-
-class Calculate_cancelled_service(APIView):
-    def get(self, request, *args, **kwargs):   
-        hospital_id = request.GET.get('hosp_id')
-        now = timezone.now()
-        today = timezone.now().date()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        # month_end_date = today.replace(day=last_day)
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
-        hospital_id = request.GET.get('hosp_id')
-        if hospital_id:
-            ls_all_event = ls_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
-        ls_all_eves = list(set(ls_eve_ids))
-        ls_enq_id = []
-        for i in ls_all_eves:
-            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
-        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
-
-      
-        ls_two = ls_all_follow_up_enq.filter(follow_up=2)
-# ------------------ This month
-
-        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-        if hospital_id:
-            ts_all_event = ts_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
-        ts_all_eves = list(set(ts_eve_ids))
-        ts_enq_id = []
-        for i in ts_all_eves:
-            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
-        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
-
-        ts_two = ts_all_follow_up_enq.filter(follow_up=2)
-       
-
-# ----------------- today
-    
-        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-        if hospital_id:
-            td_all_event = td_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        td_eve_ids = td_all_event.values_list('event_id', flat=True)
-        td_all_eves = list(set(td_eve_ids))
-        td_enq_id = []
-        for i in td_all_eves:
-            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            td_enq_id.append(td_get_enq.enq_follow_up_id)
-        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
-
-        td_two = td_all_follow_up_enq.filter(follow_up=2)
-    
-
-        return Response({
-            'total_cancelled_today': td_two.count(),
-            'total_cancelled_week': 0,
-            'total_cancelled_month': ts_two.count(),
-            'total_cancelled_last_month': ls_two.count()
-            
-        }, status=status.HTTP_200_OK)
-
-
-
-
-class Calculate_pending_service(APIView):
-    def get(self, request, *args, **kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        now = timezone.now()
-        today = timezone.now().date()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)        
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-
-# ----------------- Last month
-        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
-        hospital_id = request.GET.get('hosp_id')
-        if hospital_id:
-            ls_all_event = ls_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
-        ls_all_eves = list(set(ls_eve_ids))
-        ls_enq_id = []
-        for i in ls_all_eves:
-            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
-        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
-
-        ls_one = ls_all_follow_up_enq.filter(follow_up=1)
-        ls_two = ls_all_follow_up_enq.filter(follow_up=2)
-        ls_three = ls_all_follow_up_enq.filter(follow_up=3)
-        ls_four = ls_all_follow_up_enq.filter(follow_up=4)
-
-        print(ls_all_follow_up_enq.count(),'total')
-        print(ls_one.count(),'in follow up')
-        print(ls_two.count(), 'Cancel')
-        print(ls_three.count(), 'Converted')
-        print(ls_four.count(), 'Enqury Create')
-        print("")
-
-# ------------------ This month
-
-        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-        if hospital_id:
-            ts_all_event = ts_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
-        ts_all_eves = list(set(ts_eve_ids))
-        ts_enq_id = []
-        for i in ts_all_eves:
-            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
-        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
-
-        ts_one = ts_all_follow_up_enq.filter(follow_up=1)
-        ts_two = ts_all_follow_up_enq.filter(follow_up=2)
-        ts_three = ts_all_follow_up_enq.filter(follow_up=3)
-        ts_four = ts_all_follow_up_enq.filter(follow_up=4)
-
-        print(ts_all_follow_up_enq.count(),'total')
-        print(ts_one.count(),'in follow up')
-        print(ts_two.count(), 'Cancel')
-        print(ts_three.count(), 'Converted')
-        print(ts_four.count(), 'Enqury Create')
-        print("")
-
-
-# ----------------- today
-    
-        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-        if hospital_id:
-            td_all_event = td_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        td_eve_ids = td_all_event.values_list('event_id', flat=True)
-        td_all_eves = list(set(td_eve_ids))
-        td_enq_id = []
-        for i in td_all_eves:
-            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            td_enq_id.append(td_get_enq.enq_follow_up_id)
-        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
-
-        td_one = td_all_follow_up_enq.filter(follow_up=1)
-        td_two = td_all_follow_up_enq.filter(follow_up=2)
-        td_three = td_all_follow_up_enq.filter(follow_up=3)
-        td_four = td_all_follow_up_enq.filter(follow_up=4)
-
-        print(td_all_follow_up_enq.count(),'total')
-        print(td_one.count(),'in follow up')
-        print(td_two.count(), 'Cancel')
-        print(td_three.count(), 'Converted')
-        print(td_four.count(), 'Enqury Create')
-
-
-        return Response({
-            'total_pending_today': td_four.count(),
-            'total_pending_week': 0,
-            'total_pending_month': ts_four.count(),
-            'total_pending_last_month': ls_four.count()
-            
-        }, status=status.HTTP_200_OK)
-    
-class Get_Coupons(APIView):
-    def get(self, request,pt_id):
-        # if code_id:
-        #     coupon = agg_Coupon_Code.objects.filter(agg_sp_pt_id=pt_id,coupon_id=code_id, status=1).last()
-        #     coupons=CouponSerializer(coupon)
-        #     return Response(coupons.data)
-        # else:
-        coupon = agg_Discount_Coupon_Code.objects.filter(agg_sp_pt_id=pt_id, status=1)
-        coupons=CouponSerializer(coupon, many=True)
-        return Response(coupons.data)
-        
-
-
-
-
-
-
-class Calculate_converted_service(APIView):
-    def get(self, request, *args, **kwargs):
-        now = timezone.now()
-        today = timezone.now().date()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        # month_end_date = today.replace(day=last_day)
-        month_end_date1 = today.replace(day=last_day)
-        month_end_date = datetime.datetime.combine(month_end_date1, datetime.datetime.max.time()).replace(microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-         # Start of the previous month
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # End of the previous month
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-
-        
-        all_event = agg_hhc_enquiry_follow_up.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=2)
-        total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=2)
-        total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up=2)
-        total_last_mnth = all_event.filter(last_modified_date__gte=start_of_previous_month, last_modified_date__lte=end_of_previous_month,  follow_up=2)
-      
-
-        return Response({
-            'total_cancelled_today': total_enq1,
-            'total_cancelled_week': total_enq2,
-            'total_cancelled_month': total_enq3,
-            'total_cancelled_last_month': total_last_mnth
-            
-        }, status=status.HTTP_200_OK)
-
-#==================== Total_services__ongoing___pending___Completed ===========================================================
-
-
-
-class TotalServicesOngoingPendingCompleted(APIView):
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1)
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        # total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=3)
-        # total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=3)
-        # total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up=3)
-        total_services = all_event.filter(follow_up=2).count()
-        Completed_Session = all_event.filter(Session_jobclosure_status=1).count()
-        Completed_Session1 = all_event.filter(last_modified_date__gte=start_of_day ,Session_jobclosure_status=1).count()
-        Completed_Session2 = all_event.filter(last_modified_date__gte=start_of_week ,Session_jobclosure_status=1).count()
-        Completed_Session3 = all_event.filter(last_modified_date__gte=start_of_month ,Session_jobclosure_status=1).count()
-
-        pending_session = all_event.filter(Session_status=1).count()
-        pending_sessio1 = all_event.filter(actual_StartDate_Time=start_of_day, Session_status=1).count()
-        pending_sessio2 = all_event.filter(actual_StartDate_Time=start_of_week, Session_status=1).count()
-        pending_sessio3 = all_event.filter(actual_StartDate_Time=start_of_month, Session_status=1).count()
-
-
-        ongoing_status = all_event.filter(Session_status=8).count()
-        ongoing_status1 = all_event.filter(actual_StartDate_Time=start_of_day, Session_status=8).count()
-        ongoing_status2 = all_event.filter(actual_StartDate_Time=start_of_week, Session_status=8).count()
-        ongoing_status3 = all_event.filter(actual_StartDate_Time=start_of_month, Session_status=8).count()
-
-
-
-        return Response({
-            # 'total_converted_today': total_enq1,
-            # 'total_converted_week': total_enq2,
-            # 'total_converted_month': total_enq3,
-            'total_servces_till_date': total_services,
-            
-            'total_completed_servces_till_date': Completed_Session,
-            'total_completed_servces_today': Completed_Session1,
-            'total_completed_servces_till_this_week': Completed_Session2,
-            'total_completed_servces_this_month': Completed_Session3,
-            
-            'total_pending_service_till_date': pending_session,
-            'total_pending_service_today': pending_sessio1,
-            'total_pending_service_this_week': pending_sessio2,
-            'total_pending_service_this_month': pending_sessio3,
-            
-            'total_ongoing_till_date': ongoing_status,
-            'total_ongoing_today': ongoing_status1,
-            'total_ongoing_this_week': ongoing_status2,
-            'total_ongoing_this_month': ongoing_status3
-            
-            
-        }, status=status.HTTP_200_OK)
-
-
-
-    
-#=================================================Total converted count =====================
-
-class Calculate_converted_service(APIView):
-    def get(self, request, args, *kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_enquiry_follow_up.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=3)
-        total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=3)
-        total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up=3)
-        total_enq4 = all_event.filter(follow_up=2).count()
-
-
-        return Response({
-            'total_converted_today': total_enq1,
-            'total_converted_week': total_enq2,
-            'total_converted_month': total_enq3,
-            'total_converted_till_date': total_enq4
-            
-        }, status=status.HTTP_200_OK)
-
-#============ total assin and unassin professional ======================================
-
-class ProfessionalCountView(APIView):
-    def get(self, request, *args, **kwargs):
-        today = now().date()
-        start_of_month = today.replace(day=1)
-
-        total_professionals = agg_hhc_service_professionals.objects.filter(status=1, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4).count()
-
-        assigned_professionals_today = agg_hhc_detailed_event_plan_of_care.objects.filter(
-            srv_prof_id__isnull=False,
-            actual_StartDate_Time=today,
-            status=1
-        ).values('srv_prof_id').distinct().count()
-
-        assigned_professionals_month = agg_hhc_detailed_event_plan_of_care.objects.filter(
-            srv_prof_id__isnull=False,
-            actual_StartDate_Time__gte=start_of_month,
-            status=1
-        ).values('srv_prof_id').distinct().count()
-
-        assigned_professionals_total = agg_hhc_detailed_event_plan_of_care.objects.filter(
-            srv_prof_id__isnull=False,
-            status=1
-        ).values('srv_prof_id').distinct().count()
-
-        unassigned_professionals_today = total_professionals - assigned_professionals_today
-        unassigned_professionals_month = total_professionals - assigned_professionals_month
-        unassigned_professionals_total = total_professionals - assigned_professionals_total
-
-        data = {
-            "total_professionals": total_professionals,
-            "assigned_professionals": {
-                "today": assigned_professionals_today,
-                "this_month": assigned_professionals_month,
-                "total": assigned_professionals_total,
-            },
-            "unassigned_professionals": {
-                "today": unassigned_professionals_today,
-                "this_month": unassigned_professionals_month,
-                "total": unassigned_professionals_total,
-            }
-        }
-        return Response(data)
-    
-    
-    
-    
-    
-    
-#========================== for testing porpose ============================================
-
-class cancelled_inq_detail(APIView):
-    def get(self, request, *args, **kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # Get all event ids that are in the payment details table
-        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # End of the previous month
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        all_event = agg_hhc_enquiry_follow_up.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=2)
-        total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=2)
-        total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up=2)
-        total_last_mnth = all_event.filter(last_modified_date__gte=start_of_previous_month, last_modified_date__lte=end_of_previous_month, follow_up=2)
-
-        def extract_details(queryset):
-            return list(queryset.values(
-                'event_id',
-                'event_id__agg_sp_pt_id__name',
-                'event_id__agg_sp_pt_id__phone_no',
-                'event_id__caller_id__phone',
-                'canclation_reason__cancel_by_id',
-                'canclation_reason__cancelation_reason',
-            ))
-        return Response({
-            'total_cancelled_today': extract_details(total_enq1),
-            # 'total_cancelled_week': extract_details(total_enq2),
-            'total_cancelled_month': extract_details(total_enq3),
-            'total_cancelled_last_month': extract_details(total_last_mnth)
-            
-        }, status=status.HTTP_200_OK)
-        
-   
-   
-   
-        
-class PendingAmountReceiveddetailed(APIView):
-
-    def get(self, request, format=None):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start and end of the previous month
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-
-# ----------------- Last month
-        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
-        hospital_id = request.GET.get('hosp_id')
-        if hospital_id:
-            ls_all_event = ls_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
-        ls_all_eves = list(set(ls_eve_ids))
-        ls_enq_id = []
-        for i in ls_all_eves:
-            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
-        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
-
-        ls_three = ls_all_follow_up_enq.filter(follow_up=3)
-
-
-       
-
-# ------------------ This month
-
-        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
-        if hospital_id:
-            ts_all_event = ts_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
-        ts_all_eves = list(set(ts_eve_ids))
-        ts_enq_id = []
-        for i in ts_all_eves:
-            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
-        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
-        ts_three = ts_all_follow_up_enq.filter(follow_up=3)
-
-
-# ----------------- today
-    
-        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
-        if hospital_id:
-            td_all_event = td_all_event.filter(
-                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-        td_eve_ids = td_all_event.values_list('event_id', flat=True)
-        td_all_eves = list(set(td_eve_ids))
-        td_enq_id = []
-        for i in td_all_eves:
-            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
-            td_enq_id.append(td_get_enq.enq_follow_up_id)
-        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
-
-        td_three = td_all_follow_up_enq.filter(follow_up=3)
-      
-        return Response({
-            'total_converted_today': td_three.count(),
-            'total_converted_week': 0,
-            'total_converted_month': ts_three.count(),
-            'total_converted_till_date': ls_three.count()
-            
-        }, status=status.HTTP_200_OK)
-        # Base query
-        # payment_details = agg_hhc_payment_details.objects.all()
-        
-        # if hospital_id:
-        #     payment_details = payment_details.filter(
-        #         eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-        #     )
-        
-        # # Calculate totals
-        # total_today = payment_details.filter(date__gte=start_of_day, payment_status=1)
-        # total_week = payment_details.filter(date__gte=start_of_week, payment_status=1)
-        # total_month = payment_details.filter(date__gte=start_of_month, payment_status=1)
-        # total_till_date = payment_details.filter(date__gte=start_of_previous_month, date__lte=end_of_previous_month, payment_status=1)
-        
-        # def extract_details(queryset):
-        #     return [
-        #         {
-        #             'eve_id': item['eve_id'],
-        #             'pay_recived_by__clg_first_name': f"{item['pay_recived_by__clg_first_name']} {item['pay_recived_by__clg_last_name']}",
-        #             'mode': item['mode'],
-        #             'amount_paid': item['amount_paid']
-        #         } for item in queryset.values(
-        #             'eve_id',
-        #             'pay_recived_by__clg_first_name',
-        #             'pay_recived_by__clg_last_name',
-        #             'mode',
-        #             'amount_paid'
-        #         )
-        #     ]
-        
-        # return Response({
-        #     'total_amount_received_today': extract_details(total_today),
-        #     # 'total_amount_received_week': extract_details(total_week), # Uncomment this line if you need the weekly data
-        #     'total_amount_received_month': extract_details(total_month),
-        #     'total_amount_received_last_month': extract_details(total_till_date)
-        # }, status=status.HTTP_200_OK)
-        
-
-class UNpaidAmount_details(APIView):
-    def get(self, request, *args, **kwargs):
-        
-        hospital_id = request.GET.get('hosp_id')
-        # Current time
-        now = timezone.now()
-        
-        # Start of the day
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the week (assuming week starts on Monday)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Start of the month
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        # Get all event ids that are in the payment details table
-        paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
-        
-        all_event = agg_hhc_events.objects.all()
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        # Filter out these event ids from the events table and sum the final_amount
-        total_amount1 = all_event.filter(
-            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_day).values_list('eve_id', flat=True),
-            status=1
-        ).exclude(eve_id__in=paid_event_ids)
-
-        total_amount2 = all_event.filter(
-            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_week).values_list('eve_id', flat=True),
-            status=1
-        ).exclude(eve_id__in=paid_event_ids)
-
-        total_amount3 = all_event.filter(
-            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_month).values_list('eve_id', flat=True),
-            status=1
-        ).exclude(eve_id__in=paid_event_ids)
-
-        total_amount4 = all_event.filter(
-            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_previous_month, start_date__lte=end_of_previous_month).values_list('eve_id', flat=True),
-            status=1
-        ).exclude(eve_id__in=paid_event_ids)
-
-        def extract_details(queryset):
-            return list(queryset.values(
-                'eve_id',
-                'agg_sp_pt_id__name',
-                'final_amount',
-            ))
-
-
-        return Response({
-            'total_Unpaid_amount_today': extract_details(total_amount1),
-            # 'total_Unpaid_amount_week': total_amount2,
-            'total_Unpaid_amount_month': extract_details(total_amount3),
-            'total_Unpaid_amount_last_month':extract_details(total_amount4)
-        }, status=status.HTTP_200_OK)
-        
-
-class UNassign_ProfessionalView(APIView):
-    def get(self, request, *args, **kwargs):
-        today = now().date()
-        current_time = now()
-
-        start_of_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        
-        first_day_of_current_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-
-        hospital_id = request.GET.get('hosp_id')
-        
-        all_events = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1)
-        if hospital_id:
-            all_events = all_events.filter(
-                eve_poc_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
-            )
-
-        total_professionals = agg_hhc_service_professionals.objects.filter(status=1)
-        total_professionals_ids = total_professionals.values_list('srv_prof_id', flat=True)
-
-        assigned_professionals_today_ids = all_events.filter(
-            actual_StartDate_Time=today,
-            srv_prof_id__isnull=False
-        ).values_list('srv_prof_id', flat=True).distinct()
-
-        assigned_professionals_month_ids = all_events.filter(
-            actual_StartDate_Time__gte=start_of_month,
-            srv_prof_id__isnull=False
-        ).values_list('srv_prof_id', flat=True).distinct()
-
-        assigned_professionals_total_ids = all_events.filter(
-            actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month,
-            srv_prof_id__isnull=False
-        ).values_list('srv_prof_id', flat=True).distinct()
-
-        unassigned_professionals_today = total_professionals.exclude(srv_prof_id__in=assigned_professionals_today_ids)
-        unassigned_professionals_month = total_professionals.exclude(srv_prof_id__in=assigned_professionals_month_ids)
-        unassigned_professionals_total = total_professionals.exclude(srv_prof_id__in=assigned_professionals_total_ids)
-
-        # def get_professionals_details(professionals):
-        #     return professionals.values('prof_fullname', 'srv_id__service_title', 'google_home_location')
-        
-        def extract_details(queryset):
-            return [
-                {
-                    'prof_fullname': item['prof_fullname'],
-                    'service_title': item['srv_id__service_title'],
-                    'google_home_location': item['google_home_location'],
-                } for item in queryset.values(
-                    'prof_fullname',
-                    'srv_id__service_title',
-                    'google_home_location'
-                )
-            ]
-
-        # data = {
-        #     "unassigned_professionals": {
-        #         "today": extract_details(unassigned_professionals_today),
-        #         "this_month": extract_details(unassigned_professionals_month),
-        #         "last_month": extract_details(unassigned_professionals_total),
-        #     }
-        # }
-        return Response({
-                "today": extract_details(unassigned_professionals_today),
-                "this_month": extract_details(unassigned_professionals_month),
-                "last_month": extract_details(unassigned_professionals_total),
-            }, status=status.HTTP_200_OK)
-        
-        
-class TotalServicesOngoingPendingCompleted_counts_service_wise(APIView):
-    def get(self, request, *args, **kwargs):
-        hospital_id = request.GET.get('hosp_id')
-        now = timezone.now()
-        
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_week = now - timezone.timedelta(days=now.weekday())
-        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
-        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        all_event = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1)
-        
-        if hospital_id:
-            all_event = all_event.filter(
-                eve_poc_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_poc_id', flat=True)
-            )
-
-        services = agg_hhc_services.objects.all()
-        
-        response_data = {
-            'total_services': all_event.count()
-        }
-        
-        for service in services:
-            service_events = all_event.filter(eve_poc_id__srv_id=service.srv_id)
-            
-            response_data[service.service_title] = {
-                'total_completed_till_date': service_events.filter(last_modified_date__gte=start_of_previous_month, last_modified_date__lte=end_of_previous_month, Session_jobclosure_status=1).count(),
-                'total_completed_today': service_events.filter(last_modified_date__gte=start_of_day, Session_jobclosure_status=1).count(),
-                # 'total_completed_this_week': service_events.filter(last_modified_date__gte=start_of_week, Session_jobclosure_status=1).count(),
-                'total_completed_this_month': service_events.filter(last_modified_date__gte=start_of_month, Session_jobclosure_status=1).count(),
-                
-                'total_pending_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status=1).count(),
-                'total_pending_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status=1).count(),
-                # 'total_pending_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=1).count(),
-                'total_pending_this_month': service_events.filter(actual_StartDate_Time=start_of_month, Session_status=1).count(),
-                
-                'total_ongoing_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status=8).count(),
-                'total_ongoing_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status=8).count(),
-                # 'total_ongoing_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=8).count(),
-                'total_ongoing_this_month': service_events.filter(actual_StartDate_Time=start_of_month, Session_status=8).count()
-            }
-        
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-
-# views.py
-# views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-import http.client
-import json
-
-class SendMessageView(APIView):
-    def post(self, request):
-        base_url = "xl6mjq.api-in.infobip.com"
-        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
-        from_number = "918956193883"
-        to_number = request.data.get('to_number', '')
-        message = request.data.get('message', '')
-        message_id = "a28dd97c-1ffb-4fcf-99f1-0b557ed381da"  # You may want to generate this dynamically or receive it from the request
-
-        if not to_number:
-            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if not message:
-            return Response({"error": "Message content is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        payload = json.dumps({
-            "from": from_number,
-            "to": to_number,
-            "messageId": message_id,
-            "content": {
-                "text": message
-            },
-            "callbackData": "Callback data",
-            # "notifyUrl": "https://www.example.com/whatsapp"
-        })
-
-        headers = {
-            'Authorization': f'App {api_key}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-
-        conn = http.client.HTTPSConnection(base_url)
-        conn.request("POST", "/whatsapp/1/message/text", payload, headers)
-        res = conn.getresponse()
-        data = res.read()
-        conn.close()
-
-        if res.status == 200:
-            return Response({"status": "Message sent successfully", "response": data.decode("utf-8")}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": data.decode("utf-8")}, status=res.status)
-
-
 class AggHHCAttendanceAPIView(APIView):
     def get(self, request, format=None):
         
@@ -14697,6 +15414,57 @@ class AggHHCAttendanceAPIView(APIView):
         serializer = AggHHCAttendanceSerializer(attendance_records, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+from rest_framework.exceptions import ValidationError
+
+from rest_framework.exceptions import ValidationError
+from django.utils.dateparse import parse_date
+
+
+# class PostAggHHCAttendanceAPIView(APIView):
+#     def post(self, request, format=None):
+#         serializer = POST_AggHHCAttendanceSerializer(data=request.data)
+        
+#         try:
+#             if serializer.is_valid():
+#                 attnd_status = request.data.get("attnd_status")
+                
+#                 if attnd_status != "Present":
+#                     professional_id = request.data.get("Professional_iid")
+#                     attnd_date = request.data.get("attnd_date")
+                    
+#                     attnd_date = parse_date(attnd_date)
+
+#                     # Query the agg_hhc_detailed_event_plan_of_care table
+#                     try:
+#                         event_plans = agg_hhc_detailed_event_plan_of_care.objects.filter(
+#                             srv_prof_id=professional_id,
+#                             actual_StartDate_Time=attnd_date  # Assuming actual_StartDate_Time is a datetime field
+#                         )
+                        
+#                         if event_plans.exists():
+                        
+#                             response_data =[ {
+#                                 "eve_id": event_plan.eve_id.eve_id,
+#                                 "service": event_plan.eve_poc_id.srv_id.service_title,
+#                                 "sub_service": event_plan.eve_poc_id.sub_srv_id.recommomded_service,
+#                                 "patient": event_plan.eve_id.agg_sp_pt_id.name,
+#                                 "actual_StartDate_Time": event_plan.actual_StartDate_Time
+#                             }  for event_plan in event_plans ]
+#                         return Response(response_data, status=status.HTTP_200_OK)
+#                     except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+#                         serializer.save()
+#                         return Response({"error": "No matching event found"}, status=status.HTTP_404_NOT_FOUND)
+#                 else:
+#                     # Save the data if attnd_status is "Present"
+#                     serializer.save()
+#                     return Response(serializer.data, status=status.HTTP_201_CREATED)
+#             else:
+#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         except ValidationError as e:
+#             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({'error': 'Something went wrong','msg':str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class PostAggHHCAttendanceAPIView(APIView):
      renderer_classes = [UserRenderer]
      permission_classes = [IsAuthenticated]
@@ -14767,6 +15535,7 @@ class PostAggHHCAttendanceAPIView(APIView):
                 return Response({"message": "Attendance for this professional on this date already exists."}, status=status.HTTP_200_OK)
             
             attnd_status = request.data.get("attnd_status")
+            added_by = request.data.get("added_by") 
 
             if attnd_status != "Present":
                 professional_id = request.data.get("Professional_iid")
@@ -14794,10 +15563,10 @@ class PostAggHHCAttendanceAPIView(APIView):
                     } for event_plan in event_plans]
                     return Response(response_data, status=status.HTTP_200_OK)
                 else:
-                    serializer.save()
+                    serializer.save(added_by=added_by)
                     return Response({"message": "No matching event found, but record saved."}, status=status.HTTP_201_CREATED)
             else:
-                serializer.save()
+                serializer.save(added_by=added_by)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -14818,8 +15587,799 @@ class GetAggHHCAttendanceAPIView(APIView):
         else:
             # If no records found, return a 404 Not Found response
             return Response({"error": "No attendance records found"}, status=status.HTTP_404_NOT_FOUND)
+    
         
+#=========================get transactions==================
+
+import requests
+import json
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+import uuid
+
+@csrf_exempt
+@api_view(['POST'])
+def get_settlement_reconciliation(request):
+    url = "https://api.cashfree.com/pg/settlement/recon"
+    headers = {
+        "x-api-version": "2022-09-01",
+        "x-client-id": "20453165a737ebd97e430fcabc135402",  # Replace with your actual client ID
+        "x-client-secret": "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215", # Replace with your actual client secret
+    }
+
+    # Get today's date range
+    today = timezone.now().date()
+    tomorrow = today + timedelta(days=1)
+
+    # Fetch today's settlement UTRs from the database
+    today_settlement_utrs = agg_hhc_save_settlement_events.objects.filter(
+        added_date__gte=today,
+        added_date__lt=tomorrow
+    ).values_list('utr', flat=True)
+    
+    # Convert the queryset to a list
+    settlement_utrs_list = list(today_settlement_utrs)
+
+    # If there are no settlement UTRs for today, return an empty response
+    if not settlement_utrs_list:
+        return Response({"message": "No settlements for today"}, status=status.HTTP_200_OK)
+
+    payload = {
+        "pagination": {"limit": 40},
+        "filters": {
+            "settlement_utrs": settlement_utrs_list
+        }
+    }
+
+    try:
+        response = requests.request("POST", url, headers=headers, json=payload)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Update the agg_hhc_payment_details table
+            for item in data.get('data', []):
+                order_id = item.get('order_id')
+                settlement_utr = item.get('settlement_utr')
+                
+                if order_id and settlement_utr:
+                    agg_hhc_payment_details.objects.filter(transaction_status__data__order__order_id=order_id).update(utr=settlement_utr)
+
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to fetch settlement details"}, status=response.status_code)
+    except requests.exceptions.HTTPError as e:
+        return Response({"error": f"HTTP error occurred: {str(e)}"}, status=response.status_code)
+    except requests.exceptions.RequestException as e:
+        return Response({"error": f"Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+import json
+import re
+
+
+@csrf_exempt
+@require_POST
+def update_transaction_status_settlement_webhook(request):
+    try:
         
+        request_body = request.body.decode('utf-8')
+        
+        # Fix JSON formatting issues
+        request_body = re.sub(r'null\.', 'null', request_body)
+        # Load JSON content from the request body
+        request_data = json.loads(request_body)
+        
+        # Extract payment details
+        settlement_data = request_data.get('data', {}).get('settlement', {})
+        amount_settled = settlement_data.get('amount_settled')
+        settlement_id = settlement_data.get('settlement_id')
+        status = settlement_data.get('status')
+        utr = settlement_data.get('utr')
+        
+        # Validate extracted details
+        if not amount_settled:
+            raise ValueError('amount_settled not found in the request payload')
+        if not settlement_id:
+            raise ValueError('settlement_id not found in the request payload')
+        if not status:
+            raise ValueError('status not found in the request payload')
+        if not utr:
+            raise ValueError('utr not found in the request payload')
+
+        # Use atomic transaction to ensure data integrity
+        with transaction.atomic():
+            # Create a new payment record
+            payment_record = agg_hhc_save_settlement_events.objects.create(
+                amount_settled=amount_settled,
+                settlement_id=settlement_id,
+                status=status,
+                utr=utr,
+                settlement_json=request_data,
+            )
+            payment_record.save()
+        
+        return JsonResponse({'message': 'Settlement status updated successfully'}, status=200)
+
+    except ValueError as ve:
+        return JsonResponse({'error': str(ve)}, status=400)
+    except Exception as e:
+        # Log the exception here using Django's logging framework if needed
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+from django.http import StreamingHttpResponse
+import csv
+
+
+
+from django.http import StreamingHttpResponse
+import csv
+
+
+
+
+class service_count(APIView):
+    def get(self, request, from_date, to_date, hos_id):
+        # get_event_data = agg_hhc_event_plan_of_care.objects.filter(hosp_id = hosp_id, eve_id__added_date__range=(from_date,to_date),eve_id__status = 1, status = 1)
+        get_session = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id__hosp_id = hos_id, actual_StartDate_Time__range = (from_date,to_date),eve_id__event_status=2 or 3, eve_id__status = 1, eve_poc_id__status = 1, status = 1)
+        sub_service_wise_professional_services = []
+        for index, i in enumerate(get_session, start=1):
+            data = {
+                "sr_no":index,
+                "patient_name":i.eve_id.agg_sp_pt_id.name,
+                "service_name":i.eve_poc_id.srv_id.service_title,
+                "sub_service_name":i.eve_poc_id.sub_srv_id.recommomded_service,
+                "service_time": i.start_time,
+                "start_date":i.actual_StartDate_Time,
+                "end_date":i.actual_EndDate_Time,
+                "professional_name":i.srv_prof_id.prof_fullname
+            }
+            sub_service_wise_professional_services.append(data)
+        # return Response({'data':sub_service_wise_professional_services})
+        csv_data = self.serialize_to_csv(sub_service_wise_professional_services)
+        response = StreamingHttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="Accout_invoice.csv"'
+        return response
+
+    def serialize_to_csv(self, data):
+        header = ['sr_no', 'patient_name','service_name','sub_service_name','service_time','start_date','end_date','professional_name']  # Add other fields here #  CSV file header name of table fields names 
+        # Initialize the CSV writer
+        csv_stream = (self.generate_csv_row(header, data_row) for data_row in data)
+        # Yield header
+        yield ','.join(header) + '\n'
+        # Yield data
+        for row in csv_stream:
+            yield row + '\n'
+
+    def generate_csv_row(self, header, data_row):
+        # used to Generate a row of CSV data based on the serializer data
+        row = []
+        for field in header:
+            print("record",field)
+            if (',' in str(data_row.get(field, ''))):
+                string_data=str(data_row.get(field, ''))
+                string_data = string_data.replace(',', '')
+                row.append(string_data)#str(data_row.get(field, ''))
+            else:
+                row.append(str(data_row.get(field, '')))
+        return ','.join(row)
+
+
+#==================QR code ===============================================
+
+#==================QR code ===============================================
+# create_QR_CODE
+
+
+import requests
+from urllib.parse import quote
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from io import BytesIO
+import qrcode
+import base64
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+# Ensure your model imports are correct
+# from .models import agg_hhc_cashfree_online_payment, agg_hhc_events
+
+@csrf_exempt
+@api_view(['POST'])
+def create_QR_CODE(request):
+    url = "https://api.cashfree.com/api/v1/order/create"
+
+    # Auto-generate the order ID date-wise
+    order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
+    phone_no = request.data['customerPhone'][-10:]
+    amount = request.data['orderAmount']
+    name = request.data['customerName']
+    email = request.data['customeremail']
+    remaining = request.data['Remaining_amount']
+
+    eve_id = request.data.get('eve_id')
+    mode = 3
+    total_amount = request.data.get('total_amount')
+    payment_status = 3
+
+    payload = {
+        "appId": "2045315bd01ed984f26100c6fd135402",
+        "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
+        "orderId": order_id,
+        "orderAmount": amount,
+        "Remainingamount": remaining,
+        "orderCurrency": "INR",
+        "orderNote": "HII",
+        "customerName": name,
+        "customeremail": email,
+        "customerPhone": phone_no,
+        "returnUrl": "https://payments-test.cashfree.com/links/response",
+    }
+
+    response = requests.post(url, data=payload)
+    d = response.json()
+
+    # Assuming the response contains the payment link
+    payment_link = d.get('paymentLink')
+
+    # Generate QR code for the payment link
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(payment_link)
+    qr.make(fit=True)
+    img = qr.make_image(fill='black', back_color='white')
+
+    # Save QR code image to a bytes buffer
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    # Encode the image to base64 for data URL
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    img_data_url = f"data:image/png;base64,{img_base64}"
+
+    # Send QR code image via WhatsApp
+    api_key = "c27d7fa6-292c-4534-8dc4-a0dd28e7d7e3"
+    msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {amount}."
+    encoded_msg = quote(msg)
+    whatsapp_url = f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={api_key}&phone={phone_no}&content={encoded_msg}&fileName&caption=Scan the QR code to pay&contentType=1"
+
+    try:
+        files = {
+            'file': ('payment_qr.png', buffer.getvalue(), 'image/png')
+        }
+        response = requests.post(whatsapp_url, files=files)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error occurred while hitting the URL: {e}")
+
+    # Save payment record to the database
+    try:
+        event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
+        payment_record = agg_hhc_cashfree_online_payment.objects.create(
+            order_id=order_id,
+            amount_paid=payload['orderAmount'],
+            amount_remaining=payload['Remainingamount'],
+            Total_cost=total_amount,
+            order_currency=payload['orderCurrency'],
+            order_note=payload['orderNote'],
+            paid_by=payload['customerName'],
+            customer_email=payload['customeremail'],
+            customer_phone=payload['customerPhone'],
+            eve_id=event_instance,
+            mode=mode,
+            payment_status=payment_status,
+        )
+    except Exception as e:
+        print(f"Error saving payment record: {e}")
+
+    # Return the payment link and QR code data URL in the API response
+    data = {
+        'payment_link': payment_link,
+        'qr_code_data_url': img_data_url,
+    }
+    return Response(data)
+
+
+
+
+from .models import Payment_mode_enum, payment_status_enum, status_enum
+class collectamtprof(APIView):
+
+    def post(self, request, format=None):
+        print(';....................')
+        clgref_id = get_prof(request)[3]
+        eve_id = request.data.get('eve_id')
+        print(eve_id)
+        pt_dtl = agg_hhc_payment_details.objects.filter(eve_id=eve_id, status=status_enum.Active.value)
+        last_record = pt_dtl.last()
+        print(last_record)
+
+        if last_record:
+            eve_id_value = last_record.eve_id.eve_id if last_record.eve_id else None
+            srv_prof_id_value = request.data.get('srv_prof_id')
+
+            try:
+                srv_prof_instance = agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id_value)
+            except agg_hhc_service_professionals.DoesNotExist:
+                raise Http404("Invalid srv_prof_id - object does not exist.")
+
+            data = {
+                "eve_id": eve_id_value,
+                "srv_prof_id": srv_prof_instance.srv_prof_id if srv_prof_instance else None,
+                "Total_cost": last_record.Total_cost,
+                "paid_by": last_record.paid_by,
+                "amount_paid": last_record.amount_paid,
+                "amount_remaining": last_record.amount_remaining,
+                # "pay_recived_by": last_record.pay_recived_by,
+                "receipt_no": last_record.receipt_no,
+                "mode": last_record.mode.value if last_record.mode else None,
+                "bank_name": last_record.bank_name,
+                "cheque_number": last_record.cheque_number,
+                "cheque_status": last_record.cheque_status.value if last_record.cheque_status else None,
+                "cheque_date": last_record.cheque_date,
+                "card_no": last_record.card_no,
+                "transaction_id": last_record.transaction_id,
+                "note": last_record.note,
+                "order_id": last_record.order_id,
+                "order_currency": last_record.order_currency,
+                "order_note": last_record.order_note,
+                "customer_email": last_record.customer_email,
+                "customer_phone": last_record.customer_phone,
+                "payment_status": last_record.payment_status.value if last_record.payment_status else None,
+                "transaction_status": last_record.transaction_status,
+                "overall_status": last_record.overall_status,
+                "cf_token": last_record.cf_token,
+                "online_payment_by": last_record.online_payment_by.value if last_record.online_payment_by else None,
+                "Remark": last_record.Remark,
+                "status": last_record.status.value if last_record.status else None,
+                "added_by": last_record.added_by,
+                "last_modified_by": last_record.last_modified_by
+            }
+            print(data)
+            serializer = collectAmtProfSerializer(data=data)
+
+            if serializer.is_valid():
+                serializer.save()
+
+                if request.data['mode'] == Payment_mode_enum.Cheque.value:
+                    last_record.cheque_number = request.data.get('cheque_number')
+                    last_record.cheque_date = request.data.get('cheque_date')
+                    last_record.bank_name = request.data.get('bank_name')
+                elif request.data['mode'] == Payment_mode_enum.Card.value:
+                    last_record.card_no = request.data.get('card_no')
+                    last_record.transaction_id = request.data.get('transaction_id')
+                elif request.data['mode'] == Payment_mode_enum.qr_code.value:
+                    last_record.transaction_id = request.data.get('transaction_id')
+
+                last_record.Total_cost = request.data.get('Total_cost')
+                last_record.paid_by = request.data.get('paid_by')
+                last_record.amount_paid = request.data.get('amount_paid')
+                last_record.mode = Payment_mode_enum(request.data.get('mode'))
+                last_record.Remark = request.data.get('Remark')
+                # last_record.pay_recived_by = clgref_id
+                last_record.srv_prof_id = srv_prof_instance
+                last_record.last_modified_by = clgref_id
+                last_record.payment_status = payment_status_enum.Amount_paid_from_Desk
+                last_record.payment_to_desk_date=datetime.now().date()
+                last_record.save()
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print("error")
+                print(f"Serializer errors: {serializer.errors}")
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "No record found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+from .models import Payment_mode_enum, payment_status_enum, status_enum
+class collectamtprof1(APIView):
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
+    # def post(self, request, format=None):
+    #     clgref_id = get_prof(request)[3]
+    #     eve_id = request.data.get('eve_id')
+    #     print(eve_id)
+    #     pt_dtl = agg_hhc_payment_details.objects.filter(eve_id = eve_id, status = 1)
+    #     last_record = pt_dtl.last()
+    #     print(last_record)
+
+    #     # "cheque_image":last_record.cheque_image,
+        
+    #     data = {
+    #             "eve_id":int(last_record.eve_id),"srv_prof_id":int(last_record.srv_prof_id),"Total_cost":last_record.Total_cost,"paid_by":last_record.paid_by ,"amount_paid":last_record.amount_paid ,
+    #             "amount_remaining":last_record.amount_remaining ,"pay_recived_by":last_record.pay_recived_by,"receipt_no":last_record.receipt_no ,"mode":last_record.mode ,"bank_name":last_record.bank_name,
+    #             "cheque_number":last_record.cheque_number,"cheque_status":last_record.cheque_status,"bank_name":last_record.bank_name,"cheque_date":last_record.cheque_date,"card_no":last_record.card_no,"transaction_id":last_record.transaction_id,
+    #             "note":last_record.note,"order_id":last_record.order_id ,"order_currency":last_record.order_currency,"order_note":last_record.order_note,
+    #             "customer_email":last_record.customer_email,"customer_phone":last_record.customer_phone,"payment_status":last_record.payment_status,"transaction_status":last_record.transaction_status,
+    #             "overall_status":last_record.overall_status,"cf_token":last_record.cf_token,"online_payment_by":last_record.online_payment_by,"Remark":last_record.Remark,"status":last_record.status,
+    #             "added_by":last_record.added_by,"last_modified_by":last_record.last_modified_by
+    #         }
+    #     print(data)
+    #     serializer = collectAmtProfSerializer(data=data)
+    #     # elif request.data['mode'] == 2:
+    #     #     serializer = collectAmtProfchequeSerializer(data=request.data)
+    #     # elif request.data['mode'] == 4:
+    #     #     serializer = collectAmtProfcardSerializer(data=request.data)
+    #     # elif request.data['mode'] == 5:
+    #     #     serializer = collectAmtProfQRSerializer(data=request.data)
+    #     # ['eve_id', 'Total_cost', 'paid_by', 'amount_paid', 'amount_remaining', 'date','mode', 'Remark', 'pay_recived_by','srv_prof_id', 'last_modified_by','overall_status']
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         if request.data['mode'] == 2:
+    #             last_record.cheque_number = request.data.get('cheque_number')
+    #             last_record.cheque_date = request.data.get('cheque_date')
+    #             last_record.bank_name = request.data.get('bank_name')
+    #         elif request.data['mode'] == 4: 
+    #             'card_no','transaction_id',
+    #             last_record.card_no = request.data.get('card_no')
+    #             last_record.transaction_id = request.data.get('transaction_id')
+            
+    #         elif request.data['mode'] == 5:
+    #             last_record.transaction_id = request.data.get('transaction_id')
+            
+            
+
+    #         last_record.Total_cost = request.data.get('Total_cost')
+    #         last_record.paid_by = request.data.get('paid_by')
+    #         last_record.amount_paid = request.data.get('amount_paid')
+    #         last_record.mode = request.data.get('mode')
+    #         last_record.Remark = request.data.get('Remark')
+    #         last_record.pay_recived_by = request.data.get('pay_recived_by')
+    #         last_record.srv_prof_id = request.data.get('srv_prof_id')
+    #         last_record.last_modified_by = clgref_id
+    #         last_record.payment_status = 3
+    #         last_record.save()
+
+
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     else:
+    #         print("error")
+    #         print(f"Serializer errors: {serializer.errors}")
+    #         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    # def post(self, request, format=None):
+    #     clgref_id = get_prof(request)[3]
+    #     eve_id = request.data.get('eve_id')
+    #     print(eve_id)
+    #     pt_dtl = agg_hhc_payment_details.objects.filter(eve_id=eve_id, status=status_enum.Active.value)
+    #     last_record = pt_dtl.last()
+    #     print(last_record)
+
+    #     if last_record:
+    #         eve_id_value = last_record.eve_id.eve_id if last_record.eve_id else None
+    #         srv_prof_id_value = request.data.get('srv_prof_id')
+
+    #         data = {
+    #             "eve_id": eve_id_value,
+    #             "srv_prof_id": srv_prof_id_value,
+    #             "Total_cost": last_record.Total_cost,
+    #             "paid_by": last_record.paid_by,
+    #             "amount_paid": last_record.amount_paid,
+    #             "amount_remaining": last_record.amount_remaining,
+    #             "pay_recived_by": last_record.pay_recived_by,
+    #             "receipt_no": last_record.receipt_no,
+    #             "mode": last_record.mode.value if last_record.mode else None,
+    #             "bank_name": last_record.bank_name,
+    #             "cheque_number": last_record.cheque_number,
+    #             "cheque_status": last_record.cheque_status.value if last_record.cheque_status else None,
+    #             "cheque_date": last_record.cheque_date,
+    #             "card_no": last_record.card_no,
+    #             "transaction_id": last_record.transaction_id,
+    #             "note": last_record.note,
+    #             "order_id": last_record.order_id,
+    #             "order_currency": last_record.order_currency,
+    #             "order_note": last_record.order_note,
+    #             "customer_email": last_record.customer_email,
+    #             "customer_phone": last_record.customer_phone,
+    #             "payment_status": last_record.payment_status.value if last_record.payment_status else None,
+    #             "transaction_status": last_record.transaction_status,
+    #             "overall_status": last_record.overall_status,
+    #             "cf_token": last_record.cf_token,
+    #             "online_payment_by": last_record.online_payment_by.value if last_record.online_payment_by else None,
+    #             "Remark": last_record.Remark,
+    #             "status": last_record.status.value if last_record.status else None,
+    #             "added_by": last_record.added_by,
+    #             "last_modified_by": last_record.last_modified_by
+    #         }
+    #         print(data)
+    #         serializer = collectAmtProfSerializer(data=data)
+
+    #         if serializer.is_valid():
+    #             serializer.save()
+
+    #             if request.data['mode'] == Payment_mode_enum.Cheque.value:
+    #                 last_record.cheque_number = request.data.get('cheque_number')
+    #                 last_record.cheque_date = request.data.get('cheque_date')
+    #                 last_record.bank_name = request.data.get('bank_name')
+    #             elif request.data['mode'] == Payment_mode_enum.Card.value:
+    #                 last_record.card_no = request.data.get('card_no')
+    #                 last_record.transaction_id = request.data.get('transaction_id')
+    #             elif request.data['mode'] == Payment_mode_enum.qr_code.value:
+    #                 last_record.transaction_id = request.data.get('transaction_id')
+
+    #             last_record.Total_cost = request.data.get('Total_cost')
+    #             last_record.paid_by = request.data.get('paid_by')
+    #             last_record.amount_paid = request.data.get('amount_paid')
+    #             last_record.mode = Payment_mode_enum(request.data.get('mode'))
+    #             last_record.Remark = request.data.get('Remark')
+    #             last_record.pay_recived_by = request.data.get('pay_recived_by')
+    #             last_record.srv_prof_id = srv_prof_id_value
+    #             last_record.last_modified_by = clgref_id
+    #             last_record.payment_status = payment_status_enum.Amount_paid_from_Desk
+    #             last_record.save()
+
+    #             return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #         else:
+    #             print("error")
+    #             print(f"Serializer errors: {serializer.errors}")
+    #             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    #     else:
+    #         return Response({"error": "No record found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+    def post(self, request, format=None):
+        print(';....................')
+        clgref_id = get_prof(request)[3]
+        eve_id = request.data.get('eve_id')
+        print(eve_id)
+        pt_dtl = agg_hhc_payment_details.objects.filter(eve_id=eve_id, status=status_enum.Active.value)
+        last_record = pt_dtl.last()
+        print(last_record)
+
+        if last_record:
+            eve_id_value = last_record.eve_id.eve_id if last_record.eve_id else None
+            srv_prof_id_value = request.data.get('srv_prof_id')
+
+            try:
+                srv_prof_instance = agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id_value)
+            except agg_hhc_service_professionals.DoesNotExist:
+                raise Http404("Invalid srv_prof_id - object does not exist.")
+
+            data = {
+                "eve_id": eve_id_value,
+                "srv_prof_id": srv_prof_instance.srv_prof_id if srv_prof_instance else None,
+                "Total_cost": last_record.Total_cost,
+                "paid_by": last_record.paid_by,
+                "amount_paid": last_record.amount_paid,
+                "amount_remaining": last_record.amount_remaining,
+                # "pay_recived_by": last_record.pay_recived_by,
+                "receipt_no": last_record.receipt_no,
+                "mode": last_record.mode.value if last_record.mode else None,
+                "bank_name": last_record.bank_name,
+                "cheque_number": last_record.cheque_number,
+                "cheque_status": last_record.cheque_status.value if last_record.cheque_status else None,
+                "cheque_date": last_record.cheque_date,
+                "card_no": last_record.card_no,
+                "transaction_id": last_record.transaction_id,
+                "note": last_record.note,
+                "order_id": last_record.order_id,
+                "order_currency": last_record.order_currency,
+                "order_note": last_record.order_note,
+                "customer_email": last_record.customer_email,
+                "customer_phone": last_record.customer_phone,
+                "payment_status": last_record.payment_status.value if last_record.payment_status else None,
+                "transaction_status": last_record.transaction_status,
+                "overall_status": last_record.overall_status,
+                "cf_token": last_record.cf_token,
+                "online_payment_by": last_record.online_payment_by.value if last_record.online_payment_by else None,
+                "Remark": last_record.Remark,
+                "status": last_record.status.value if last_record.status else None,
+                "added_by": last_record.added_by,
+                "last_modified_by": last_record.last_modified_by
+            }
+            print(data)
+            serializer = collectAmtProfSerializer(data=data)
+
+            if serializer.is_valid():
+                serializer.save()
+
+                if request.data['mode'] == Payment_mode_enum.Cheque.value:
+                    last_record.cheque_number = request.data.get('cheque_number')
+                    last_record.cheque_date = request.data.get('cheque_date')
+                    last_record.bank_name = request.data.get('bank_name')
+                elif request.data['mode'] == Payment_mode_enum.Card.value:
+                    last_record.card_no = request.data.get('card_no')
+                    last_record.transaction_id = request.data.get('transaction_id')
+                elif request.data['mode'] == Payment_mode_enum.qr_code.value:
+                    last_record.transaction_id = request.data.get('transaction_id')
+
+                last_record.Total_cost = request.data.get('Total_cost')
+                last_record.paid_by = request.data.get('paid_by')
+                last_record.amount_paid = request.data.get('amount_paid')
+                last_record.mode = Payment_mode_enum(request.data.get('mode'))
+                last_record.Remark = request.data.get('Remark')
+                # last_record.pay_recived_by = clgref_id
+                last_record.srv_prof_id = srv_prof_instance
+                last_record.last_modified_by = clgref_id
+                last_record.payment_status = payment_status_enum.Amount_paid_from_Desk
+                last_record.save()
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print("error")
+                print(f"Serializer errors: {serializer.errors}")
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "No record found"}, status=status.HTTP_404_NOT_FOUND)
+
+class hospital_dashboard_srv_count(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, hosp_id, id):
+        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
+        # print(clg.clg_hos_id.hospital_name)
+        if  id==1:
+            start_datetime=datetime.now().date()
+            end_datetime=datetime.now().date()
+        elif id==2:
+            start_datetime=datetime.now().date() - timedelta(days=7)
+            end_datetime=datetime.now().date()
+        elif id==3:
+            start_datetime=datetime.now().date() - timedelta(days=30)
+            end_datetime=datetime.now().date() 
+        else:return Response({'error':'please select correct id'})
+        # print(s_date)
+        # eve_poc=agg_hhc_event_plan_of_care.objects.filter((Q(start_date__gte=s_date) | Q(end_date__lte=e_date)),hosp_id=clg.clg_hos_id, status=1).values_list('eve_poc_id')
+        # d=[j[0] for j in eve_poc]
+        # # d1=[j[1] for j in eve_poc] 
+        # print(d)
+        # # for i in d:
+        # #     print(i)
+        # dt_eve=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id__in=d,status=1)
+        # print(dt_eve)
+
+        try:
+            today_data = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1).count()
+            on_going = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1, Session_jobclosure_status = 2, eve_id__event_status = 2).count()
+            completed_Services = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1, Session_jobclosure_status = 1).count()
+            Pending = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id, status=1, eve_id__event_status = 1).count()
+
+
+            response_data = {
+                    "Total_services": today_data,
+                    "Completed_services": {
+                        "completed_srv": completed_Services
+                    },
+                    "Pending_services": {
+                        "Pending_srv": Pending
+                    },
+                    "ongoing_services": {
+                        "Ongoing_srv": on_going
+                    }
+                }
+
+            return Response(response_data)
+        except:
+            return Response({'error':'something went wrong'})
+
+class hospital_dashboard_enquiry_count(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, hosp_id, id):
+        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
+        # print(clg.clg_hos_id.hospital_name)
+        if  id==1:
+            start_datetime=datetime.now().date()
+        elif id==2:
+            start_datetime=datetime.now().date() - timedelta(days=7)
+        elif id==3:
+            start_datetime=datetime.now().date() - timedelta(days=30)
+
+        enquiry = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,status=1,eve_id__enq_spero_srv_status=3)
+        # print(enquiry[0].eve_id.added_date)
+        App = 0
+        Social = 0
+        Calls = 0
+        Walk_in = 0
+        for i in enquiry:
+            # caller_id = agg_hhc_events.objects.filter(pt_id=i.pt_id).first()
+            if i.eve_id.patient_service_status == 1:
+                App += 1
+            elif i.eve_id.patient_service_status == 2:
+                Social += 1
+            elif i.eve_id.patient_service_status == 3:
+                Walk_in += 1
+            elif i.eve_id.patient_service_status == 4:
+                Calls += 1
+        # print()
+        return Response({'Total_enquiries': enquiry.count(),'App': App,'Social': Social,'Calls': Calls,'Walk_in': Walk_in})
+    
+class hospital_dashboard_enquiry_follow_up_count(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated] 
+    def get(self, request, hosp_id, id):
+        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
+        if  id==1:
+            start_datetime=datetime.now().date()
+        elif id==2:
+            start_datetime=datetime.now().date() - timedelta(days=7)
+        elif id==3:
+            start_datetime=datetime.now().date() - timedelta(days=30)
+        # enq = agg_hhc_enquiry_follow_up.objects.filter(follow_up__in=[1,3,4], status=1)
+        enq = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,eve_id__enq_spero_srv_status=3,status=1).count()
+        conv_enq = agg_hhc_event_plan_of_care.objects.filter(eve_id__added_date__gte=start_datetime,hosp_id=hosp_id,eve_id__enq_spero_srv_status=1,status=1).count()
+        result={
+            "enquiry_converted":conv_enq,
+            "enquiry_in_follow_up":enq
+        }
+        return Response(result)
+    
+class hospital_dashboard_service_details(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated] 
+    def get(self, request, hosp_id, id):
+        # clg=agg_com_colleague.objects.filter(clg_ref_id=clg_id, is_active=True).last()
+
+        if  id==1:
+            start_datetime=datetime.now().date()
+            end_datetime=datetime.now().date()
+        elif id==2:
+            start_datetime=datetime.now().date() - timedelta(days=7)
+            end_datetime=datetime.now().date()
+        elif id==3:
+            start_datetime=datetime.now().date() - timedelta(days=30)
+            end_datetime=datetime.now().date() 
+        else:return Response({'error':'please select correct id'})
+
+        # srv = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id,eve_id__enq_spero_srv_status__in=[1,2],status=1).values('eve_id__agg_sp_pt_id__name', 'eve_poc_id__srv_id__service_title','eve_poc_id__sub_srv_id__recommomded_service','eve_poc_id__start_date', 'eve_poc_id__end_date', 'eve_poc_id__start_time','eve_poc_id__end_time').order_by('eve_poc_id')
+
+        srv = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_datetime, end_datetime),eve_poc_id__hosp_id=hosp_id,eve_id__enq_spero_srv_status__in=[1,2],status=1,srv_prof_id__isnull=False).values(('eve_poc_id'),patient_name=F('eve_id__agg_sp_pt_id__name'),service_name=F('eve_poc_id__srv_id__service_title'),sub_service_name=F('eve_poc_id__sub_srv_id__recommomded_service'),s_start_date=F('eve_poc_id__start_date'),s_end_date=F('eve_poc_id__end_date'),s_start_time=F('eve_poc_id__start_time'),s_end_time=F('eve_poc_id__end_time')).order_by('eve_poc_id').distinct()
+        # data1=DashboardSerializer(srv,many=True)
+        print(srv)
+        data = []
+        for item in srv:
+            record = {
+                'eve_poc_id': item['eve_poc_id'],
+                'patient_name': str(item['patient_name']),  # Cast datetime to string
+                'service_name': item['service_name'],
+                'sub_service_name': item['sub_service_name'],
+                's_start_date': str(item['s_start_date']),  # Cast datetime to string
+                's_end_date': str(item['s_end_date']),      # Cast datetime to string
+                's_start_time': str(item['s_start_time']),  # Cast datetime to string
+                's_end_time': str(item['s_end_time']),      # Cast datetime to string
+            }
+            data.append(record)
+        print(data)
+        # d=list(set([i['eve_poc_id'] for i in srv]))
+        # d1=[i['eve_id__agg_sp_pt_id__name'] for i in srv]
+        # plan=agg_hhc_event_plan_of_care.objects.filter(eve_poc_id__in=d, status=1).order_by('eve_poc_id')
+        # result={}
+        # for i in range(0,len(plan)+1):
+        #     data= {
+        #         "patient_name":d[i],
+        #         "service":plan[i],
+        #         "sub_service":plan[i],
+        #         "start_date":plan[i],
+        #         "end_date":plan[i]
+        #     }
+        #     result.['data']
+        # print(result)
+        # print(d1) 
+
+        # return Response(srv)
+        # serialized_data = list(srv)
+
+        # Serialize the data to JSON
+        # json_data = DjangoJSONEncoder().encode(serialized_data)
+
+        # Return the response
+        return Response(data)
+    
+    
+#================ professional count================================
+
 class CountProfessionals(APIView):
     def get(self, request, format=None):
         try:
@@ -14830,8 +16390,8 @@ class CountProfessionals(APIView):
             return Response({"error": "Professionals do not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 
-
-
+#=================== professional Present \\ absent\\ week-of  Count==========================
+import calendar
 
 class CountProfessionalsAttendanceStatus(APIView):
     def get(self, request, format=None):
@@ -14868,43 +16428,13 @@ class CountProfessionalsAttendanceStatus(APIView):
             return Response({"error": "Attendance records do not exist"}, status=status.HTTP_404_NOT_FOUND)
         
         
+#=============== deallocate and save attendance =======================================
+
+from django.db.models import F
+
 class Deallocate_AggHHCAttendanceAPIView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
-    # def post(self, request, *args, **kwargs):
-    #     attendance_serializer = Deallocate_and_POST_AggHHCAttendanceSerializer(data=request.data)
-    #     if attendance_serializer.is_valid():
-    #         attendance_record = attendance_serializer.save()
-
-    #         # Create data for the cancellation and reschedule request
-    #         cancellation_data = {
-    #             'eve_id': request.data.get('eve_id'),
-    #             'epoc_id': request.data.get('epoc_id'),
-    #             'dtl_eve_id': request.data.get('dtl_eve_id'),
-    #             'is_canceled': 2,
-    #             'is_srv_sesn': 3,
-    #             'is_reschedule': 1,
-    #             'reschedule_date': attendance_record.attnd_date,
-    #             'req_resson': 'urgent leave',
-    #             'remark': 'Apply for professional resqudule',
-    #             'professional_request_status': 3,
-    #             'atten_id': attendance_record.att_id,
-    #             'req_rejection_remark': 'urgent leave',
-    #             'is_deleted': 2,
-    #             'added_by': request.data.get('added_by'),
-    #             'last_modified_by': request.data.get('added_by'),
-    #         }
-            
-
-    #         cancellation_serializer = AggHHCCancellationAndRescheduleRequestSerializer(data=cancellation_data)
-    #         if cancellation_serializer.is_valid():
-    #             cancellation_serializer.save()
-    #         else:
-    #             return Response(cancellation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    #         return Response(attendance_serializer.data, status=status.HTTP_201_CREATED)
-
-    #     return Response(attendance_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def post(self, request, *args, **kwargs):
         if not isinstance(request.data, list):
@@ -14915,12 +16445,14 @@ class Deallocate_AggHHCAttendanceAPIView(APIView):
         
         if attendance_serializer.is_valid():
             attendance_record = attendance_serializer.save()
+            
+            print(attendance_record.added_by)
 
             for obj in request.data:
                 cancellation_data = {
                     'eve_id': obj.get('eve_id'),
-                    'epoc_id': obj.get('epoc_id'),
-                    'dtl_eve_id': obj.get('dtl_eve_id'),
+                    'epoc_id': obj.get('eve_poc_id'),
+                    'dtl_eve_id': obj.get('dt_eve_poc_id'),
                     'is_canceled': 2,
                     'is_srv_sesn': 3,
                     'is_reschedule': 1,
@@ -14931,7 +16463,7 @@ class Deallocate_AggHHCAttendanceAPIView(APIView):
                     'atten_id': attendance_record.att_id,
                     'req_rejection_remark': 'urgent leave',
                     'is_deleted': 2,
-                    'added_by': obj.get('added_by', first_object.get('added_by')),
+                    'added_by': obj.get('added_by'),
                     'last_modified_by': obj.get('added_by', first_object.get('added_by')),
                 }
 
@@ -14972,72 +16504,1124 @@ class UpdateAggHHCAttendanceAPIView(APIView):
         except Exception as e:
             return Response({'error': 'Something went wrong','msg': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        
-class AttendanceReportView(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+class get_payment_with_prof_eve_detail(APIView):
+    def get(self,request, eve_id):
+        event=agg_hhc_events.objects.filter(eve_id=eve_id, status=1).last()
+        # payment_dt= agg_hhc_payment_details.objects.filter(eve_id=event).last().srv_prof_id.prof_fullname
+        payment_dt = getattr(agg_hhc_payment_details.objects.filter(eve_id=event, status=1, overall_status='SUCCESS').last(), 'pay_recived_by', None)
+        prof_id=agg_hhc_service_professionals.objects.filter(clg_ref_id=payment_dt, status=1).last()
+        prof_id_id = getattr(prof_id, 'srv_prof_id', None)
+        prof_name=getattr(prof_id, 'prof_fullname', None)
+        # if payment_dt:
+        #     payment_dt_Fname=payment_dt.clg_first_name
+        #     payment_dt_Mname=payment_dt.clg_mid_name
+        #     payment_dt_Lname=payment_dt.clg_last_name
+        #     name=None
+        #     if payment_dt_Fname:
+        #         name=payment_dt_Fname
+        #     if payment_dt_Mname:
+        #         name=f'{name} {payment_dt_Mname}'
+        #     if payment_dt_Lname:
+        #         name=f'{name} {payment_dt_Lname}'
+        # else:return Response({"pay_recived_by":prof_name, "prof_id":prof_id})
+        # print(payment_dt)
+        return Response({"pay_recived_by":prof_name, "prof_id":prof_id_id})
     
-    # def get(self, request, format=None):
-    #     from_date = request.GET.get('from_date')
-    #     to_date = request.GET.get('to_date')
+    
+#============================ session count for spero website======================================
 
-    #     if from_date:
-    #         try:
-    #             from_date = datetime.strptime(from_date, '%Y-%m-%d')
-    #         except ValueError:
-    #             return Response({'error': 'Incorrect from_date format, should be YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
-    #     if to_date:
-    #         try:
-    #             to_date = datetime.strptime(to_date, '%Y-%m-%d')
-    #         except ValueError:
-    #             return Response({'error': 'Incorrect to_date format, should be YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     if from_date and to_date:
-    #         date_range = (to_date - from_date).days + 1
-    #     else:
-    #         date_range = None
-
-    #     professionals = agg_hhc_service_professionals.objects.all()
-    #     report = []
-
-    #     for professional in professionals:
-    #         professional_id = professional.srv_prof_id
-    #         professional_name = professional.prof_fullname
-    #         job_type = professional.Job_type
+class session_count_view(APIView):
+    @csrf_exempt
+    def post(self, request, *args, **kwargs):
+        try:
+            # Count the professionals with status 1
+            old_count = 249055
+            service_count = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1).count()
+            total_count = old_count + service_count
             
-    #         attendance_entries = []
+            # Save the total_count into the service_count_save_for_website table
+            service_count_entry = service_count_save_for_website.objects.create(today_session_count=total_count)
+            service_count_entry.save()
+            
+            return Response({"total_count": total_count}, status=status.HTTP_200_OK)
 
-    #         if date_range:
-    #             for i in range(date_range):
-    #                 current_date = from_date + timedelta(days=i)
-    #                 attendance = agg_hhc_attendance.objects.filter(
-    #                     Professional_iid=professional_id,
-    #                     attnd_date__date=current_date.date()
-    #                 ).first()
-    #                 if attendance:
-    #                     attendance_data = AttendanceSerializer(attendance).data
-    #                     attendance_entries.append(attendance_data)
-    #                 else:
-    #                     attendance_entries.append({
-    #                         'Professional_iid': professional_id,
-    #                         'attnd_date': current_date.strftime('%Y-%m-%d'),  # Convert date to string
-    #                         'attnd_status': 'No Entry'
-    #                     })
-    #         else:
-    #             attendances = agg_hhc_attendance.objects.filter(
-    #                 Professional_iid=professional_id
-    #             ).order_by('attnd_date')
-    #             attendance_entries = AttendanceSerializer(attendances, many=True).data
-
-    #         report.append({
-    #             'Professional_iid': professional_id,
-    #             'professional_name': professional_name,
-    #             'job_type': job_type,
-    #             'attendance': attendance_entries
-    #         })
-
-    #     return Response(report)
+        except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
+            return Response({"error": "Data not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class LatestServiceCountView(APIView):
+    def get(self, request, format=None):
+        latest_record = service_count_save_for_website.objects.order_by('-added_date').first()
+        if latest_record:
+            serializer = ServiceCountSaveForWebsiteSerializer(latest_record)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'error': 'No records found'}, status=status.HTTP_404_NOT_FOUND)
     
+class TotalAmountReceivedView(APIView):
+
+    def get(self, request, format=None):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Base query
+        payment_details = agg_hhc_payment_details.objects.all()
+        
+        if hospital_id:
+            payment_details = payment_details.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        
+        # Calculate totals
+        total_today = payment_details.filter(date__gte=start_of_day).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_week = payment_details.filter(date__gte=start_of_week).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_month = payment_details.filter(date__range=(start_of_month,month_end_date)).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_till_date = payment_details.filter(date__gte=start_of_previous_month, date__lte=end_of_previous_month).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        
+        return Response({
+            'total_amount_received_today': total_today,
+            # 'total_amount_received_week': total_week,
+            'total_amount_received_month': total_month,
+            'total_amount_received_tll_date': total_till_date
+        }, status=status.HTTP_200_OK)
+        
+        
+        
+class PendingAmountReceivedView(APIView):
+
+    def get(self, request, format=None):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Base query
+        payment_details = agg_hhc_payment_details.objects.all()
+        
+        if hospital_id:
+            payment_details = payment_details.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        
+        # Calculate totals
+        total_today = payment_details.filter(date__gte=start_of_day, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_week = payment_details.filter(date__gte=start_of_week, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_month = payment_details.filter(date__range=(start_of_month,month_end_date)).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        total_till_date = payment_details.filter(date__gte=start_of_previous_month, date__lte=end_of_previous_month, payment_status=1).aggregate(total_amount=Sum('amount_paid'))['total_amount'] or 0
+        
+        return Response({
+            'total_amount_received_today': total_today,
+            # 'total_amount_received_week': total_week,
+            'total_amount_received_month': total_month,
+            'total_amount_received_tll_date': total_till_date
+        }, status=status.HTTP_200_OK)
+    
+class get_event_dates(APIView):
+    def get(self, request, eve_id):
+        c_dates=sorted([i.actual_StartDate_Time for i in agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, status=1)])
+        # d=[]
+        # dd=[]
+        # for i in c_dates:
+        #     if not d:
+        #         d.append(i)
+        #     else:
+        #         if d[-1] == i - timedelta(days=1):
+        #             d.append(i)
+        #         else:
+        #             dd.append(d)
+        #             d = [i]
+        # if d:
+        #     dd.append(d)
+        # d1 = [f'{i[0]},{i[-1]}' for i in dd]
+        # result = [d1]
+        # print(result)
+        return Response({'dates':c_dates})
+    
+class get_service_details(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated] 
+    def get(self, request, eve_id):
+        event=agg_hhc_events.objects.filter(eve_id=eve_id, status=1).last()
+        if event:
+            details=GetEventDetailsSetializer(event)
+        else: return Response({'status':'event does not exist'})
+        return Response({"data":details.data})
+    
+    
+    
+    
+#============================ unpaid ammount conunt ======================================
+
+class CalculateUNpaidAmount(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Get all event ids that are in the payment details table
+        paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
+        
+        all_event = agg_hhc_events.objects.filter(status=1)
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        # Filter out these event ids from the events table and sum the final_amount
+        # total_amount1 = all_event.filter(event_date__gte=start_of_day, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+        # total_amount2 = all_event.filter(event_date__gte=start_of_week, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+        # total_amount3 = all_event.filter(event_date__gte=start_of_month, status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+        # total_amount4 = all_event.filter(status=1).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+        total_amount1 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_day).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+
+        total_amount2 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_week).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+
+        total_amount3 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__range=(start_of_month, month_end_date)).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+
+        total_amount4 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_previous_month, start_date__lte=end_of_previous_month).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids).aggregate(Sum('final_amount'))['final_amount__sum'] or 0
+
+
+        return Response({
+            'total_Unpaid_amount_today': total_amount1,
+            # 'total_Unpaid_amount_week': total_amount2,
+            'total_Unpaid_amount_month': total_amount3,
+            'total_Unpaid_amount_last_month':total_amount4
+        }, status=status.HTTP_200_OK)
+        
+        
+        
+#============================ dashboard ======================================
+
+#===================================== Totral enquiry count===========================
+
+class Calculate_Total_enquiry(APIView):
+    def get(self, request, *args, **kwargs):
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)    
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+# ----------------- Last month
+        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
+        hospital_id = request.GET.get('hosp_id')
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
+        ls_all_eves = list(set(ls_eve_ids))
+        ls_enq_id = []
+        for i in ls_all_eves:
+            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
+        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
+
+# ------------------ This month
+
+        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
+        ts_all_eves = list(set(ts_eve_ids))
+        ts_enq_id = []
+        for i in ts_all_eves:
+            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
+        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
+
+
+# ----------------- today
+    
+        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        td_eve_ids = td_all_event.values_list('event_id', flat=True)
+        td_all_eves = list(set(td_eve_ids))
+        td_enq_id = []
+        for i in td_all_eves:
+            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            td_enq_id.append(td_get_enq.enq_follow_up_id)
+        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
+
+    
+        return Response({
+            'total_enq_today': td_all_follow_up_enq.count(),
+            'total_enq_week': 0,
+            'total_enq_month': ts_all_follow_up_enq.count(),
+            'total_enq_till_date': ls_all_follow_up_enq.count()
+        }, status=status.HTTP_200_OK)
+    
+#================================== Total infollow up count ==========================================
+
+class Calculate_infollow_up_service(APIView):
+    def get(self, request, *args, **kwargs):
+        hospital_id = request.GET.get('hosp_id')
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+
+# ----------------- Last month
+        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
+        hospital_id = request.GET.get('hosp_id')
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
+        ls_all_eves = list(set(ls_eve_ids))
+        ls_enq_id = []
+        for i in ls_all_eves:
+            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
+        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
+
+        ls_one = ls_all_follow_up_enq.filter(follow_up=1)
+# ------------------ This month
+
+        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
+        ts_all_eves = list(set(ts_eve_ids))
+        ts_enq_id = []
+        for i in ts_all_eves:
+            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
+        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
+
+        ts_one = ts_all_follow_up_enq.filter(follow_up=1)
+
+# ----------------- today
+    
+        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        td_eve_ids = td_all_event.values_list('event_id', flat=True)
+        td_all_eves = list(set(td_eve_ids))
+        td_enq_id = []
+        for i in td_all_eves:
+            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            td_enq_id.append(td_get_enq.enq_follow_up_id)
+        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
+        td_one = td_all_follow_up_enq.filter(follow_up=1)
+
+        return Response({
+            'total_follow_today': td_one.count(),
+            'total_follow_week': 0,
+            'total_follow_month': ts_one.count(),
+            'total_follow_tll_date': ls_one.count()
+        }, status=status.HTTP_200_OK)
+
+        
+#========================== Total cancelled enq ==============================
+
+class Calculate_cancelled_service(APIView):
+    def get(self, request, *args, **kwargs):   
+        hospital_id = request.GET.get('hosp_id')
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
+        hospital_id = request.GET.get('hosp_id')
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
+        ls_all_eves = list(set(ls_eve_ids))
+        ls_enq_id = []
+        for i in ls_all_eves:
+            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
+        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
+
+      
+        ls_two = ls_all_follow_up_enq.filter(follow_up=2)
+# ------------------ This month
+
+        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
+        ts_all_eves = list(set(ts_eve_ids))
+        ts_enq_id = []
+        for i in ts_all_eves:
+            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
+        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
+
+        ts_two = ts_all_follow_up_enq.filter(follow_up=2)
+       
+
+# ----------------- today
+    
+        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        td_eve_ids = td_all_event.values_list('event_id', flat=True)
+        td_all_eves = list(set(td_eve_ids))
+        td_enq_id = []
+        for i in td_all_eves:
+            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            td_enq_id.append(td_get_enq.enq_follow_up_id)
+        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
+
+        td_two = td_all_follow_up_enq.filter(follow_up=2)
+    
+
+        return Response({
+            'total_cancelled_today': td_two.count(),
+            'total_cancelled_week': 0,
+            'total_cancelled_month': ts_two.count(),
+            'total_cancelled_last_month': ls_two.count()
+            
+        }, status=status.HTTP_200_OK)
+
+
+#==================== Total_services__ongoing___pending___Completed ===========================================================
+
+
+
+class TotalServicesOngoingPendingCompleted(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        print(start_of_month,'start_of_month')
+        
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        print(start_of_previous_month, 'start_of_previous_month')
+        # End of the previous month
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        # Get all event ids that are in the payment details table
+        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
+        print(end_of_previous_month,'end_of_previous_month')
+        all_event = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1, eve_id__event_status__in=[2,3])
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        # Filter out these event ids from the events table and sum the final_amount
+        # total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=3)
+        # total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=3)
+        # total_enq3 = all_event.filter(last_modified_date__gte=start_of_month,  follow_up=3)
+        total_services = all_event.filter().count()
+        total_services_l = all_event.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=start_of_previous_month).count()
+        total_services1 = all_event.filter(actual_StartDate_Time=start_of_day).count()
+        total_services2 = all_event.filter(actual_StartDate_Time=start_of_week).count()
+        total_services3 = all_event.filter(actual_StartDate_Time__range=(start_of_month,month_end_date)).count()
+
+        
+        Completed_Session = all_event.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month,Session_jobclosure_status=1).count()
+        Completed_Session1 = all_event.filter(actual_StartDate_Time__gte=start_of_day ,Session_jobclosure_status=1).count()
+        Completed_Session2 = all_event.filter(actual_StartDate_Time__gte=start_of_week ,Session_jobclosure_status=1).count()
+        Completed_Session3 = all_event.filter(actual_StartDate_Time__range=(start_of_month,month_end_date) ,Session_jobclosure_status=1).count()
+
+        pending_session = all_event.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month,Session_status=1).exclude(Session_status__in=[8,2,9]).count()
+        pending_sessio1 = all_event.filter(actual_StartDate_Time=start_of_day, Session_status=1).exclude(Session_status__in=[8,2,9]).count()
+        pending_sessio2 = all_event.filter(actual_StartDate_Time=start_of_week, Session_status=1).exclude(Session_status__in=[8,2,9]).count()
+        pending_sessio3 = all_event.filter(actual_StartDate_Time__range=(start_of_month,month_end_date), Session_status=1).exclude(Session_status__in=[8,2,9]).count()
+
+
+        ongoing_status = all_event.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=start_of_previous_month,Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count()
+        ongoing_status1 = all_event.filter(actual_StartDate_Time=start_of_day, Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count()
+        ongoing_status2 = all_event.filter(actual_StartDate_Time=start_of_week, Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count()
+        ongoing_status3 = all_event.filter(actual_StartDate_Time__range=(start_of_month,month_end_date), Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count()
+
+
+
+
+        return Response({
+            # 'total_converted_today': total_enq1,
+            # 'total_converted_week': total_enq2,
+            # 'total_converted_month': total_enq3,
+            'total_servces_till_date': total_services,
+            'total_service_today': total_services1,
+            'total_service_this_month': total_services3,
+            'total_service_last_month': total_services_l,
+            
+            'total_completed_servces_till_date': Completed_Session,
+            'total_completed_servces_today': Completed_Session1,
+            'total_completed_servces_till_this_week': Completed_Session2,
+            'total_completed_servces_this_month': Completed_Session3,
+            
+            'total_pending_service_till_date': pending_session,
+            'total_pending_service_today': pending_sessio1,
+            'total_pending_service_this_week': pending_sessio2,
+            'total_pending_service_this_month': pending_sessio3,
+            
+            'total_ongoing_till_date': ongoing_status,
+            'total_ongoing_today': ongoing_status1,
+            'total_ongoing_this_week': ongoing_status2,
+            'total_ongoing_this_month': ongoing_status3
+            
+            
+        }, status=status.HTTP_200_OK)
+
+
+
+    
+#=================================================Total converted count =====================
+
+
+class Calculate_converted_service(APIView):
+    def get(self, request, *args, **kwargs):
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+
+# ----------------- Last month
+        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
+        hospital_id = request.GET.get('hosp_id')
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
+        ls_all_eves = list(set(ls_eve_ids))
+        ls_enq_id = []
+        for i in ls_all_eves:
+            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
+        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
+
+        ls_three = ls_all_follow_up_enq.filter(follow_up=3)
+
+
+       
+
+# ------------------ This month
+
+        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
+        ts_all_eves = list(set(ts_eve_ids))
+        ts_enq_id = []
+        for i in ts_all_eves:
+            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
+        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
+        ts_three = ts_all_follow_up_enq.filter(follow_up=3)
+
+
+# ----------------- today
+    
+        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        td_eve_ids = td_all_event.values_list('event_id', flat=True)
+        td_all_eves = list(set(td_eve_ids))
+        td_enq_id = []
+        for i in td_all_eves:
+            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            td_enq_id.append(td_get_enq.enq_follow_up_id)
+        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
+
+        td_three = td_all_follow_up_enq.filter(follow_up=3)
+      
+        return Response({
+            'total_converted_today': td_three.count(),
+            'total_converted_week': 0,
+            'total_converted_month': ts_three.count(),
+            'total_converted_till_date': ls_three.count()
+            
+        }, status=status.HTTP_200_OK)
+
+
+#============ total assin and unassin professional ======================================
+from django.utils.timezone import now
+
+class ProfessionalCountView(APIView):
+    def get(self, request, *args, **kwargs):
+        today = now().date()
+        current_time = now()
+
+        start_of_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        
+        first_day_of_current_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+        hospital_id = request.GET.get('hosp_id')
+        
+        all_events = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1)
+        if hospital_id:
+            all_events = all_events.filter(
+                eve_poc_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        total_professionals = agg_hhc_service_professionals.objects.filter(status=1, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4).count()
+
+        assigned_professionals_today = all_events.filter(
+            actual_StartDate_Time=today,
+            srv_prof_id__isnull=False
+        ).values('srv_prof_id').distinct().count()
+
+        assigned_professionals_month = all_events.filter(
+            actual_StartDate_Time__range=(start_of_month,month_end_date),
+            srv_prof_id__isnull=False
+        ).values('srv_prof_id').distinct().count()
+
+        assigned_professionals_total = all_events.filter(
+            actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month,
+            srv_prof_id__isnull=False
+        ).values_list('srv_prof_id', flat=True).distinct().count()
+
+        unassigned_professionals_today = total_professionals - assigned_professionals_today
+        unassigned_professionals_month = total_professionals - assigned_professionals_month
+        unassigned_professionals_total = total_professionals - assigned_professionals_total
+
+        data = {
+            "total_professionals": total_professionals,
+            "assigned_professionals": {
+                "today": assigned_professionals_today,
+                "this_month": assigned_professionals_month,
+                "total": assigned_professionals_total,
+            },
+            "unassigned_professionals": {
+                "today": unassigned_professionals_today,
+                "this_month": unassigned_professionals_month,
+                "total": unassigned_professionals_total,
+            }
+        }
+        return Response(data)
+
+
+class get_help(APIView):
+    def post(self, request):
+        datas=PostFile1(data=request.data)
+        if datas.is_valid():
+            datas.save()
+            return Response({'status':'done'})
+        else:
+            return Response({'status':'not done'})
+
+    def get(self, request):
+        file=HeplFiles.objects.filter(is_active=True)
+        fileserializer=PostFile(file, many=True)
+        return Response({'appuse':fileserializer.data})  
+    
+    
+    
+class cancelled_inq_detail(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Get all event ids that are in the payment details table
+        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
+        
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # End of the previous month
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        all_event = agg_hhc_enquiry_follow_up.objects.all()
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        # Filter out these event ids from the events table and sum the final_amount
+        total_enq1 = all_event.filter(last_modified_date__gte=start_of_day,  follow_up=2, event_id__status=2)
+        total_enq2 = all_event.filter(last_modified_date__gte=start_of_week,  follow_up=2, event_id__status=2)
+        total_enq3 = all_event.filter(last_modified_date__range=(start_of_month,month_end_date),  follow_up=2, event_id__status=2)
+        total_last_mnth = all_event.filter(last_modified_date__gte=start_of_previous_month, last_modified_date__lte=end_of_previous_month, follow_up=2, event_id__status=2)
+
+        def extract_details(queryset):
+            cancel_mapping = {1: 'Spero', 2: 'Customer', 3: 'Professional'}
+            # return list(queryset.values(
+            #     'event_id',
+            #     'event_id__agg_sp_pt_id__name',
+            #     'event_id__agg_sp_pt_id__phone_no',
+            #     'event_id__caller_id__phone',
+            #     'canclation_reason__cancel_by_id': cancel_mapping,
+            #     'canclation_reason__cancelation_reason',
+            # ))
+            return [
+                {
+                    'event_id': item['event_id'],
+                    'event_id__agg_sp_pt_id__name': item['event_id__agg_sp_pt_id__name'],
+                    'event_id__agg_sp_pt_id__phone_no': item['event_id__agg_sp_pt_id__phone_no'],
+                    'event_id__caller_id__phone': item['event_id__caller_id__phone'],
+                    'canclation_reason__cancel_by_id': cancel_mapping.get(item['canclation_reason__cancel_by_id'], 'unknown'),
+                    'canclation_reason__cancelation_reason': item['canclation_reason__cancelation_reason']
+                } for item in queryset.values(
+                    'event_id',
+                    'event_id__agg_sp_pt_id__name',
+                    'event_id__agg_sp_pt_id__phone_no',
+                    'event_id__caller_id__phone',
+                    'canclation_reason__cancel_by_id',
+                    'canclation_reason__cancelation_reason',
+                )
+            ]
+        return Response({
+            'total_cancelled_today': extract_details(total_enq1),
+            # 'total_cancelled_week': extract_details(total_enq2),
+            'total_cancelled_month': extract_details(total_enq3),
+            'total_cancelled_last_month': extract_details(total_last_mnth)
+            
+        }, status=status.HTTP_200_OK)
+        
+   
+   
+   
+        
+class PendingAmountReceiveddetailed(APIView):
+
+    def get(self, request, format=None):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        # Start and end of the previous month
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Base query
+        payment_details = agg_hhc_payment_details.objects.all()
+        
+        if hospital_id:
+            payment_details = payment_details.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        
+        # Calculate totals
+        total_today = payment_details.filter(date__gte=start_of_day, payment_status=1)
+        total_week = payment_details.filter(date__gte=start_of_week, payment_status=1)
+        total_month = payment_details.filter(date__range=(start_of_month,month_end_date), payment_status=1)
+        total_till_date = payment_details.filter(date__gte=start_of_previous_month, date__lte=end_of_previous_month, payment_status=1)
+        
+        def extract_details(queryset):
+            mode_mapping = {1: 'Cash', 2: 'Cheque', 3: 'Online', 4: 'Card', 5: 'QR Code', 6: 'NEFT'}
+            return [
+                {
+                    'eve_id': item['eve_id'],
+                    'pay_recived_by__clg_first_name': f"{item['pay_recived_by__clg_first_name']} {item['pay_recived_by__clg_last_name']}".strip() if item['pay_recived_by__clg_last_name'] else item['pay_recived_by__clg_first_name'],
+                    'mode': mode_mapping.get(item['mode'], 'unknown'),
+                    'amount_paid': item['amount_paid']
+                } for item in queryset.values(
+                    'eve_id',
+                    'pay_recived_by__clg_first_name',
+                    'pay_recived_by__clg_last_name',
+                    'mode',
+                    'amount_paid'
+                )
+            ]
+        
+        return Response({
+            'total_amount_received_today': extract_details(total_today),
+            # 'total_amount_received_week': extract_details(total_week), # Uncomment this line if you need the weekly data
+            'total_amount_received_month': extract_details(total_month),
+            'total_amount_received_last_month': extract_details(total_till_date)
+        }, status=status.HTTP_200_OK)
+        
+
+class UNpaidAmount_details(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Get all event ids that are in the payment details table
+        paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
+        
+        all_event = agg_hhc_events.objects.all()
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        # Filter out these event ids from the events table and sum the final_amount
+        total_amount1 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_day).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids)
+
+        total_amount2 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_week).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids)
+
+        total_amount3 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__range=(start_of_month,month_end_date)).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids)
+
+        total_amount4 = all_event.filter(
+            eve_id__in=agg_hhc_event_plan_of_care.objects.filter(start_date__gte=start_of_previous_month, start_date__lte=end_of_previous_month).values_list('eve_id', flat=True),
+            status=1
+        ).exclude(eve_id__in=paid_event_ids)
+
+        def extract_details(queryset):
+            return list(queryset.values(
+                'eve_id',
+                'agg_sp_pt_id__name',
+                'final_amount',
+            ))
+
+
+        return Response({
+            'total_Unpaid_amount_today': extract_details(total_amount1),
+            # 'total_Unpaid_amount_week': total_amount2,
+            'total_Unpaid_amount_month': extract_details(total_amount3),
+            'total_Unpaid_amount_last_month':extract_details(total_amount4)
+        }, status=status.HTTP_200_OK)
+        
+
+class UNassign_ProfessionalView(APIView):
+    def get(self, request, *args, **kwargs):
+        today = now().date()
+        current_time = now()
+
+        start_of_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        
+        first_day_of_current_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+        hospital_id = request.GET.get('hosp_id')
+        
+        all_events = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1)
+        if hospital_id:
+            all_events = all_events.filter(
+                eve_poc_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        total_professionals = agg_hhc_service_professionals.objects.filter(status=1, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4)
+        total_professionals_ids = total_professionals.values_list('srv_prof_id', flat=True)
+
+        assigned_professionals_today_ids = all_events.filter(
+            actual_StartDate_Time=today,
+            srv_prof_id__isnull=False
+        ).values_list('srv_prof_id', flat=True).distinct()
+
+        assigned_professionals_month_ids = all_events.filter(
+            actual_StartDate_Time__range=(start_of_month,month_end_date),
+            srv_prof_id__isnull=False
+        ).values_list('srv_prof_id', flat=True).distinct()
+
+        assigned_professionals_total_ids = all_events.filter(
+            actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month,
+            srv_prof_id__isnull=False
+        ).values_list('srv_prof_id', flat=True).distinct()
+
+        unassigned_professionals_today = total_professionals.exclude(srv_prof_id__in=assigned_professionals_today_ids)
+        unassigned_professionals_month = total_professionals.exclude(srv_prof_id__in=assigned_professionals_month_ids)
+        unassigned_professionals_total = total_professionals.exclude(srv_prof_id__in=assigned_professionals_total_ids)
+
+        # def get_professionals_details(professionals):
+        #     return professionals.values('prof_fullname', 'srv_id__service_title', 'google_home_location')
+        
+        def extract_details(queryset):
+            return [
+                {
+                    'prof_fullname': item['prof_fullname'],
+                    'service_title': item['srv_id__service_title'],
+                    'google_home_location': item['google_home_location'],
+                } for item in queryset.values(
+                    'prof_fullname',
+                    'srv_id__service_title',
+                    'google_home_location'
+                )
+            ]
+
+        # data = {
+        #     "unassigned_professionals": {
+        #         "today": extract_details(unassigned_professionals_today),
+        #         "this_month": extract_details(unassigned_professionals_month),
+        #         "last_month": extract_details(unassigned_professionals_total),
+        #     }
+        # }
+        return Response({
+                "today": extract_details(unassigned_professionals_today),
+                "this_month": extract_details(unassigned_professionals_month),
+                "last_month": extract_details(unassigned_professionals_total),
+            }, status=status.HTTP_200_OK)
+        
+        
+        
+class TotalServicesOngoingPendingCompleted_counts_service_wise(APIView):
+    def get(self, request, *args, **kwargs):
+        hospital_id = request.GET.get('hosp_id')
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        all_event = agg_hhc_detailed_event_plan_of_care.objects.filter(status=1, eve_id__event_status__in=[2,3])
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                eve_poc_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_poc_id', flat=True)
+            )
+
+        services = agg_hhc_services.objects.all()
+        
+        response_data = {
+            'total_services': all_event.count()
+        }
+        
+        res_data = []
+        for service in services:
+            service_events = all_event.filter(eve_poc_id__srv_id=service.srv_id)
+            
+            if service.service_title:
+                service_title_key = service.service_title.replace(" ", "_")
+            else:
+                service_title_key = 'unknown_service'
+            
+            # response_data[service.service_title] = {
+            #     'total_completed_till_date': service_events.filter(last_modified_date__gte=start_of_previous_month, last_modified_date__lte=end_of_previous_month, Session_jobclosure_status=1).count(),
+            #     'total_completed_today': service_events.filter(last_modified_date__gte=start_of_day, Session_jobclosure_status=1).count(),
+            #     # 'total_completed_this_week': service_events.filter(last_modified_date__gte=start_of_week, Session_jobclosure_status=1).count(),
+            #     'total_completed_this_month': service_events.filter(last_modified_date__range=(start_of_month,start_of_day), Session_jobclosure_status=1).count(),
+                
+            #     'total_pending_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status=1, eve_id__event_status=2).count(),
+            #     'total_pending_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status=1, eve_id__event_status=2).count(),
+            #     # 'total_pending_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=1).count(),
+            #     'total_pending_this_month': service_events.filter(actual_StartDate_Time__range=(start_of_month,start_of_day), Session_status=1, eve_id__event_status=2).count(),
+                
+            #     'total_ongoing_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status=8, eve_id__event_status=2).count(),
+            #     'total_ongoing_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status=8, eve_id__event_status=2).count(),
+            #     # 'total_ongoing_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=8).count(),
+            #     'total_ongoing_this_month': service_events.filter(actual_StartDate_Time__range=(start_of_month,start_of_day), Session_status=8, eve_id__event_status=2).count()
+            # }
+            
+            
+            
+            response_data_obj  = {
+                "srv_name" : service.service_title,
+                "data" : {
+                    'total_completed_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_jobclosure_status=1).count(),
+                    'total_completed_today': service_events.filter(actual_StartDate_Time__gte=start_of_day, Session_jobclosure_status=1).count(),
+                    # 'total_completed_this_week': service_events.filter(last_modified_date__gte=start_of_week, Session_jobclosure_status=1).count(),
+                    'total_completed_this_month': service_events.filter(actual_StartDate_Time__range=(start_of_month,month_end_date), Session_jobclosure_status=1).count(),
+                    
+                    'total_pending_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status=1).exclude(Session_status__in=[8,2,9]).count(),
+                    'total_pending_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status=1).exclude(Session_status__in=[8,2,9]).count(),
+                    # 'total_pending_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=1).count(),
+                    'total_pending_this_month': service_events.filter(actual_StartDate_Time__range=(start_of_month,month_end_date), Session_status=1).exclude(Session_status__in=[8,2,9]).count(),
+                    
+                    'total_ongoing_till_date': service_events.filter(actual_StartDate_Time__gte=start_of_previous_month, actual_StartDate_Time__lte=end_of_previous_month, Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count(),
+                    'total_ongoing_today': service_events.filter(actual_StartDate_Time=start_of_day, Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count(),
+                    # 'total_ongoing_this_week': service_events.filter(actual_StartDate_Time=start_of_week, Session_status=8).count(),
+                    'total_ongoing_this_month': service_events.filter(actual_StartDate_Time__range=(start_of_month,month_end_date), Session_status__in=[8,2,9]).exclude(Session_jobclosure_status=1).count()
+                }
+            }
+            
+            
+            res_data.append(response_data_obj)
+            
+            
+            
+            
+            
+        
+        return Response(res_data, status=status.HTTP_200_OK)
+    
+    
+    
+    
+class AttendanceReportView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     
@@ -15045,6 +17629,7 @@ class AttendanceReportView(APIView):
         from_date = request.GET.get('from_date')
         to_date = request.GET.get('to_date')
 
+        # Parse date filters
         if from_date:
             try:
                 from_date = datetime.strptime(from_date, '%Y-%m-%d')
@@ -15061,17 +17646,16 @@ class AttendanceReportView(APIView):
         else:
             date_range = None
 
-        professionals = agg_hhc_service_professionals.objects.filter(status=1, prof_registered=True, prof_interviewed=True, prof_doc_verified=True, professinal_status=4)
+        professionals = agg_hhc_service_professionals.objects.all()
         report = []
-
-        job_type_mapping = {1: 'ONCALL', 2: 'FULLTIME', 3: 'PARTTIME'}
 
         for professional in professionals:
             professional_id = professional.srv_prof_id
             professional_name = professional.prof_fullname
-            job_type = job_type_mapping.get(professional.Job_type, 'Unknown')
-
+            job_type = professional.Job_type
+            
             attendance_entries = []
+            total_hours = 0  # Initialize total hours for this professional
 
             if date_range:
                 for i in range(date_range):
@@ -15082,12 +17666,20 @@ class AttendanceReportView(APIView):
                     ).first()
                     if attendance:
                         attendance_data = AttendanceSerializer(attendance).data
+
+                        # Extract hours from `attnd_type` field if present
+                        attnd_type = attendance_data.get('attnd_type', '')
+                        hours = self.extract_hours_from_attnd_type(attnd_type)
+                        total_hours += hours
+
                         attendance_entries.append(attendance_data)
                     else:
                         attendance_entries.append({
                             'Professional_iid': professional_id,
-                            'attnd_date': current_date.strftime('%Y-%m-%d'),  # Convert date to string
-                            'attnd_status': 'No Entry'
+                            'attnd_date': current_date.strftime('%Y-%m-%d'),
+                            'attnd_status': '',
+                            'attnd_Note': '',
+                            'added_by': ''
                         })
             else:
                 attendances = agg_hhc_attendance.objects.filter(
@@ -15095,44 +17687,171 @@ class AttendanceReportView(APIView):
                 ).order_by('attnd_date')
                 attendance_entries = AttendanceSerializer(attendances, many=True).data
 
+                # Sum total hours for all entries
+                for attendance in attendances:
+                    attnd_type = attendance.attnd_type
+                    hours = self.extract_hours_from_attnd_type(attnd_type)
+                    total_hours += hours
+
+            # Append professional data and total hours to the report
             report.append({
                 'Professional_iid': professional_id,
                 'professional_name': professional_name,
                 'job_type': job_type,
-                'attendance': attendance_entries
+                'attendance': attendance_entries,
+                'total_hours': total_hours  # Include total hours in the response
             })
 
         return Response(report)
-    
-class AllProfessionalLocationsAPIView(APIView):
-    def get(self, request):
-        # Get all unique srv_prof_id values (which are actually ForeignKey references)
-        unique_prof_ids = agg_hhc_professional_location.objects.values_list('srv_prof_id', flat=True).distinct()
 
-        # Prepare response data
-        response_data = []
-
-        for prof_id in unique_prof_ids:
-            # Get the professional instance
-            professional = agg_hhc_service_professionals.objects.get(srv_prof_id=prof_id)
-            
-            # Get locations for each professional
-            locations = agg_hhc_professional_location.objects.filter(srv_prof_id=professional)
-            location_names = locations.values_list('location_name', flat=True)
-            
-            # Prepare professional data
-            prof_data = {
-                "prof_id": professional.srv_prof_id,
-                "prof_name": professional.prof_fullname,
-                "location_name": list(location_names)
-            }
-            response_data.append(prof_data)
-
-        return Response(response_data, status=status.HTTP_200_OK)
+    def extract_hours_from_attnd_type(self, attnd_type):
+        """Extract numeric hours from the attnd_type field (e.g., 'Service for 2 hrs')."""
+        match = re.search(r'Service for (\d+) hrs?', attnd_type)
+        if match:
+            return int(match.group(1))  # Extract the number of hours
+        return 0  # Default to 0 if no valid hours are found
     
     
+import http.client
+import json
 
-#=================feedback===============================
+class SendMessageView(APIView):
+    # def post(self, request):
+    #     base_url = "xl6mjq.api-in.infobip.com"
+    #     api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+    #     from_number = "918956193883"
+    #     to_number = request.data.get('to_number', '')
+    #     template_name = "professional_name"
+    #     placeholders = request.data.get('placeholders', [])
+    #     order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+    #     if not to_number:
+    #         return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+    #     if not placeholders:
+    #         return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    #     payload = json.dumps({
+    #         "messages": [
+    #             {
+    #                 "from": from_number,
+    #                 "to": to_number,
+    #                 "messageId": order_id,
+    #                 "content": {
+    #                     "templateName": template_name,
+    #                     "templateData": {
+    #                         "body": {
+    #                             "placeholders": [
+    #                                 "mayank",  # Placeholder 1: Dear {{1}}
+    #                                 "vinayak",  # Placeholder 2: Patient : {{2}}
+    #                                 "9131982332",  # Placeholder 3: Caller No : {{3}}
+    #                                 "442333272",  # Placeholder 4: Mobile No : {{4}}
+    #                                 "123 anand nagar, pune, MH",  # Placeholder 5: Address : {{5}}
+    #                                 "EVT12345",  # Placeholder 6: Event No : {{6}}
+    #                                 "Health Checkup",  # Placeholder 7: Service : {{7}}
+    #                                 "Blood Test",  # Placeholder 8: Sub-Service : {{8}}
+    #                                 "2024-07-11",  # Placeholder 9: Date : {{9}}
+    #                                 "10:00 AM"  # Placeholder 10: Reporting Time : {{10}}
+    #                             ]
+    #                         }
+    #                     },
+    #                     "language": "en",
+    #                     "buttons": [
+    #                         {
+    #                             "type": "REPLY",
+    #                             "parameter": "confirm",
+    #                             "text": "Confirm"
+    #                         },
+    #                         {
+    #                             "type": "REPLY",
+    #                             "parameter": "not_confirm",
+    #                             "text": "Not Confirm"
+    #                         }
+    #                     ]
+    #                 }
+    #             }
+    #         ]
+    #     })
+
+    #     headers = {
+    #         'Authorization': f'App {api_key}',
+    #         'Content-Type': 'application/json',
+    #         'Accept': 'application/json'
+    #     }
+
+    #     conn = http.client.HTTPSConnection(base_url)
+    #     conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+    #     res = conn.getresponse()
+    #     data = res.read()
+    #     conn.close()
+
+    #     if res.status == 200:
+    #         return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+    #     else:
+    #         return Response({"error": data.decode("utf-8")}, status=res.status)
+    def post(self, request):
+        base_url = "xl6mjq.api-in.infobip.com"
+        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+        from_number = "918956193883"
+        to_number = request.data.get('to_number', '')
+        template_name = "professional_name1"
+        placeholders = request.data.get('placeholders', [])
+        order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+
+        if not to_number:
+            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not placeholders:
+            return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = json.dumps({
+            "messages": [
+                {
+                    "from": from_number,
+                    "to": to_number,
+                    "messageId": order_id,
+                    "content": {
+                        "templateName": template_name,
+                        "templateData": {
+                            "body": {
+                                "placeholders": placeholders
+                            },
+                            #"header": {
+                            #    "type": "IMAGE",
+                            #    "mediaUrl": "https://hhc.hospitalguru.in/media/sign_sepro.jpeg"
+                            #},
+                            "buttons": [
+                                {
+                                    "type": "QUICK_REPLY",
+                                    "parameter": "confirm",  # Add a parameter for the button
+                                    "text": "Confirm"
+                                },
+                                {
+                                    "type": "QUICK_REPLY",
+                                    "parameter": "not_confirm",  # Add a parameter for the button
+                                    "text": "Not Confirm"
+                                }
+                            ]
+                        },
+                        "language": "en"
+                    }
+                }
+            ]
+        })
+
+        headers = {
+            'Authorization': f'App {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        conn = http.client.HTTPSConnection(base_url)
+        conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        conn.close()
+
+        if res.status == 200:
+            return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": data.decode("utf-8")}, status=res.status)
 
 class FeedbackQuestionsAPIView(APIView):
     renderer_classes = [UserRenderer]
@@ -15142,6 +17861,24 @@ class FeedbackQuestionsAPIView(APIView):
         question_ids = [16, 17, 18, 19]  
         questions = FeedBack_Questions.objects.filter(F_questions__in=question_ids).order_by('F_questions')
         serializer = FeedBackQuestionWithLangAndOptionsSerializer(questions, many=True, context={'request': request})
+        
+       
+        data = {
+            'data': serializer.data
+        }
+        
+        return Response(data)
+    
+
+
+class FeedbackQuestionsAPIView_for_app(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        question_ids = [16, 17, 18, 19]  
+        questions = FeedBack_Questions.objects.filter(F_questions__in=question_ids).order_by('F_questions')
+        serializer = FeedBackQuestionWithLangAndOptionsss(questions, many=True, context={'request': request})
         
        
         data = {
@@ -15229,7 +17966,7 @@ class SsavePatientFeedbackAPIView(APIView):
 
     #     except Exception as e:
     #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    # parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser)
     
     def post(self, request, *args, **kwargs):
         try:
@@ -15336,6 +18073,150 @@ class SsavePatientFeedbackAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+
+class SendMessageView2(APIView):
+    def post(self, request):
+        base_url = "xl6mjq.api-in.infobip.com"
+        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+        from_number = "918956193883"
+        to_number = "917517631674"
+        template_name = "sos_button"
+        placeholders = request.data.get('placeholders', [])
+        order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+
+        if not to_number:
+            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not placeholders:
+            return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = json.dumps({
+            "messages": [
+                {
+                    "from": from_number,
+                    "to": to_number,
+                    "messageId": order_id,
+                    "content": {
+                        "templateName": template_name,
+                        "templateData": {
+                            "body": {
+                                "placeholders": placeholders
+                            },
+                            # "header": {
+                            #     "type": "LOCATION",
+                            #     "latitude": 18.595961327299644,
+                            #     "longitude": 73.7588712015471
+                            # }
+                            # "buttons": [
+                            #     {
+                            #         "type": "CALL_BUTTON",
+                            #         "parameter": "919131982332",  # Add a parameter for the button
+                            #         "text": "call"
+                            #     },
+                            #     {
+                            #         "type": "DYNAMIC_URL",
+                            #         "parameter": "https://www.sperohealthcare.in/",  # Add a parameter for the button
+                            #         "text": "Visit Website"
+                            #     }
+                            # ],
+                            
+                            # "footer": {
+                            #     "text": "Spero Healthcare Innovation Pvt Ltd"
+                            # }                           
+                        },
+                        "language": "en"
+                    }
+                }
+            ]
+        })
+
+        headers = {
+            'Authorization': f'App {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        conn = http.client.HTTPSConnection(base_url)
+        conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        conn.close()
+
+        if res.status == 200:
+            return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": data.decode("utf-8")}, status=res.status)
+
+
+
+
+
+class Prof_names_eve_wise_view(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request,eve_id):
+        daily_Report = agg_hhc_detailed_event_plan_of_care.objects.filter(
+            (Q(eve_id__event_status = 2) | Q(eve_id__event_status = 3)) , eve_id=eve_id,
+            eve_id__status=1).order_by('srv_prof_id').distinct('srv_prof_id')
+        if not daily_Report:
+            return Response({"detail": "No data found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = prof_names_eve_wise_serializer(daily_Report, many=True)
+        return Response(serializer.data)            
+
+
+
+class SendMessageView_for_allocation(APIView):
+    def post(self, request):
+        base_url = "xl6mjq.api-in.infobip.com"
+        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+        from_number = "918956193883"
+        to_number = request.data.get('to_number', '')
+        template_name = "professional_name_sms"
+        placeholders = request.data.get('placeholders', [])
+        order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+
+        if not to_number:
+            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not placeholders:
+            return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = json.dumps({
+            "messages": [
+                {
+                    "from": from_number,
+                    "to": to_number,
+                    "messageId": order_id,
+                    "content": {
+                        "templateName": template_name,
+                        "templateData": {
+                            "body": {
+                                "placeholders": placeholders
+                            },                   
+                        },
+                        "language": "en"
+                    }
+                }
+            ]
+        })
+
+        headers = {
+            'Authorization': f'App {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        conn = http.client.HTTPSConnection(base_url)
+        conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        conn.close()
+
+        if res.status == 200:
+            return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": data.decode("utf-8")}, status=res.status)
+
+
+# from rest_framework.permissions import IsAuthenticated
 class CombinedAPIView_for_feedback_questions(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -15372,172 +18253,14 @@ class CombinedAPIView_for_feedback_questions(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-
-
-class PatientFeedbackAPIView_for_app(APIView):
-    
-    def post(self, request, *args, **kwargs):
-        try:
-            eve_id = request.data.get('eve_id')
-            ptn_id = request.data.get('ptn_id')
-            media = request.FILES.get('media')
-            video = request.FILES.get('video')
-            prof_id = request.data.get('prof_id')
-            feedback_data = request.data.get('feedback')
-    
-            # Ensure eve_id, ptn_id, and prof_id are provided
-            if not eve_id or not ptn_id or not prof_id:
-                return Response({"error": "eve_id, ptn_id, and prof_id are required"}, status=status.HTTP_400_BAD_REQUEST)
-    
-            # Fetch the related model instances
-            try:
-                event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
-            except ObjectDoesNotExist:
-                return Response({"error": "Invalid eve_id"}, status=status.HTTP_400_BAD_REQUEST)
-    
-            try:
-                patient_instance = agg_hhc_patients.objects.get(agg_sp_pt_id=ptn_id)
-            except ObjectDoesNotExist:
-                return Response({"error": "Invalid ptn_id"}, status=status.HTTP_400_BAD_REQUEST)
-    
-            try:
-                profile_instance = agg_hhc_service_professionals.objects.get(srv_prof_id=prof_id)
-            except ObjectDoesNotExist:
-                return Response({"error": "Invalid prof_id"}, status=status.HTTP_400_BAD_REQUEST)
-            record = agg_save_patient_feedback_table.objects.filter(eve_id=event_instance,ptn_id=patient_instance,prof_id=profile_instance).last()
-            # Use a transaction to ensure atomicity
-            with transaction.atomic():
-                # Check if a media entry already exists
-                media_entry, created = agg_save_feedback_medias.objects.update_or_create(
-                    eve_id=event_instance,
-                    ptn_id=patient_instance,
-                    prof_id=profile_instance,
-                    defaults={'images': media, 'video': video}
-                )
-    
-                # Parse feedback data if provided
-                if feedback_data:
-                    try:
-                        feedback_data = json.loads(feedback_data)
-                        if not isinstance(feedback_data, list):
-                            raise ValueError
-                    except (json.JSONDecodeError, ValueError):
-                        return Response({"error": "Feedback data must be a list of objects"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                feedback_entries = []
-                if feedback_data:
-                    for entry in feedback_data:
-                        question_id = entry.get('que')
-                        answer = entry.get('ans')
-    
-                        if question_id is None or answer is None:
-                            return Response({"error": "Each feedback entry must have 'que' and 'ans' fields"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                        try:
-                            question_instance = FeedBack_Questions.objects.get(F_questions=question_id)
-                        except ObjectDoesNotExist:
-                            return Response({"error": f"Invalid question ID: {question_id}"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                        feedback_entry, created = agg_save_patient_feedback_table.objects.update_or_create(
-                            eve_id=event_instance,
-                            ptn_id=patient_instance,
-                            f_questions=question_instance,
-                            prof_id=profile_instance,
-                            defaults={'answer': answer}
-                        )
-                        feedback_entries.append(feedback_entry)
-                else:
-                    # Create or update a single entry with no feedback data if feedback is not provided
-                    feedback_entry, created = agg_save_patient_feedback_table.objects.update_or_create(
-                        eve_id=event_instance,
-                        ptn_id=patient_instance,
-                        prof_id=profile_instance,
-                        defaults={}
-                    )
-                    feedback_entries.append(feedback_entry)
-                print(record,'record..........')
-                if record:
-                    return Response({"message": "Feedback updated successfully"}, status=status.HTTP_201_CREATED)
-                else:
-                    return Response({"message": "Feedback saved successfully"}, status=status.HTTP_201_CREATED)
-
-    
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def get(self, request, *args, **kwargs):
-        eve_id = request.query_params.get('eve_id')
-        ptn_id = request.query_params.get('ptn_id')
-        prof_id = request.query_params.get('prof_id')
-
-        if not eve_id or not ptn_id or not prof_id:
-            return Response({"error": "eve_id, ptn_id and prof_id are required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        feedback_entries = agg_save_patient_feedback_table.objects.filter(eve_id=eve_id, ptn_id=ptn_id, prof_id=prof_id)
-        if not feedback_entries.exists():
-            return Response({"error": "No feedback found for the given eve_id and ptn_id"}, status=status.HTTP_200_OK)
-        
-        serializer = AggSavePatientFeedbackSerializer(feedback_entries, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class enquirie_SingleRecord(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
-    def get(self,request,eve_id):
-        try:
-            event_details=agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id)
-            try:
-                caller_name=event_details.eve_id.caller_id.caller_fullname
-                caller_phone=event_details.eve_id.caller_id.phone
-            except:
-                caller_name=None
-                caller_phone=None
-            patient_name=event_details.eve_id.agg_sp_pt_id.name if event_details.eve_id.agg_sp_pt_id.name else None
-            zone_dt=event_details.eve_id.agg_sp_pt_id.prof_zone_id.Name if event_details.eve_id.agg_sp_pt_id.prof_zone_id else None
-            patient_phone=event_details.eve_id.agg_sp_pt_id.phone_no if event_details.eve_id.agg_sp_pt_id.phone_no else None
-            patient_age=event_details.eve_id.agg_sp_pt_id.Age if event_details.eve_id.agg_sp_pt_id.Age else None
-            patient_gender=event_details.eve_id.agg_sp_pt_id.gender_id.name if event_details.eve_id.agg_sp_pt_id.gender_id.name else None
-            patient_gmail=event_details.eve_id.agg_sp_pt_id.patient_email_id if event_details.eve_id.agg_sp_pt_id.patient_email_id else None
-            patient_address=event_details.eve_id.agg_sp_pt_id.address if event_details.eve_id.agg_sp_pt_id.address else None
-            patient_Google_address=event_details.eve_id.agg_sp_pt_id.google_address if event_details.eve_id.agg_sp_pt_id.google_address else None
-            patient_pincode=event_details.eve_id.agg_sp_pt_id.pincode if event_details.eve_id.agg_sp_pt_id.pincode else None
-            service_name=event_details.srv_id.service_title if event_details.srv_id.service_title else None
-            sub_srv_name=event_details.sub_srv_id.recommomded_service if event_details.sub_srv_id else None
-            hospital_name=event_details.hosp_id.hospital_name if event_details.hosp_id else None
-            consultant_name=event_details.doct_cons_id.cons_fullname if event_details.doct_cons_id else None
-            consultant_number=event_details.doct_cons_id.mobile_no if event_details.doct_cons_id else None
-            suffered_from=event_details.eve_id.Suffered_from if event_details.eve_id.Suffered_from else None
-            start_date=event_details.start_date if event_details.start_date else None
-            end_date=event_details.end_date if event_details.end_date else None
-            session_days=event_details.serivce_dates if event_details.serivce_dates else None
-            Enquirie_from=event_details.eve_id.patient_service_status if event_details.eve_id.patient_service_status else None
-            if Enquirie_from:
-                if Enquirie_from==1:
-                    Enquirie_from='mobile'
-                elif(Enquirie_from==2):
-                    Enquirie_from='website'
-                elif(Enquirie_from==3):
-                    Enquirie_from='walking'
-                else:
-                    Enquirie_from='calling'
-        except Exception as e:
-            return Response({"event_not_found": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        details={'caller_name':caller_name,'caller_phone':caller_phone,'patient_name':patient_name,'patient_phone':patient_phone,'patient_age':patient_age,'patient_gmail':patient_gmail,'patient_address':patient_address,'patient_Google_address':patient_Google_address,'patient_pincode':patient_pincode,'service_name':service_name,'sub_srv_name':sub_srv_name,'hospital_name':hospital_name,'consultant_name':consultant_name,'zone': zone_dt,'consultant_number':consultant_number,'suffered_from':suffered_from,'start_date':start_date,'end_date':end_date,'session_days':session_days,'Enquirie_from':Enquirie_from,'patient_gender':patient_gender}
-        return Response({'Detials':details})
-
-
-import http.client
-import json
-
-class Send_casgfree_link_in_whatsapp(APIView):
+class SendMessageView_for_total_session_count(APIView):
     def post(self, request):
         base_url = "xl6mjq.api-in.infobip.com"
         api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
         from_number = "918956193883"
-        to_number =  91 + phone_no#request.data.get('to_number', '')
-        template_name = "cashfree_payment"
-        # placeholders = request.data.get('placeholders', [])
+        to_number = request.data.get('to_number', '')
+        template_name = "total_session_count"
+        placeholders = request.data.get('placeholders', [])
         order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
 
         if not to_number:
@@ -15555,8 +18278,206 @@ class Send_casgfree_link_in_whatsapp(APIView):
                         "templateName": template_name,
                         "templateData": {
                             "body": {
-                                "placeholders": [ammount,
-                                                 payment_link]
+                                "placeholders": placeholders
+                            },                   
+                        },
+                        "language": "en"
+                    }
+                }
+            ]
+        })
+
+        headers = {
+            'Authorization': f'App {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        conn = http.client.HTTPSConnection(base_url)
+        conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        conn.close()
+
+        if res.status == 200:
+            return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": data.decode("utf-8")}, status=res.status)
+
+
+
+class pending1_Total_enquiry(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        hospital_id = request.GET.get('hosp_id')
+        # Current time
+        now = timezone.now()
+        today = timezone.now().date()
+        # Start of the day
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        # Start of the week (assuming week starts on Monday)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Start of the month
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Get all event ids that are in the payment details table
+        # paid_event_ids = agg_hhc_payment_details.objects.values_list('eve_id', flat=True)
+        
+        all_event = agg_hhc_enquiry_follow_up.objects.all()
+        
+        if hospital_id:
+            all_event = all_event.filter(
+                eve_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+
+        # Filter out these event ids from the events table and sum the final_amount
+        total_enq1 = all_event.filter(added_date__gte=start_of_day, follow_up=None).count()
+        total_enq2 = all_event.filter(added_date__gte=start_of_week, follow_up=None).count()
+        total_enq3 = all_event.filter(added_date__range=(start_of_month,month_end_date), follow_up=None).count()
+        total_enq4 = all_event.filter(added_date__gte=start_of_previous_month ,added_date__lte=end_of_previous_month, follow_up=None).count()
+
+
+
+
+        return Response({
+            'total_enq_today': total_enq1,
+            'total_enq_week': total_enq2,
+            'total_enq_month': total_enq3,
+            'total_enq_till_date': total_enq4
+        }, status=status.HTTP_200_OK)
+    
+
+
+
+
+class Calculate_pending_service(APIView):
+    def get(self, request, *args, **kwargs):
+        hospital_id = request.GET.get('hosp_id')
+        now = timezone.now()
+        today = timezone.now().date()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        month_end_date = today.replace(day=last_day)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_day_of_current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
+        start_of_previous_month = last_day_of_previous_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_previous_month = last_day_of_previous_month.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+
+# ----------------- Last month
+        ls_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_previous_month, end_of_previous_month),follow_up_status=1)
+        hospital_id = request.GET.get('hosp_id')
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ls_eve_ids = ls_all_event.values_list('event_id', flat=True)
+        ls_all_eves = list(set(ls_eve_ids))
+        ls_enq_id = []
+        for i in ls_all_eves:
+            ls_get_enq = ls_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ls_enq_id.append(ls_get_enq.enq_follow_up_id)
+        ls_all_follow_up_enq = ls_all_event.filter(enq_follow_up_id__in=ls_enq_id)
+        ls_four = ls_all_follow_up_enq.filter(follow_up=4)
+
+# ------------------ This month
+
+        ts_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__range=(start_of_month,month_end_date),follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        ts_eve_ids = ts_all_event.values_list('event_id', flat=True)
+        ts_all_eves = list(set(ts_eve_ids))
+        ts_enq_id = []
+        for i in ts_all_eves:
+            ts_get_enq = ts_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            ts_enq_id.append(ts_get_enq.enq_follow_up_id)
+        ts_all_follow_up_enq = ts_all_event.filter(enq_follow_up_id__in=ts_enq_id)
+        ts_four = ts_all_follow_up_enq.filter(follow_up=4)
+
+# ----------------- today
+    
+        td_all_event = agg_hhc_enquiry_follow_up.objects.filter(last_modified_date__gte=start_of_day,follow_up_status=1)
+        if hospital_id:
+            ls_all_event = ls_all_event.filter(
+                event_id__in=agg_hhc_event_plan_of_care.objects.filter(hosp_id=hospital_id).values_list('eve_id', flat=True)
+            )
+        td_eve_ids = td_all_event.values_list('event_id', flat=True)
+        td_all_eves = list(set(td_eve_ids))
+        td_enq_id = []
+        for i in td_all_eves:
+            td_get_enq = td_all_event.filter(event_id=i).order_by('last_modified_date').last()
+            td_enq_id.append(td_get_enq.enq_follow_up_id)
+        td_all_follow_up_enq = td_all_event.filter(enq_follow_up_id__in=td_enq_id)
+
+        td_four = td_all_follow_up_enq.filter(follow_up=4)
+
+    
+        return Response({
+            'total_pending_today': td_four.count(),
+            'total_pending_week': 0,
+            'total_pending_month': ts_four.count(),
+            'total_pending_last_month': ls_four.count()
+            
+        }, status=status.HTTP_200_OK)
+
+
+#chatbot post api
+
+class ChatbotConversationView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ChatbotConversationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class Get_Coupons(APIView):
+    def get(self, request):
+
+        coupon = agg_Discount_Coupon_Code.objects.filter(status=1)
+        coupons=CouponSerializer(coupon, many=True)
+        return Response(coupons.data)
+
+
+class Send_casgfree_link_in_whatsapp(APIView):
+    def post(self, request):
+        base_url = "xl6mjq.api-in.infobip.com"
+        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+        from_number = "918956193883"
+        to_number = request.data.get('to_number', '')
+        template_name = "cashfree_payment"
+        placeholders = request.data.get('placeholders', [])
+        order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+
+        if not to_number:
+            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not placeholders:
+            return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = json.dumps({
+            "messages": [
+                {
+                    "from": from_number,
+                    "to": to_number,
+                    "messageId": order_id,
+                    "content": {
+                        "templateName": template_name,
+                        "templateData": {
+                            "body": {
+                                "placeholders": placeholders
                             },
                         },
                         "language": "en"
@@ -15583,8 +18504,7 @@ class Send_casgfree_link_in_whatsapp(APIView):
             return Response({"error": data.decode("utf-8")}, status=res.status)
         
         
-
-# from .models import PaymentRecord  # Import the PaymentRecord model
+        
 @api_view(['POST'])
 def create_payment_url_whatsapp(request):
     url = "https://api.cashfree.com/api/v1/order/create"
@@ -15602,7 +18522,7 @@ def create_payment_url_whatsapp(request):
     mode = 3
     payment_status = 3
     total_amount = request.data.get('total_amount')
-    # expiration_time = timezone.now() + timezone.timedelta(minutes=5)
+    expiry_time = (timezone.now() + timedelta(hours=24)).isoformat()
 
     # print(phone_no)
     payload = {
@@ -15615,7 +18535,8 @@ def create_payment_url_whatsapp(request):
         "orderNote": "HII",
         "customerName": name,
         "customeremail": email,
-        "customerPhone": phone_no,  
+        "customerPhone": phone_no,
+        "link_expiry_time": expiry_time, 
         
     }
 
@@ -15631,7 +18552,7 @@ def create_payment_url_whatsapp(request):
     from_number = "918956193883"
     to_number = f"91{phone_no}"
     template_name = "cashfree_payment"
-    order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+    order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
 
     whatsapp_payload = json.dumps({
         "messages": [
@@ -15719,6 +18640,154 @@ def create_payment_url_whatsapp(request):
         'payment_link': payment_link,
     }
     return Response(data)
+
+
+
+#----------------------------------------------Payment----------------------------------------------------
+import requests
+from urllib.parse import quote  # Import the quote function for URL encoding
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+import json
+import re 
+# from .models import PaymentRecord  # Import the PaymentRecord model
+@api_view(['POST'])
+def create_link(request):
+    url = "https://api.cashfree.com/api/v1/order/create"
+
+    # Auto-generate the order ID date-wise
+    # order_id = "order_id_SPERO" + datetime.now().strftime("%d%m%Y%H%M%S")
+    order_id = "order_id_SPERO" + timezone.now().strftime("%d%m%Y%H%M%S")
+    phone_no = request.data['customerPhone'][-10:]
+    ammount = request.data['orderAmount']
+    name = request.data['customerName']
+    email = request.data['customeremail']
+    remaining = request.data['Remaining_amount']
+
+    eve_id = request.data.get('eve_id')
+    mode = 3
+    payment_status = 3
+    total_amount = request.data.get('total_amount')
+    # expiration_time = timezone.now() + timezone.timedelta(minutes=5)
+
+    # print(phone_no)
+    payload = {
+        "appId": "2045315bd01ed984f26100c6fd135402",
+        "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
+        "orderId": order_id,
+        "orderAmount": ammount,
+        "Remainingamount":remaining,
+        "orderCurrency": "INR",
+        "orderNote": "HII",
+        "customerName": name,
+        "customeremail": email,
+        "customerPhone": phone_no,  
+        # "returnUrl": "https://payments-test.cashfree.com/links/response",  
+        # "notifyUrl": "https://hhc.hospitalguru.in/web/update_transaction_status/",
+        # "expTime": int(expiration_time.timestamp()),  # Convert expiration_time to timestamp
+    }
+
+    response = requests.request("POST", url, data=payload)
+    s = response.text
+    json_acceptable_string = s.replace("'", "\"")
+    d = json.loads(json_acceptable_string)
+
+    # Assuming the response contains the payment link and payment status, you can extract them from the response.
+    payment_link = d.get('paymentLink')
+
+    # Send the payment link via SMS using Cashfree's SMS API
+    # sms_url = "https://sandbox.cashfree.com/api/v1/sms"
+    # sms_payload = {
+    #     "appId": "2045315bd01ed984f26100c6fd135402",
+    #     "secretKey": "5b0b3b4ed9b879b2864796aaf2c320867591e3c4",
+    #     "to": phone_no,
+    #     "message": f"Hello {name},\n\nPlease find the payment link below:\n\n{payment_link}",
+    #     "sender": "CFPG",
+    #     "type": "OTP"
+    # }
+    # sms_response = requests.request("POST", sms_url, data=sms_payload)
+    # sms_d = json.loads(sms_response.text)
+    
+    # sms_url = " https://api.cashfree.com/pg/links"
+    # sms_payload = {
+    #     "x-client-id": "20453165a737ebd97e430fcabc135402",
+    #     "x-client-secret": "cfsk_ma_prod_172c08ceff37119b1cf5ff4fa593b4bd_a2adc215",
+    #     "customerPhone": phone_no,
+    #     "send_sms": True,
+    #     "message": f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-:{payment_link}"
+    # }
+
+    # sms_response = requests.post(sms_url, json=sms_payload)
+
+    # # Print the SMS API response
+    # print("SMS API response:", sms_response.text)
+
+    # # Parse the response JSON
+    # try:
+    #     sms_d = sms_response.json()
+    # except json.JSONDecodeError:
+    #     sms_d = {"status": sms_response.text}
+
+    api_key = "c27d7fa6-292c-4534-8dc4-a0dd28e7d7e3"
+    unique_identifier = re.search(r'#([^/]*)', payment_link).group(1)
+    fixed_msg_part = "this is your payment link: https://payments.cashfree.com/order/"
+
+    smstmp = f'Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}. Click on this link to pay-: https://payments.cashfree.com/order/#{unique_identifier}'
+    send_payment_sms(phone_no, smstmp)
+    
+    # msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-: {payment_link}"
+    msg = f"Spero Healthcare Innovations Pvt.Ltd is requesting payment of INR {ammount}.Click on this link to pay-: {payment_link}"
+    # Properly encode the content parameter for the WhatsApp API request
+    encoded_msg = quote(msg)
+    
+    url = f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={api_key}&phone={phone_no}&content={encoded_msg}&fileName&caption&contentType=1"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
+        # print("URL successfully hit!")
+        # print("WhatsApp API Response:", response.text)
+    except requests.exceptions.RequestException as e:
+        print("Error occurred while hitting the URL:", e)
+
+    # ... Your existing code ...
+    # transaction_status = d.get('paymentStatus') if d else None
+
+
+    event_instance = agg_hhc_events.objects.get(eve_id=eve_id)
+
+
+    # Save payment record to the database
+    payment_record = agg_hhc_cashfree_online_payment.objects.create(
+        order_id=order_id,
+        amount_paid=payload['orderAmount'],
+        amount_remaining=payload['Remainingamount'],
+        Total_cost=total_amount,
+        order_currency=payload['orderCurrency'],
+        order_note=payload['orderNote'],
+        paid_by=payload['customerName'],
+        customer_email=payload['customeremail'],
+        customer_phone=payload['customerPhone'],
+        # transaction_status=transaction_status,
+        # signature=computed_signature,
+        eve_id=event_instance,
+        mode=mode,
+        payment_status=payment_status,
+
+    )
+
+    # Return the payment link and payment status in the API response
+    data = {
+        'payment_link': payment_link,
+        # 'SMS': sms_d.get("status"),
+        # 'payload_json':payload_json
+    }
+    return Response(data)
+
+
+
+import pytz
+
 
 @api_view(['POST'])
 def create_payment_url_sms_new(request):
@@ -15873,6 +18942,136 @@ class CancelPaymentLinkView(APIView):
             "canceled_links": canceled_links,
             "failed_links": failed_links
         }, status=status.HTTP_200_OK if not failed_links else status.HTTP_207_MULTI_STATUS)
+
+    def get_link_ids_from_event(self, event_id):
+        # Implement logic to fetch the list of link_ids (order_ids) using event_id from your database
+        try:
+            events = agg_hhc_cashfree_online_payment.objects.filter(eve_id=event_id)
+            return [event.order_id for event in events]  # Return all order_ids associated with the event
+        except agg_hhc_cashfree_online_payment.DoesNotExist:
+            return None
+            
+            
+            
+            
+@csrf_exempt
+@require_POST
+def update_transaction_status_for_community_app(request):
+    try:
+        # Load JSON content from the request body
+        request_data = json.loads(request.body)
+
+        # Extract order_id from the JSON content
+        order_id = request_data.get('data', {}).get('order', {}).get('order_id')
+        if order_id is None:
+            raise ValueError('Order ID not found in the request payload')
+
+        # Fetch the corresponding payment record based on the order_id
+        try:
+            payment_record = agg_hhc_cashfree_online_payment.objects.get(order_id=order_id)
+        except agg_hhc_cashfree_online_payment.DoesNotExist:
+            return JsonResponse({'error': 'Payment record not found for the given order_id'}, status=404)
+
+        # Extract payment status
+        payment_statuss = request_data.get('data', {}).get('payment', {}).get('payment_status')
+        if not payment_statuss:
+            raise ValueError('Payment status not found in the request payload')
+
+        # Use atomic transaction to ensure data integrity
+        with transaction.atomic():
+            # Check if a SUCCESS entry already exists in agg_hhc_payment_details
+            existing_success_entry = agg_hhc_payment_details.objects.filter(order_id=order_id, overall_status='SUCCESS').exists()
+
+            if payment_statuss == 'SUCCESS' and not existing_success_entry:
+                # Create a new payment record if no SUCCESS entry exists
+                payment_record1 = agg_hhc_payment_details.objects.create(
+                    order_id=payment_record.order_id,
+                    amount_paid=payment_record.amount_paid or 0,
+                    amount_remaining=payment_record.amount_remaining or 0,
+                    Total_cost=payment_record.Total_cost or 0,
+                    order_currency=payment_record.order_currency,
+                    order_note=payment_record.order_note,
+                    paid_by=payment_record.paid_by,
+                    customer_email=payment_record.customer_email,
+                    customer_phone=payment_record.customer_phone,
+                    eve_id=payment_record.eve_id,
+                    mode=payment_record.mode,
+                    payment_status=payment_record.payment_status,
+                    transaction_status=request_data,
+                    overall_status=payment_statuss,
+                    payment_to_desk_date = timezone.now().date()
+                )
+                payment_record1.save()
+                return JsonResponse({'message': 'Transaction status updated successfully'}, status=200)
+            else:
+                # Update the existing payment record for non-SUCCESS statuses
+                transaction_status = payment_record.transaction_status or {}
+                transaction_status.update(request_data)
+                payment_record.transaction_status = transaction_status
+                payment_record.overall_status = payment_statuss  # Update overall status
+                payment_record.save()
+                return JsonResponse({'message': 'Transaction status updated successfully'}, status=200)
+
+    except ValueError as ve:
+        return JsonResponse({'error': str(ve)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+class enquirie_SingleRecord(APIView):
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
+    def get(self,request,eve_id):
+        try:
+            event_details=agg_hhc_event_plan_of_care.objects.get(eve_id=eve_id)
+            try:
+                caller_name=event_details.eve_id.caller_id.caller_fullname
+                caller_phone=event_details.eve_id.caller_id.phone
+            except:
+                caller_name=None
+                caller_phone=None
+            patient_name=event_details.eve_id.agg_sp_pt_id.name if event_details.eve_id.agg_sp_pt_id.name else None
+            zone_dt=event_details.eve_id.agg_sp_pt_id.prof_zone_id.Name if event_details.eve_id.agg_sp_pt_id.prof_zone_id else None
+            patient_phone=event_details.eve_id.agg_sp_pt_id.phone_no if event_details.eve_id.agg_sp_pt_id.phone_no else None
+            patient_age=event_details.eve_id.agg_sp_pt_id.Age if event_details.eve_id.agg_sp_pt_id.Age else None
+            patient_gender=event_details.eve_id.agg_sp_pt_id.gender_id.name if event_details.eve_id.agg_sp_pt_id.gender_id.name else None
+            patient_gmail=event_details.eve_id.agg_sp_pt_id.patient_email_id if event_details.eve_id.agg_sp_pt_id.patient_email_id else None
+            patient_address=event_details.eve_id.agg_sp_pt_id.address if event_details.eve_id.agg_sp_pt_id.address else None
+            patient_Google_address=event_details.eve_id.agg_sp_pt_id.google_address if event_details.eve_id.agg_sp_pt_id.google_address else None
+            patient_pincode=event_details.eve_id.agg_sp_pt_id.pincode if event_details.eve_id.agg_sp_pt_id.pincode else None
+            service_name=event_details.srv_id.service_title if event_details.srv_id.service_title else None
+            sub_srv_name=event_details.sub_srv_id.recommomded_service if event_details.sub_srv_id else None
+            hospital_name=event_details.hosp_id.hospital_name if event_details.hosp_id else None
+            consultant_name=event_details.doct_cons_id.cons_fullname if event_details.doct_cons_id else None
+            consultant_number=event_details.doct_cons_id.mobile_no if event_details.doct_cons_id else None
+            suffered_from=event_details.eve_id.Suffered_from if event_details.eve_id.Suffered_from else None
+            start_date=event_details.start_date if event_details.start_date else None
+            end_date=event_details.end_date if event_details.end_date else None
+            session_days=event_details.serivce_dates if event_details.serivce_dates else None
+            Enquirie_from=event_details.eve_id.patient_service_status if event_details.eve_id.patient_service_status else None
+            if Enquirie_from:
+                if Enquirie_from==1:
+                    Enquirie_from='mobile'
+                elif(Enquirie_from==2):
+                    Enquirie_from='website'
+                elif(Enquirie_from==3):
+                    Enquirie_from='walking'
+                else:
+                    Enquirie_from='calling'
+        except Exception as e:
+            return Response({"event_not_found": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        details={'caller_name':caller_name,'caller_phone':caller_phone,'patient_name':patient_name,'patient_phone':patient_phone,'patient_age':patient_age,'patient_gmail':patient_gmail,'patient_address':patient_address,'patient_Google_address':patient_Google_address,'patient_pincode':patient_pincode,'service_name':service_name,'sub_srv_name':sub_srv_name,'hospital_name':hospital_name,'consultant_name':consultant_name,'zone': zone_dt,'consultant_number':consultant_number,'suffered_from':suffered_from,'start_date':start_date,'end_date':end_date,'session_days':session_days,'Enquirie_from':Enquirie_from,'patient_gender':patient_gender}
+        return Response({'Detials':details})
+
+class GroupListView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        # Query to get all groups with only grp_id and grp_name
+        groups = agg_mas_group.objects.filter(usr_role_status=0).values('grp_id', 'grp_name')
+
+        # Return the response with grp_id and grp_name
+        return Response(list(groups), status=status.HTTP_200_OK)
 
 
 
@@ -16084,799 +19283,878 @@ class srv_enq_cancellation_data(APIView):
         elif cancel_type == 3:
             return Response({"Total_Enquiry_and_Service_Cancelled":len(res_dt),"Total_Service_Cancelled":srvvv,"Total_Enquiry_Cancelled":enq,"Enquiry_and_Service_Can_Data":res_dt})
        
-  
 
 
 
-# Mayank Code as per discuss with Mayank Push code as it is 
 
-# import requests
-# from io import BytesIO
-# from reportlab.lib.pagesizes import letter
-# from reportlab.lib import colors
-# from reportlab.pdfgen import canvas
-# from django.http import HttpResponse
-# from weasyprint import HTML
-# import pdfkit
+
+
+
+
 #-------------------mayank PDF download invoice------------------
 
-# import requests
-# from io import BytesIO
-# from reportlab.lib.pagesizes import letter
-# from reportlab.lib import colors
-# from reportlab.pdfgen import canvas
-# from django.http import HttpResponse
-# import pdfkit
+import requests
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
+from weasyprint import HTML, CSS
+from datetime import datetime
+import pdfkit
 
-# def generate_invoice_pdf(request, eve_id):
-#     # API to fetch invoice data
-#     url = f"http://122.176.232.35:8008/web/hd_invoce_eventwise/{eve_id}"
-#     try:
-#         response = requests.get(url)
-#         response.raise_for_status()
+def generate_invoice_pdf(request, eve_id):
+    # API to fetch invoice data
+    base_url = settings.BASE_API_URL
+    print(base_url)
+    # API to fetch invoice data
+    url = f"http://{base_url}/web/hd_invoce_eventwise/{eve_id}"
+    # url = f"testhhc.hospitalguru.in:8000/web/hd_invoce_eventwise/{eve_id}"
+    print(url,'url')
+    try:
+        
+        response = requests.get(url)
+        print(response,"response")
+        response.raise_for_status()
+        print(response.raise_for_status(),"hiiiiiiiiiiiiiiiiiiiiii")
+        
 
-#         # Parsing the JSON data
-#         data = response.json()
-#         if not data or 'Event_Invoice' not in data or not data['Event_Invoice']:
-#             return HttpResponse("Invoice not found", status=404)
+        # Parsing the JSON data
+        data = response.json()
+        if not data or 'Event_Invoice' not in data or not data['Event_Invoice']:
+            return HttpResponse("Invoice not found", status=404)
 
-#         invoice_data = data['Event_Invoice'][0]
+        invoice_data = data['Event_Invoice'][0]
 
-
-#         discount_map = {
-#             1: "Discount Value %",
-#             2: "Discount Value &#8377;",
-#             3: "Discount Value (Complementary)",
-#         }
-#         discount_title = discount_map.get(invoice_data.get('discount_type'), "Discount Value")
-#         last_modified_date_str = invoice_data['last_modified_date']
-#         last_modified_date = datetime.strptime(last_modified_date_str, "%Y-%m-%d %H:%M:%S.%f")
-#         formatted_date = last_modified_date.strftime("%Y-%m-%d %H:%M")
-
-#         # Constructing the HTML content
-#         html_content = f"""
-#         <html>
-#         <head>
-#             <style>
-#                 body {{
-#                     font-family: Arial, sans-serif;
-#                     margin: 5px;
-#                     padding: 5px;
-#                     background-color: #f8f8f8;
-#                     font-size:19px;
-#                 }}
-#                 .invoice-container {{
-#                     width: 800px;
-#                     margin: 20px auto;
-#                     background: #fff;
-#                     padding: 20px;
-#                     border: 1px solid #ddd;
-#                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-#                 }}
-#                 .header {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: center;
-#                     padding-bottom: 10px;
-#                 }}
-#                 .header h1 {{
-#                     margin: 0;
-#                     font-size: 24px;
-#                 }}
-#                 .logo img {{
-#                     margin-top: 2rem;
-#                     height: 100px;
-#                 }}
-#                 .details div {{
-#                     margin-bottom: 5px;
-#                     line-height:35px;
-#                 }}
-#                 .section-title {{
-#                     font-weight: bold;
-#                     margin-top: 20px;
-#                     margin-bottom: 10px;
-#                     padding-bottom: 5px;
-#                     line-space:29px;
-#                     font-size:19px;
-#                 }}
-#                 table {{
-#                     width: 100%;
-#                     border-collapse: collapse;
-#                     margin-bottom: 20px;
-#                 }}
-#                 th,
-#                 td {{
-#                     border: 1px solid #ddd;
-#                     text-align: left;
-#                     padding: 20px;
-#                 }}
-#                 th {{
-#                     background-color: #ffcc00;
-#                     font-weight: bold;
-#                 }}
-#                 .amt_details {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     padding-top: 10px;
-#                     font-size: 19px;
-#                 }}
-#                 .title_amt {{
-#                     width: 50%;
-#                     line-height: 35px;
-#                 }}
-#                 .amt {{
-#                     width: 50%;
-#                     text-align: right;
-#                     line-heigt:48px;
-#                     margin-top:15px;
-#                 }}
-#                 .footer {{
-#                     display: flex;
-#                     background-color: #00bcd4;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     padding-top: 10px;
-#                     font-size: 19px;
-#                     border-radius: 3px yellow solid;
-#                 }}
-#                   .footer .bank-details {{
-#                   width: 50%;
-#                  padding: 10px;
-#                  line-height: 32px;
-#                  font-size:1rem;
+        print("hiiii")
+        discount_map = {
+            1: "Discount Value %",
+            2: "Discount Value &#8377;",
+            3: "Discount Value (Complementary)",
+        }
+        discount_title = discount_map.get(invoice_data.get('discount_type'), "Discount Value")
+        last_modified_date_str = invoice_data['last_modified_date']
+        last_modified_date = datetime.strptime(last_modified_date_str, "%Y-%m-%d %H:%M:%S.%f")
+        formatted_date = last_modified_date.strftime("%Y-%m-%d %H:%M")
+        sourceee = f"http://{base_url}/media/spero.png"
+        # http://testhhc.hospitalguru.in:8090/media/spero.png
+        print(sourceee,"sourceee")
+        # Constructing the HTML content
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 5px;
+                    padding: 5px;
+                    background-color: #f8f8f8;
+                    font-size:19px;
+                }}
+                .invoice-container {{
+                    width: 800px;
+                    margin: 20px auto;
+                    background: #fff;
+                    padding: 20px;
+                    border: 1px solid #ddd;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding-bottom: 10px;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                }}
+                .logo img {{
+                    margin-top: 2rem;
+                    height: 100px;
+                }}
+                .details div {{
+                    margin-bottom: 5px;
+                    line-height:35px;
+                }}
+                .section-title {{
+                    font-weight: bold;
+                    margin-top: 20px;
+                    margin-bottom: 10px;
+                    padding-bottom: 5px;
+                    line-space:29px;
+                    font-size:19px;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }}
+                th,
+                td {{
+                    border: 1px solid #ddd;
+                    text-align: left;
+                    padding: 20px;
+                }}
+                th {{
+                    background-color: #ffcc00;
+                    font-weight: bold;
+                }}
+                .amt_details {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    padding-top: 10px;
+                    font-size: 19px;
+                }}
+                .title_amt {{
+                    width: 50%;
+                    line-height: 35px;
+                }}
+                .amt {{
+                    width: 50%;
+                    text-align: right;
+                    line-heigt:48px;
+                    margin-top:15px;
+                }}
+                .footer {{
+                    display: flex;
+                    background-color: #00bcd4;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    padding-top: 10px;
+                    font-size: 19px;
+                    border-radius: 3px yellow solid;
+                }}
+                  .footer .bank-details {{
+                  width: 50%;
+                 padding: 10px;
+                 line-height: 32px;
+                 font-size:1rem;
                
 
-#                   }}
-#                 .footer .contact {{
-#                     width: 50%;
-#                     text-align: right;
-#                     padding: 10px;
-#                     line-height: 35px;
-#                 }}
-#                 .footer .contact div {{
-#                     margin-bottom: 5px;
-#                 }}
-#                 .E_details {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     font-size: 19px;
-#                     width: 100%;
-#                     line-height: 23px;
-#                 }}
-#                 .event_d {{
-#                     text-align: left;
-#                     width: 48%;
-#                     line-height:30px;
-#                 }}
-#                 .bill_d {{
-#                     text-align: right;
-#                     width: 48%;
-#                     line-height:30px;
-#                  }}
-#                 hr {{
-#                     border: none;
-#                     height: 2px;
-#                     background-color: black;
-#                     margin: 10px 0;
-#                 }}
+                  }}
+                .footer .contact {{
+                    width: 50%;
+                    text-align: right;
+                    padding: 10px;
+                    line-height: 35px;
+                }}
+                .footer .contact div {{
+                    margin-bottom: 5px;
+                }}
+                .E_details {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    font-size: 19px;
+                    width: 100%;
+                    line-height: 23px;
+                }}
+                .event_d {{
+                    text-align: left;
+                    width: 48%;
+                    line-height:30px;
+                }}
+                .bill_d {{
+                    text-align: right;
+                    width: 48%;
+                    line-height:30px;
+                 }}
+                hr {{
+                    border: none;
+                    height: 2px;
+                    background-color: black;
+                    margin: 10px 0;
+                }}
                 
-#                     # .contact {{
-#                     #     display: grid;
-#                     #     grid-template-columns: auto auto; 
-#                     #     justify-content: end; 
-#                     #     # text-align: left; 
-#                     #     margin-top: 0.5rem;
-#                     #     color: black;
-#                     #     # float: right;
-#                     #     # margin: 10px 0;
+                    # .contact {{
+                    #     display: grid;
+                    #     grid-template-columns: auto auto; 
+                    #     justify-content: end; 
+                    #     # text-align: left; 
+                    #     margin-top: 0.5rem;
+                    #     color: black;
+                    #     # float: right;
+                    #     # margin: 10px 0;
                    
-#                     # }}
+                    # }}
 
-#                     # .contact-item {{
-#                     #     display: flex;
-#                     #     # align-items: center; /* Align icon and text vertically */
-#                     #     # margin-bottom: 10px; /* Add space between items */
-#                     #     line-height: 2.5; /* Adjust line height */
-#                     #     # float: right;
-#                     #     margin-right: 20px;
-#                     # }}
+                    # .contact-item {{
+                    #     display: flex;
+                    #     # align-items: center; /* Align icon and text vertically */
+                    #     # margin-bottom: 10px; /* Add space between items */
+                    #     line-height: 2.5; /* Adjust line height */
+                    #     # float: right;
+                    #     margin-right: 20px;
+                    # }}
 
-#                     .icon {{
+                    .icon {{
                         
-#                         color: #333 !important; /* Icon color */
-#                         margin-right: 10px; /* Gap between icon and text */
-#                     }}
+                        color: #333 !important; /* Icon color */
+                        margin-right: 10px; /* Gap between icon and text */
+                    }}
 
-#                     .text {{
-#                         font-size: 1rem; 
-#                         color: #333; 
-#                         text-align: start;
-#                     }}
+                    .text {{
+                        font-size: 1rem; 
+                        color: #333; 
+                        text-align: start;
+                    }}
 
-#                 /* Media Query for Print */
-#                 @media print {{
-#                     @page {{
-#                         size: A4; 
-#                         margin: 20mm; 
-#                     }}
+                /* Media Query for Print */
+                @media print {{
+                    @page {{
+                        size: A4; 
+                        margin: 20mm; 
+                    }}
 
-#                     body {{
-#                         background-color: #fff; /* Remove background for printing */
-#                         margin: 0;
-#                     }}
+                    body {{
+                        background-color: #fff; /* Remove background for printing */
+                        margin: 0;
+                    }}
 
-#                     .invoice-container {{
-#                         width: auto;
-#                         margin: 0;
-#                         border: none;
-#                         box-shadow: none;
-#                         padding: 0;
-#                         line-spacing:23px;
-#                     }}
+                    .invoice-container {{
+                        width: auto;
+                        margin: 0;
+                        border: none;
+                        box-shadow: none;
+                        padding: 0;
+                        line-spacing:23px;
+                    }}
 
-#                     .header, .footer {{
-#                         page-break-inside: avoid; /* Prevent breaking the header or footer across pages */
-#                     }}
+                    .header, .footer {{
+                        page-break-inside: avoid; /* Prevent breaking the header or footer across pages */
+                    }}
 
-#                     table {{
-#                         page-break-inside: auto;
-#                     }}
+                    table {{
+                        page-break-inside: auto;
+                    }}
 
-#                     tr {{
-#                         page-break-inside: avoid;
-#                         page-break-after: auto;
-#                     }}
+                    tr {{
+                        page-break-inside: avoid;
+                        page-break-after: auto;
+                    }}
 
-#                     /* Ensure proper font sizes for print */
-#                     h1, h2, h3, h4, h5, h6, p, td, th {{
-#                         font-size: 12pt;
-#                     }}
-#                 }}
-#             </style>
-#         </head>
-#         <body>
-#             <div class="invoice-container">
-#                 <div class="header">
-#                     <h1 id="header-title">INVOICE</h1>
-#                     <div class="logo">
-#                         <img src="http://122.176.232.35:8008/media/spero.png" alt="Logo">
-#                     </div>
-#                 </div>
+                    /* Ensure proper font sizes for print */
+                    h1, h2, h3, h4, h5, h6, p, td, th {{
+                        font-size: 12pt;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="invoice-container">
+                <div class="header">
+                    <h1 id="header-title">INVOICE</h1>
+                    <div class="logo">
+                        <img src="{sourceee}" alt="Logo">
+                    </div>
+                </div>
 
-#                 <div class="E_details">
-#                     <div class="event_d">
-#                         <div><strong>Event ID:</strong>  {invoice_data['eve_id']}</div>
-#                         <div><strong>Event Date:</strong>  {invoice_data['event_date']}</div>
-#                         <div id="last-updated"><strong>Last Updated:</strong>{formatted_date} </div>
-#                     </div>
-#                     <div class="bill_d">
-#                         <div><strong>BILL DETAILS</strong></div>
-#                         <div><strong>Invoice ID:</strong> DMHHC/{invoice_data['years_range']}/{invoice_data['invoice_id']}</div>
-#                         <div><strong>Date:</strong>{invoice_data['event_date']}</div>
-#                     </div>
-#                 </div>
+                <div class="E_details">
+                    <div class="event_d">
+                        <div><strong>Event ID:</strong>  {invoice_data['eve_id']}</div>
+                        <div><strong>Event Date:</strong>  {invoice_data['event_date']}</div>
+                        <div id="last-updated"><strong>Last Updated:</strong>{formatted_date} </div>
+                    </div>
+                    <div class="bill_d">
+                        <div><strong>BILL DETAILS</strong></div>
+                        <div><strong>Invoice ID:</strong> DMHHC/{invoice_data['years_range']}/{invoice_data['invoice_id']}</div>
+                        <div><strong>Date:</strong>{invoice_data['event_date']}</div>
+                    </div>
+                </div>
 
-#                 <hr/>
-#                 <div class="section-title">PATIENT DETAILS</div>
-#                 <div class="details">
-#                     <div><strong>Name:</strong> {invoice_data['patient_name']}</div>
-#                     <div><strong>Mobile:</strong>{invoice_data['patient_number']}</div>
-#                     <div><strong>Residential Address:</strong>{invoice_data['patient_address']}</div>
-#                     <div><strong>Permanent Address:</strong> {invoice_data.get('patient_google_address', 'N/A')}</div>
-#                 </div>
+                <hr/>
+                <div class="section-title">PATIENT DETAILS</div>
+                <div class="details">
+                    <div><strong>Name:</strong> {invoice_data['patient_name']}</div>
+                    <div><strong>Mobile:</strong>{invoice_data['patient_number']}</div>
+                    <div><strong>Residential Address:</strong>{invoice_data.get('patient_google_address', 'N/A')}</div>
+                    <div><strong>Permanent Address:</strong>{invoice_data['patient_address']}</div>
+                </div>
 
-#                 <hr>
-#                 <div class="section-title">SERVICE DETAILS</div>
-#                 <div class="details">
-#                     <div><strong>Service:</strong>{invoice_data['service_name']}</div>
-#                     <div><strong>Sub Service:</strong> {invoice_data['sub_service_name']}</div>
-#                 </div>
+                <hr>
+                <div class="section-title">SERVICE DETAILS</div>
+                <div class="details">
+                    <div><strong>Service:</strong>{invoice_data['service_name']}</div>
+                    <div><strong>Sub Service:</strong> {invoice_data['sub_service_name']}</div>
+                </div>
 
-#                 <table>
-#                     <thead>
-#                         <tr>
-#                             <th>Professional Name</th>
-#                             <th>Sessions</th>
-#                             <th>Start Date</th>
-#                             <th>End Date</th>
-#                             <th>Amount</th>
-#                         </tr>
-#                     </thead>
-#                     <tbody>
-#                 """
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Professional Name</th>
+                            <th>Sessions</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
 
-#         # Adding professional details
-#         for professional in invoice_data['professional_amount']:
-#             html_content += f"""
-#                     <tr>
-#                         <td>{professional['professional_name']}</td>
-#                         <td>{professional['sessions']}</td>
-#                         <td>{professional['start_date']}</td>
-#                         <td>{professional['end_date']}</td>
-#                         <td>&#8377;{professional['amount']}</td>
-#                     </tr>
-#             """
+        # Adding professional details
+        for professional in invoice_data['professional_amount']:
+            html_content += f"""
+                    <tr>
+                        <td>{professional['professional_name']}</td>
+                        <td>{professional['sessions']}</td>
+                        <td>{professional['start_date']}</td>
+                        <td>{professional['end_date']}</td>
+                        <td>&#8377;{professional['amount']}</td>
+                    </tr>
+            """
 
-#         html_content += f"""
-#                     </tbody>
-#                 </table>
+        html_content += f"""
+                    </tbody>
+                </table>
                             
-#             <div class="amt_details">
-#                 <div class="title_amt">
-#                     <div id="conveniance-charges-title" style="display: none;"><strong>Conveniance_Charges:</strong></div>
-#                     <div id="discount-value-title"><strong>{discount_title}:</strong></div>
+            <div class="amt_details">
+                <div class="title_amt">
+                    <div id="conveniance-charges-title" style="display: none;"><strong>Conveniance_Charges:</strong></div>
+                    <div id="discount-value-title"><strong>{discount_title}:</strong></div>
                     
  
-#                 </div>
+                </div>
 
-#                 <div class="amt" >
-#                     <div id="conveniance-charges-amount" style="display: none;">{invoice_data['conveniance_charges']}</div>
-#                     <div id="discount-value-amount" style="display: none;">{invoice_data['discount_value']}</div>
-#                 </div>
-#             </div>
+                <div class="amt" >
+                    <div id="conveniance-charges-amount" style="display: none;">{invoice_data['conveniance_charges']}</div>
+                    <div id="discount-value-amount" style="display: none;">{invoice_data['discount_value']}</div>
+                </div>
+            </div>
 
 
-#                 <hr>
-#                 <div class="amt_details">
+                <hr>
+                <div class="amt_details">
 
-#                     <div class="title_amt">
-#                         <div><strong>Final Amount (INR):</strong></div>
-#                         <div><strong>Received Amount (INR):</strong></div>
-#                     </div>
+                    <div class="title_amt">
+                        <div><strong>Final Amount (INR):</strong></div>
+                        <div><strong>Received Amount (INR):</strong></div>
+                    </div>
 
-#                     <div class="amt">
-#                         <div>&#8377;{invoice_data['Final_amount']}</div>
-#                         <div  id="amount-paid-display">&#8377;{invoice_data['amount_paid']}</div>
-#                     </div>
-#                     </div>
+                    <div class="amt">
+                        <div>&#8377;{invoice_data['Final_amount']}</div>
+                        <div  id="amount-paid-display">&#8377;{invoice_data['amount_paid']}</div>
+                    </div>
+                    </div>
 
-#                 <div class="section-title">Declaration:</div>
-#                 <p>
-#                     We declare that this Bill shows the actual price of the services described and that all particulars
-#                     are true and correct.
-#                 </p>
-#                         <div class="footer">
-#                             <div class="bank-details">
-#                                 <strong>Company's Bank Detail:</strong>
-#                                 <div><strong>Bank Name:</strong> HDFC BANK</div>
-#                                 <div><strong>IFSC Code:</strong> HDFC0000007</div>
-#                                 <div><strong>Branch:</strong> Bhandarkar Road</div>
-#                                 <div><strong>Account:</strong> 50200010027418</div>
-#                             </div>
+                <div class="section-title">Declaration:</div>
+                <p>
+                    We declare that this Bill shows the actual price of the services described and that all particulars
+                    are true and correct.
+                </p>
+                        <div class="footer">
+                            <div class="bank-details">
+                                <strong>Company's Bank Detail:</strong>
+                                <div><strong>Bank Name:</strong> HDFC BANK</div>
+                                <div><strong>IFSC Code:</strong> HDFC0000007</div>
+                                <div><strong>Branch:</strong> Bhandarkar Road</div>
+                                <div><strong>Account:</strong> 50200010027418</div>
+                            </div>
 
-#                             <div class="contact" style="padding-top:30px">
-#                                 <div class="contact-item" style="margin-right:95px">
-#                                     <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-telephone" viewBox="0 0 16 16">
-#                                             <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.6 17.6 0 0 0 4.168 6.608 17.6 17.6 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.68.68 0 0 0-.58-.122l-2.19.547a1.75 1.75 0 0 1-1.657-.459L5.482 8.062a1.75 1.75 0 0 1-.46-1.657l.548-2.19a.68.68 0 0 0-.122-.58zM1.884.511a1.745 1.745 0 0 1 2.612.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/>
-#                                         </svg></span>
-#                                     <span class="text">7620400100</span>
-#                                 </div>
-#                                 <div class="contact-item">
-#                                     <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16">
-#                                             <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/>
-#                                     </svg></span>
-#                                     <span class="text">info@sperohealthcare.in</span>
-#                                 </div>
-#                                 <div class="contact-item" style="margin-right:46px">
-#                                     <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-globe" viewBox="0 0 16 16">
-#                                             <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/>
-#                                         </svg></span>
-#                                     <span class="text">sperohealthcare.in</span>
-#                                 </div>
-#                             </div>
-#                         </div>
+                            <div class="contact" style="padding-top:30px">
+                                <div class="contact-item" style="margin-right:95px">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-telephone" viewBox="0 0 16 16">
+                                            <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.6 17.6 0 0 0 4.168 6.608 17.6 17.6 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.68.68 0 0 0-.58-.122l-2.19.547a1.75 1.75 0 0 1-1.657-.459L5.482 8.062a1.75 1.75 0 0 1-.46-1.657l.548-2.19a.68.68 0 0 0-.122-.58zM1.884.511a1.745 1.745 0 0 1 2.612.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/>
+                                        </svg></span>
+                                    <span class="text">7620400100</span>
+                                </div>
+                                <div class="contact-item">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16">
+                                            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/>
+                                    </svg></span>
+                                    <span class="text">info@sperohealthcare.in</span>
+                                </div>
+                                <div class="contact-item" style="margin-right:46px">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-globe" viewBox="0 0 16 16">
+                                            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/>
+                                        </svg></span>
+                                    <span class="text">sperohealthcare.in</span>
+                                </div>
+                            </div>
+                        </div>
 
-#                     <script>
+                    <script>
                     
-#                     const amountPaid = {invoice_data['amount_paid']}; 
-#                     const headerTitle = document.getElementById('header-title');
+                    const amountPaid = {invoice_data['amount_paid']}; 
+                    const headerTitle = document.getElementById('header-title');
 
-#                     if (amountPaid === 0) {{
-#                         headerTitle.innerHTML = "PROFORMA INVOICE";
-#                     }} else {{
-#                         headerTitle.innerHTML = "INVOICE";
-#                     }}
-#                 </script>
+                    if (amountPaid === 0) {{
+                        headerTitle.innerHTML = "PROFORMA INVOICE";
+                    }} else {{
+                        headerTitle.innerHTML = "INVOICE";
+                    }}
+                </script>
                 
-#                     <script>
-#                     const convenianceCharges = parseFloat("{invoice_data['conveniance_charges']}");
-#                     const discountValue = parseFloat("{invoice_data['discount_value']}");
+                    <script>
+                    const convenianceCharges = parseFloat("{invoice_data['conveniance_charges']}");
+                    const discountValue = parseFloat("{invoice_data['discount_value']}");
 
-#                     if (convenianceCharges > 0) {{
-#                         document.getElementById("conveniance-charges-title").style.display = "block";
-#                         document.getElementById("conveniance-charges-amount").style.display = "block";
-#                     }}
+                    if (convenianceCharges > 0) {{
+                        document.getElementById("conveniance-charges-title").style.display = "block";
+                        document.getElementById("conveniance-charges-amount").style.display = "block";
+                    }}
 
-#                     if (discountValue > 0) {{
-#                         document.getElementById("discount-value-title").style.display = "block";
-#                         document.getElementById("discount-value-amount").style.display = "block";
-#                     }}
-#                 </script>
+                    if (discountValue > 0) {{
+                        document.getElementById("discount-value-title").style.display = "block";
+                        document.getElementById("discount-value-amount").style.display = "block";
+                    }}
+                </script>
                 
-#        <script>
-#         // Example invoice data
-#         const invoiceData = {{
-#             last_modified_date: '2024-12-10 12:46:54.559901' // Original format
-#         }};
+       <script>
+        // Example invoice data
+        const invoiceData = {{
+            last_modified_date: '2024-12-10 12:46:54.559901' // Original format
+        }};
 
-#         // Function to format the date
-#         function formatDate(dateString) {{
-#             // Remove fractional seconds and convert to ISO format
-#             const date = new Date(dateString.split('.')[0].replace(' ', 'T'));
-#             const hours = date.getHours();
-#             const minutes = String(date.getMinutes()).padStart(2, '0');
-#             const ampm = hours >= 12 ? 'PM' : 'AM';
-#             const formattedTime = `${{hours % 12 || 12}}:${{minutes}} ${{ampm}}`;
-#             const formattedDate = date.toISOString().split('T')[0]; // Get YYYY-MM-DD
-#             return `${{formattedDate}} ${{formattedTime}}`;
-#         }}
+        // Function to format the date
+        function formatDate(dateString) {{
+            // Remove fractional seconds and convert to ISO format
+            const date = new Date(dateString.split('.')[0].replace(' ', 'T'));
+            const hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const formattedTime = `${{hours % 12 || 12}}:${{minutes}} ${{ampm}}`;
+            const formattedDate = date.toISOString().split('T')[0]; // Get YYYY-MM-DD
+            return `${{formattedDate}} ${{formattedTime}}`;
+        }}
 
-#         // Get the formatted date and update the HTML
-#         const formattedDate = formatDate(invoiceData.last_modified_date);
-#         document.getElementById('last-updated').innerHTML += formattedDate;
-#     </script>
-#             </body>
-#         </html>
-#         """
+        // Get the formatted date and update the HTML
+        const formattedDate = formatDate(invoiceData.last_modified_date);
+        document.getElementById('last-updated').innerHTML += formattedDate;
+    </script>
+            </body>
+        </html>
+        """
 
-#         # Use pdfkit to convert HTML to PDF
-#         pdf = pdfkit.from_string(html_content, False)
+        # Use pdfkit to convert HTML to PDF
+        pdf = pdfkit.from_string(html_content, False)
 
-#         # Send the PDF as a response
-#         response = HttpResponse(pdf, content_type='application/pdf')
-#         response['Content-Disposition'] = f'attachment; filename="invoice_{invoice_data["invoice_id"]}.pdf"'
-#         return response
-#     except requests.exceptions.RequestException as e:
-#         return HttpResponse(f"Error fetching invoice data: {e}", status=500)
+        # Send the PDF as a response
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="invoice_{invoice_data["invoice_id"]}.pdf"'
+        return response
+    except requests.exceptions.RequestException as e:
+        return HttpResponse(f"Error fetching invoice data: {e}", status=500)
 
 
+#------------------for Viewe------------invoice---------------------------
 
-# #------------------for Viewe------------invoice---------------------------
+def generate_invoice_pdf_view(request, eve_id):
+    # API to fetch invoice data
+    url = f"http://testhhc.hospitalguru.in:8090/web/hd_invoce_eventwise/{eve_id}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
 
-# def generate_invoice_pdf_view(request, eve_id):
-#     # API to fetch invoice data
-#     url = f"http://122.176.232.35:8008/web/hd_invoce_eventwise/{eve_id}"
-#     try:
-#         response = requests.get(url)
-#         response.raise_for_status()
+        # Parsing the JSON data
+        data = response.json()
+        print(data,'data')
+        if not data or 'Event_Invoice' not in data or not data['Event_Invoice']:
+            return HttpResponse("Invoice not found", status=404)
 
-#         # Parsing the JSON data
-#         data = response.json()
-#         if not data or 'Event_Invoice' not in data or not data['Event_Invoice']:
-#             return HttpResponse("Invoice not found", status=404)
+        invoice_data = data['Event_Invoice'][0]
 
-#         invoice_data = data['Event_Invoice'][0]
-
-#         # Constructing the HTML content
-#         html_content = f"""
-#         <html>
-#         <head>
-#             <style>
-#                 body {{
-#                     font-family: Arial, sans-serif;
-#                     margin: 0;
-#                     padding: 5px;
-#                     background-color: #f8f8f8;
-#                     font-size:19px;
-#                 }}
-#                 .invoice-container {{
-#                     width: 800px;
-#                     margin: 20px auto;
-#                     background: #fff;
-#                     padding: 20px;
-#                     border: 1px solid #ddd;
-#                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-#                 }}
-#                 .header {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: center;
-#                     padding-bottom: 10px;
-#                 }}
-#                 .header h1 {{
-#                     margin: 0;
-#                     font-size: 24px;
-#                 }}
-#                 .logo img {{
-#                     margin-top: 2rem;
-#                     height: 100px;
-#                 }}
-#                 .details div {{
-#                     margin-bottom: 5px;
-#                     line-height:35px;
-#                 }}
-#                 .section-title {{
-#                     font-weight: bold;
-#                     margin-top: 20px;
-#                     margin-bottom: 10px;
-#                     padding-bottom: 5px;
-#                     line-space:29px;
-#                     font-size:19px;
-#                 }}
-#                 table {{
-#                     width: 100%;
-#                     border-collapse: collapse;
-#                     margin-bottom: 20px;
-#                 }}
-#                 th,
-#                 td {{
-#                     border: 1px solid #ddd;
-#                     text-align: left;
-#                     padding: 20px;
-#                 }}
-#                 th {{
-#                     background-color: #ffcc00;
-#                     font-weight: bold;
-#                 }}
-#                 .amt_details {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     padding-top: 10px;
-#                     font-size: 19px;
-#                 }}
-#                 .title_amt {{
-#                     width: 50%;
-#                     line-height: 35px;
-#                 }}
-#                 .amt {{
-#                     width: 50%;
-#                     text-align: right;
-#                     line-heigt:32px;
-#                 }}
-#                 .footer {{
-#                     display: flex;
-#                     background-color: #00bcd4;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     padding-top: 10px;
+        # Constructing the HTML content
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 5px;
+                    background-color: #f8f8f8;
+                    font-size:19px;
+                }}
+                .invoice-container {{
+                    width: 800px;
+                    margin: 20px auto;
+                    background: #fff;
+                    padding: 20px;
+                    border: 1px solid #ddd;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding-bottom: 10px;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                }}
+                .logo img {{
+                    margin-top: 2rem;
+                    height: 100px;
+                }}
+                .details div {{
+                    margin-bottom: 5px;
+                    line-height:35px;
+                }}
+                .section-title {{
+                    font-weight: bold;
+                    margin-top: 20px;
+                    margin-bottom: 10px;
+                    padding-bottom: 5px;
+                    line-space:29px;
+                    font-size:19px;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }}
+                th,
+                td {{
+                    border: 1px solid #ddd;
+                    text-align: left;
+                    padding: 20px;
+                }}
+                th {{
+                    background-color: #ffcc00;
+                    font-weight: bold;
+                }}
+                .amt_details {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    padding-top: 10px;
+                    font-size: 19px;
+                }}
+                .title_amt {{
+                    width: 50%;
+                    line-height: 35px;
+                }}
+                .amt {{
+                    width: 50%;
+                    text-align: right;
+                    line-heigt:32px;
+                }}
+                .footer {{
+                    display: flex;
+                    background-color: #00bcd4;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    padding-top: 10px;
                     
-#                     border-radius: 3px yellow solid;
-#                 }}
-#                 .footer .bank-details {{
-#                     width: 100%;
-#                     padding: 10px;
-#                     line-height: 35px;
-#                 }}
-#                 .footer .contact {{
-#                     width: 50%;
-#                     text-align: right;
-#                     padding: 10px;
-#                     line-height: 35px;
+                    border-radius: 3px yellow solid;
+                }}
+                .footer .bank-details {{
+                    width: 100%;
+                    padding: 10px;
+                    line-height: 35px;
+                }}
+                .footer .contact {{
+                    width: 50%;
+                    text-align: right;
+                    padding: 10px;
+                    line-height: 35px;
                    
-#                 }}
-#                 .footer .contact div {{
-#                     margin-bottom: 5px;
-#                 }}
-#                 .E_details {{
-#                     display: flex;
-#                     justify-content: space-between;
-#                     align-items: flex-start;
-#                     font-size: 19px;
-#                     width: 100%;
-#                     line-height: 23px;
-#                 }}
-#                 .event_d {{
-#                     text-align: left;
-#                     width: 48%;
-#                     line-height:30px;
-#                 }}
-#                 .bill_d {{
-#                     text-align: right;
-#                     width: 48%;
-#                     line-height:30px;
-#                  }}
-#                 hr {{
-#                     border: none;
-#                     height: 2px;
-#                     background-color: black;
-#                     margin: 10px 0;
-#                 }}
+                }}
+                .footer .contact div {{
+                    margin-bottom: 5px;
+                }}
+                .E_details {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    font-size: 19px;
+                    width: 100%;
+                    line-height: 23px;
+                }}
+                .event_d {{
+                    text-align: left;
+                    width: 48%;
+                    line-height:30px;
+                }}
+                .bill_d {{
+                    text-align: right;
+                    width: 48%;
+                    line-height:30px;
+                 }}
+                hr {{
+                    border: none;
+                    height: 2px;
+                    background-color: black;
+                    margin: 10px 0;
+                }}
 
-#                 /* Media Query for Print */
-#                 @media print {{
-#                     @page {{
-#                         size: A4; 
-#                         margin: 20mm; 
-#                     }}
+                /* Media Query for Print */
+                @media print {{
+                    @page {{
+                        size: A4; 
+                        margin: 20mm; 
+                    }}
 
-#                     body {{
-#                         background-color: #fff; /* Remove background for printing */
-#                         margin: 0;
-#                     }}
+                    body {{
+                        background-color: #fff; /* Remove background for printing */
+                        margin: 0;
+                    }}
 
-#                     .invoice-container {{
-#                         width: auto;
-#                         margin: 0;
-#                         border: none;
-#                         box-shadow: none;
-#                         padding: 0;
-#                         line-spacing:23px;
-#                     }}
+                    .invoice-container {{
+                        width: auto;
+                        margin: 0;
+                        border: none;
+                        box-shadow: none;
+                        padding: 0;
+                        line-spacing:23px;
+                    }}
 
-#                     .header, .footer {{
-#                         page-break-inside: avoid; /* Prevent breaking the header or footer across pages */
-#                     }}
+                    .header, .footer {{
+                        page-break-inside: avoid; /* Prevent breaking the header or footer across pages */
+                    }}
 
-#                     table {{
-#                         page-break-inside: auto;
-#                     }}
+                    table {{
+                        page-break-inside: auto;
+                    }}
 
-#                     tr {{
-#                         page-break-inside: avoid;
-#                         page-break-after: auto;
-#                     }}
+                    tr {{
+                        page-break-inside: avoid;
+                        page-break-after: auto;
+                    }}
 
-#                     /* Ensure proper font sizes for print */
-#                     h1, h2, h3, h4, h5, h6, p, td, th {{
-#                         font-size: 12pt;
-#                     }}
-#                 }}
-#             </style>
-#         </head>
-#         <body>
-#             <div class="invoice-container">
-#                 <div class="header">
-#                     <h1 id="header-title">INVOICE</h1>
-#                     <div class="logo">
-#                         <img src="http://122.176.232.35:8008/media/spero.png" alt="Logo">
-#                     </div>
-#                 </div>
+                    /* Ensure proper font sizes for print */
+                    h1, h2, h3, h4, h5, h6, p, td, th {{
+                        font-size: 12pt;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="invoice-container">
+                <div class="header">
+                    <h1 id="header-title">INVOICE</h1>
+                    <div class="logo">
+                        <img src="http://testhhc.hospitalguru.in:8090/media/spero.png" alt="Logo">
+                    </div>
+                </div>
 
-#                 <div class="E_details">
-#                     <div class="event_d">
-#                         <div><strong>Event ID:</strong>  {invoice_data['eve_id']}</div>
-#                         <div><strong>Event Date:</strong>  {invoice_data['event_date']}</div>
-#                         <div id="last-updated"><strong>Last Updated:</strong>
-#                         # {invoice_data['last_modified_date']}
-#                         </div>
-#                     </div>
-#                     <div class="bill_d">
-#                         <div><strong>BILL DETAILS</strong></div>
-#                         <div><strong>Invoice ID:</strong> DMHHC/{invoice_data['years_range']}/{invoice_data['invoice_id']}</div>
-#                         <div><strong>Date:</strong>{invoice_data['event_date']}</div>
-#                     </div>
-#                 </div>
+                <div class="E_details">
+                    <div class="event_d">
+                        <div><strong>Event ID:</strong>  {invoice_data['eve_id']}</div>
+                        <div><strong>Event Date:</strong>  {invoice_data['event_date']}</div>
+                        <div id="last-updated"><strong>Last Updated:</strong>
+                        # {invoice_data['last_modified_date']}
+                        </div>
+                    </div>
+                    <div class="bill_d">
+                        <div><strong>BILL DETAILS</strong></div>
+                        <div><strong>Invoice ID:</strong> DMHHC/{invoice_data['years_range']}/{invoice_data['invoice_id']}</div>
+                        <div><strong>Date:</strong>{invoice_data['event_date']}</div>
+                    </div>
+                </div>
 
-#                 <hr/>
-#                 <div class="section-title">PATIENT DETAILS</div>
-#                 <div class="details">
-#                     <div><strong>Name:</strong> {invoice_data['patient_name']}</div>
-#                     <div><strong>Mobile:</strong>{invoice_data['patient_number']}</div>
-#                     <div><strong>Residential Address:</strong>{invoice_data['patient_address']}</div>
-#                     <div><strong>Permanent Address:</strong> {invoice_data.get('patient_google_address', 'N/A')}</div>
-#                 </div>
+                <hr/>
+                <div class="section-title">PATIENT DETAILS</div>
+                <div class="details">
+                    <div><strong>Name:</strong> {invoice_data['patient_name']}</div>
+                    <div><strong>Mobile:</strong>{invoice_data['patient_number']}</div>
+                    <div><strong>Residential Address:</strong>{invoice_data['patient_address']}</div>
+                    <div><strong>Permanent Address:</strong> {invoice_data.get('patient_google_address', 'N/A')}</div>
+                </div>
 
-#                 <hr>
-#                 <div class="section-title">SERVICE DETAILS</div>
-#                 <div class="details">
-#                     <div><strong>Service:</strong>{invoice_data['service_name']}</div>
-#                     <div><strong>Sub Service:</strong> {invoice_data['sub_service_name']}</div>
-#                 </div>
+                <hr>
+                <div class="section-title">SERVICE DETAILS</div>
+                <div class="details">
+                    <div><strong>Service:</strong>{invoice_data['service_name']}</div>
+                    <div><strong>Sub Service:</strong> {invoice_data['sub_service_name']}</div>
+                </div>
 
-#                 <table>
-#                     <thead>
-#                         <tr>
-#                             <th>Professional Name</th>
-#                             <th>Sessions</th>
-#                             <th>Start Date</th>
-#                             <th>End Date</th>
-#                             <th>Amount (INR)</th>
-#                         </tr>
-#                     </thead>
-#                     <tbody>
-#                 """
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Professional Name</th>
+                            <th>Sessions</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Amount (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
 
-#         # Adding professional details
-#         for professional in invoice_data['professional_amount']:
-#             html_content += f"""
-#                     <tr>
-#                         <td>{professional['professional_name']}</td>
-#                         <td>{professional['sessions']}</td>
-#                         <td>{professional['start_date']}</td>
-#                         <td>{professional['end_date']}</td>
-#                         <td>&#8377;{professional['amount']}</td>
-#                     </tr>
-#             """
+        # Adding professional details
+        for professional in invoice_data['professional_amount']:
+            html_content += f"""
+                    <tr>
+                        <td>{professional['professional_name']}</td>
+                        <td>{professional['sessions']}</td>
+                        <td>{professional['start_date']}</td>
+                        <td>{professional['end_date']}</td>
+                        <td>&#8377;{professional['amount']}</td>
+                    </tr>
+            """
 
-#         html_content += f"""
-#                     </tbody>
-#                 </table>
+        html_content += f"""
+                    </tbody>
+                </table>
                 
             
              
-#                 <hr>
-#                 <div class="amt_details">
+                <hr>
+                <div class="amt_details">
 
-#                     <div class="title_amt">
-#                         <div><strong>Final Amount (INR):</strong></div>
-#                         <div><strong>Received Amount (INR):</strong></div>
-#                     </div>
+                    <div class="title_amt">
+                        <div><strong>Final Amount (INR):</strong></div>
+                        <div><strong>Received Amount (INR):</strong></div>
+                    </div>
 
-#                     <div class="amt">
-#                         <div>&#8377;{invoice_data['Final_amount']}</div>
-#                         <div id="amount-paid-display">&#8377;{invoice_data['amount_paid']}</div>
-#                     </div>
-#                     </div>
+                    <div class="amt">
+                        <div>&#8377;{invoice_data['Final_amount']}</div>
+                        <div id="amount-paid-display">&#8377;{invoice_data['amount_paid']}</div>
+                    </div>
+                    </div>
 
-#                 <div class="section-title">Declaration:</div>
-#                 <p>
-#                     We declare that this Bill shows the actual price of the services described and that all particulars
-#                     are true and correct.
-#                 </p>
+                <div class="section-title">Declaration:</div>
+                <p>
+                    We declare that this Bill shows the actual price of the services described and that all particulars
+                    are true and correct.
+                </p>
 
-#                 <div class="footer">
-#                     <div class="bank-details">
-#                         <strong>Company's Bank Detail:</strong>
-#                         <div>Bank Name: HDFC BANK</div>
-#                         <div>IFSC Code: HDFC0000007</div>
-#                         <div>Branch: Bhandarkar Road</div>
-#                         <div>Account: 50200010027418</div>
-#                     </div>
-#                     <div class="contact">
-#                         <div><strong>Phone:</strong> 7620400100</div>
-#                         <div><strong>Email:</strong>info@sperohealthcare.in</div>
-#                         <div><strong>Website:</strong> sperohealthcare.in</div>
-#                     </div>
-#                 </div>
-#                     <script>
+                <div class="footer">
+                    <div class="bank-details">
+                        <strong>Company's Bank Detail:</strong>
+                        <div>Bank Name: HDFC BANK</div>
+                        <div>IFSC Code: HDFC0000007</div>
+                        <div>Branch: Bhandarkar Road</div>
+                        <div>Account: 50200010027418</div>
+                    </div>
+                    <div class="contact">
+                        <div><strong>Phone:</strong> 7620400100</div>
+                        <div><strong>Email:</strong>info@sperohealthcare.in</div>
+                        <div><strong>Website:</strong> sperohealthcare.in</div>
+                    </div>
+                </div>
+                    <script>
     
-#                         document.addEventListener('DOMContentLoaded', function() {{
+                        document.addEventListener('DOMContentLoaded', function() {{
                         
-#                             const invoice_data = {{
-#                                 'last_modified_date': '2024-12-04T12:08:00' 
-#                             }};
+                            const invoice_data = {{
+                                'last_modified_date': '2024-12-04T12:08:00' 
+                            }};
 
                            
-#                             const lastModifiedDate = invoice_data['last_modified_date'];
+                            const lastModifiedDate = invoice_data['last_modified_date'];
                             
-#                             if (lastModifiedDate) {{
+                            if (lastModifiedDate) {{
                                
-#                                 const date = new Date(lastModifiedDate);
+                                const date = new Date(lastModifiedDate);
 
                               
-#                                 if (!isNaN(date)) {{
+                                if (!isNaN(date)) {{
                                   
-#                                     const formattedDate = date.toLocaleString('en-US', {{
-#                                         year: 'numeric',
-#                                         month: '2-digit',
-#                                         day: '2-digit',
-#                                         hour: '2-digit',
-#                                         minute: '2-digit',
-#                                         hour12: true
-#                                     }});
+                                    const formattedDate = date.toLocaleString('en-US', {{
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: true
+                                    }});
 
                                    
-#                                     document.getElementById('lastUpdated').textContent = formattedDate;
-#                                 }} else {{
-#                                     console.error('Invalid date format:', lastModifiedDate);
-#                                 }}
-#                             }} else {{
-#                                 console.error('Date not found in invoice_data.');
-#                             }}
-#                         }});
+                                    document.getElementById('lastUpdated').textContent = formattedDate;
+                                }} else {{
+                                    console.error('Invalid date format:', lastModifiedDate);
+                                }}
+                            }} else {{
+                                console.error('Date not found in invoice_data.');
+                            }}
+                        }});
                     
-#                     const amountPaid = {invoice_data['amount_paid']}; 
-#                     const headerTitle = document.getElementById('header-title');
+                    const amountPaid = {invoice_data['amount_paid']}; 
+                    const headerTitle = document.getElementById('header-title');
 
-#                     if (amountPaid === 0) {{
-#                         headerTitle.innerHTML = "PROFORMA INVOICE";
-#                     }} else {{
-#                         headerTitle.innerHTML = "INVOICE";
-#                     }}
-#                 </script>
-#             </body>
-#         </html>
-#         """
+                    if (amountPaid === 0) {{
+                        headerTitle.innerHTML = "PROFORMA INVOICE";
+                    }} else {{
+                        headerTitle.innerHTML = "INVOICE";
+                    }}
+                </script>
+            </body>
+        </html>
+        """
 
-#         # Use pdfkit to convert HTML to PDF
-#         return HttpResponse(html_content, content_type='text/html')
-#     except requests.exceptions.RequestException as e:
-#         return HttpResponse(f"Error fetching invoice data: {e}", status=500)
+        # Use pdfkit to convert HTML to PDF
+        return HttpResponse(html_content, content_type='text/html')
+    except requests.exceptions.RequestException as e:
+        return HttpResponse(f"Error fetching invoice data: {e}", status=500)
+    
+    
+    #--------------------------Professional Home Zone API ---------------------------------------
+    
+def get_active_professionals(request):
+    try:
+        # Query for active professionals
+        active_professionals = agg_hhc_service_professionals.objects.filter(
+            status=1, 
+            prof_registered=True, 
+            prof_interviewed=True, 
+            prof_doc_verified=True, 
+            professinal_status=4
+        )
+
+        # Prepare the response data
+        response_data = []
+        for professional in active_professionals:
+            # Correct the filter: remove the empty list and filter based on srv_id
+            sub_service = agg_hhc_sub_services.objects.filter(srv_id=professional.srv_id)
+            
+            # Prepare the response data for each professional
+            response_data.append({
+                "professional_id": professional.srv_prof_id,
+                "name": professional.prof_fullname,
+                "latitude": professional.lattitude,
+                "longitude": professional.langitude,
+                "zone_name": professional.prof_zone_id.Name if professional.prof_zone_id else None,
+                "phone": professional.work_phone_no,
+                "email": professional.email_id,
+                "service": professional.srv_id.service_title,
+                "sub_service": [sub.recommomded_service for sub in sub_service] if sub_service else None,  # Example for sub_service names, adjust as needed
+            })
+
+        # Return the response as JSON
+        return JsonResponse({"status": "success", "data": response_data}, safe=False, status=200)
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+class Ambulances(APIView):
+    def get(self, request, prof_id):
+        dat = ambulance.objects.filter(vendor=prof_id, status=1)
+        dt = AmbulanceSerializer(dat, many=True)
+        return Response(dt.data, status=status.HTTP_200_OK)
 
 
+
+class update_cl_eve(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, eve_id, cl_id):
+        clgref_id = get_prof(request)[3]
+        caller = agg_hhc_callers.objects.get(caller_id=cl_id)
+        eve = agg_hhc_events.objects.get(eve_id=eve_id)
+        eve.caller_id = caller
+        caller.remark = request.data.get('remark', caller.remark)  
+        # caller.caller_fullname=request.data.get('caller_fullname',caller.caller_fullname)
+        caller.last_modified_by = clgref_id
+        caller.save()
+        eve.save()
+
+        response_data = {
+            "updated_caller": {
+                "caller_id": caller.caller_id,
+                "remark": caller.remark,
+                "caller_fullname": caller.caller_fullname,
+                "last_modified_by": caller.last_modified_by,
+            }
+        }
+        
+        return Response(response_data)
+           
 
 
 
@@ -16914,7 +20192,7 @@ class update_sub_srv_eventwise(APIView):
                         all_dates.extend(get_dates_between(start_date, end_date))
                         all_dates=sorted(all_dates)
                     print(all_dates, "all_dates")
-                
+                    
                     print('hiii')
                     gdpc = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id = eve_id, status = 1)
                     if gdpc:
@@ -16955,43 +20233,21 @@ class update_sub_srv_eventwise(APIView):
                 ssi= agg_hhc_sub_services.objects.get(sub_srv_id=int(request.data.get('sub_srv_id')))
                 if epoc:
                     epoc.eve_id.Total_cost = int(request.data.get('Total_cost'))
-                    epoc.eve_id.discount_type = int(request.data.get('discount_type')) if request.data.get('discount_type') else None
-                    epoc.eve_id.discount_value = int(request.data.get('discount')) if request.data.get('discount') else 0
+                    epoc.eve_id.discount_type = int(request.data.get('discount_type'))
+                    epoc.eve_id.discount_value = int(request.data.get('discount'))
                     epoc.eve_id.final_amount = int(request.data.get('final_amount'))
                     epoc.eve_id.save()
                    
                     epoc.start_time = s_t
-                    epoc.initail_discount_value = int(request.data.get('discount')) if request.data.get('discount') else 0
+                    epoc.initail_discount_value = int(request.data.get('discount'))
                     epoc.end_time = e_t
                     epoc.sub_srv_id = ssi
                     # epoc.serivce_dates = all_dates
                     epoc.last_modified_by = 'abc'
                     epoc.save()
-                
-                else:
-                    return Response({'error':'event_plan of care not present'},status=status.HTTP_404_NOT_FOUND)
             
                 return Response({"msg":"Service details updated"}, status=status.HTTP_200_OK)
             else:
                 return Response({"msg":"Service not updated, Payment done"}, status=status.HTTP_409_CONFLICT)
         except Exception as e:
             return Response({"error":str(e)}, status=status.HTTP_409_CONFLICT)
-            
-class insurance_gen_dtl_api(APIView):
-    def get(self, request, patient_id):
-        get_insurance= agg_hhc_insurance_gen_dtl.objects.filter(ptn_id=patient_id, status=1)
-        get_insurance_serializer=get_insurance_serializer(get_insurance, many=True)
-        return Response({'insurances':get_insurance_serializer.data})
-    
-class insurance_gen_ptn_api(APIView):
-    def get(self, request, patient_id):
-        get_insurance= agg_hhc_insurance_gen_dtl.objects.values('ptn_id').distinct()
-        get_insurance_serializer=get_insurance_serializer(get_insurance, many=True)
-        return Response({'insurances':get_insurance_serializer.data})
-    
-
-
-
-
-
-

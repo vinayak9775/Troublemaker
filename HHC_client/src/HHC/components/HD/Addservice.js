@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { Alert, Snackbar, useMediaQuery, Checkbox, Modal, FormControlLabel, Box, MenuItem, TextField, Paper, Grid, Typography, Card, CardContent, Stack, Button, InputBase } from '@mui/material';
@@ -21,6 +21,7 @@ import Footer from '../../Footer';
 import Header from '../../Header';
 import moment from 'moment';
 import dayjs from "dayjs";
+import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 
 const Item = styled(Paper)(({ theme }) => ({
     backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -62,6 +63,9 @@ const discount = [
         label: 'Coupon',
     },
 ];
+
+const libraries = ['places'];
+
 const calculateDateCount = (start, end) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
@@ -150,7 +154,7 @@ const Addservice = () => {
     const [selectedSubService, setSelectedSubService] = useState(
         // enqToServiceSrv.sub_srv_id
         //     ? enqToServiceSrv.sub_srv_id.sub_srv_id
-        //     : 
+        // : 
         srvExtendSrv.sub_srv_id
             ? srvExtendSrv.sub_srv_id.sub_srv_id
             : ''
@@ -260,6 +264,40 @@ const Addservice = () => {
         } else {
             setOpenQuestions(false);
             setShowError('');
+        }
+    };
+
+    const [selectedPlace, setSelectedPlace] = useState(null);
+
+    const { isLoaded } = useJsApiLoader({
+        googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+        libraries: libraries,
+    });
+
+    const addressRef = useRef();
+
+    const handlePlaceChanged = () => {
+        console.log("place select function hitting...");
+        if (addressRef.current) {
+            const place = addressRef.current.getPlace();
+            setSelectedPlace(place);
+            // setSelectedPlace(place.formatted_address);
+            console.log("place select...", place.formatted_address);
+
+            // Access latitude and longitude
+            const { lat, lng } = place.geometry.location;
+
+            const formattedLat = parseFloat(lat().toFixed(6));
+            const formattedLng = parseFloat(lng().toFixed(6));
+
+            // setLat(lat());
+            // setLong(lng());
+            setGisAddress(place.formatted_address);
+
+            setLat(formattedLat);
+            setLong(formattedLng);
+            console.log('Latitude:', formattedLat);
+            console.log('Longitude:', formattedLng);
         }
     };
 
@@ -486,7 +524,7 @@ const Addservice = () => {
     }, [values, enqToServiceSrv]);
 
     console.log('Selected Date vlaues:', values);
-    console.log("Rendering DatePicker with values:", selectedDates);
+    console.log('Selected Date Range:', selectedDates);
     console.log('Selected Dates count:', dateCount);
 
     const handleFieldEdit = (field, value) => {
@@ -559,7 +597,6 @@ const Addservice = () => {
 
     useEffect(() => {
         setEditedPreCaller({ ...callerDetails });
-        // setSelectedPatient({ ...selectedPatient });
     }, [callerDetails]);
 
     const handleFieldChange = (field, value) => {
@@ -1120,6 +1157,9 @@ const Addservice = () => {
                     : null
         );
 
+        // setStartDate(enqToServiceSrv ? enqToServiceSrv.start_date : '');
+        // setEndDate(enqToServiceSrv ? enqToServiceSrv.end_date : '');
+
         setValues(enqToServiceSrv ? enqToServiceSrv.serivce_dates : []);
         setSelectedDates(enqToServiceSrv ? enqToServiceSrv.service_dates : []);
         // setSelectedDates(enqToServiceSrv ? enqToServiceSrv.serivce_dates : []);
@@ -1128,6 +1168,7 @@ const Addservice = () => {
         setEndTime(enqToServiceSrv ? enqToServiceSrv.end_time : '');
         // setGetCost(enqToServicePay ? enqToServicePay.Total_cost : '')
 
+        // setGetCost(enqToServiceSrv.sub_srv_id ? enqToServiceSrv.sub_srv_id.cost : '')
         setGetCost(enqToServiceSrv.sub_srv_id
             ? enqToServiceSrv.sub_srv_id.cost
             : srvExtendSrv.sub_srv_id
@@ -1420,7 +1461,7 @@ const Addservice = () => {
         if (selectedSubService) {
             setSelectedSubService(subServiceId);
             // setGetCost(selectedSubService.cost);
-            if (selectedService === 12) {
+            if (selectedService === 10) {
                 setGetCost(medTransAmt);
             } else {
                 setGetCost(selectedSubService.cost);
@@ -1502,44 +1543,6 @@ const Addservice = () => {
             setSelectedQuestions([]);
         }
     };
-
-    //Calculate Sub Service cost with dates
-    // useEffect(() => {
-    //     const calculateTotalAmount = async () => {
-    //         const effectiveDateCount = selectedService === 11 ? 1 : dateCount;
-    //         if (getCost && effectiveDateCount) {
-    //             // if (selectedSubService && startDate && endDate && lat && long) {
-    //             console.log("Cost, Dates.....", getCost, effectiveDateCount);
-    //             try {
-    //                 // const url = `${port}/web/calculate_total_amount/${getCost}/${startDate}/${endDate}/?latitude=${lat}&longitude=${long}`;
-    //                 // const url = `${port}/web/calculate_total_amount/${getCost}/${startDate}/${endDate}/`;
-    //                 const url = `${port}/web/calculate_total_amount/${getCost}/${effectiveDateCount}/`;
-    //                 const res = await fetch(url, {
-    //                     method: 'GET',
-    //                     headers: {
-    //                         'Authorization': `Bearer ${accessToken}`,
-    //                         'Content-Type': 'application/json',
-    //                     },
-    //                 });
-    //                 const data = await res.json();
-    //                 console.log("Calculated Service Cost datewise.....", data.days_difference);
-    //                 const total = data.days_difference + data.total_convinance;
-    //                 setCalculatedAmount(data.days_difference);
-    //                 setConvenience(data.total_convinance);
-    //                 setDayConvenience(data.day_convinance);
-    //                 // setTotalAmount(total);
-
-    //                 setEnqToServicePay(prevState => ({
-    //                     ...prevState,
-    //                     final_amount: data.days_difference,
-    //                 }));
-    //             } catch (error) {
-    //                 console.error("Error fetching Calculated Amount:", error);
-    //             }
-    //         }
-    //     };
-    //     calculateTotalAmount();
-    // }, [getCost, dateCount, calculatedAmount]);
 
     //Calculate Sub Service cost with dates
     useEffect(() => {
@@ -1645,7 +1648,7 @@ const Addservice = () => {
     }, [calculatedAmount, selectedDiscountId, discountValue, selectedCouponType, couponValue]);
 
     useEffect(() => {
-        if (selectedService === 12 && medTransAmt && dateCount > 0) {
+        if (selectedService === 10 && medTransAmt && dateCount > 0) {
             setCalculatedAmount(parseInt(medTransAmt, 10) * dateCount);
         } else {
             setCalculatedAmount("");
@@ -1708,7 +1711,7 @@ const Addservice = () => {
         const patient = patientDetails.find((patient) => patient.agg_sp_pt_id === selectedPatientId);
         setSelectedPatient(patient);
         setSelectedPatientID(patient.agg_sp_pt_id);
-        console.log('Selected Patientttttttttttt....:', patient);
+        console.log('Selected Patient....:', patient);
     };
 
     useEffect(() => {
@@ -1930,12 +1933,12 @@ const Addservice = () => {
         } else {
             hasEmptyFields = handleEmptyField();
         }
-        // if (hasEmptyFields) {
-        //     setOpenSnackbar(true);
-        //     setSnackbarMessage('Please fill all * mark field.');
-        //     setSnackbarSeverity('error');
-        //     return;
-        // }
+        if (hasEmptyFields) {
+            setOpenSnackbar(true);
+            setSnackbarMessage('Please fill all * mark field.');
+            setSnackbarSeverity('error');
+            return;
+        }
         let successMessage = '';
         if (actionType === 'CreateService') {
             successMessage = 'Your form received successfully.';
@@ -1957,7 +1960,7 @@ const Addservice = () => {
             Total_cost: calculatedAmount,
             // Total_cost: totalCostValue,
             discount_type: selectedDiscountId === 6 ? 1 : selectedDiscountId,
-            discount_value: selectedDiscountId === 6 ? couponValue : discountValue,
+            discount_value: discountValue,
             final_amount: totalDiscount,
             final_amount: selectedDiscountId === 3 ? 0 : totalDiscount || calculatedAmount,
             coupon_id: selectedCoupon,
@@ -2007,8 +2010,9 @@ const Addservice = () => {
             requestData.city_id = enqToServicePtn.city_id ? enqToServicePtn.city_id.city_id : selectedCity;
             requestData.prof_zone_id = enqToServicePtn.prof_zone_id ? enqToServicePtn.prof_zone_id.prof_zone_id : selectedZone;
             requestData.pincode = pincode;
-            requestData.google_address = enqToServicePtn.google_address;
+            // requestData.google_address = enqToServicePtn.google_address;
             requestData.address = enqToServicePtn.address;
+            requestData.google_address = gisAddress;
             requestData.lattitude = enqToServicePtn.lattitude ? enqToServicePtn.lattitude : lat;
             requestData.langitude = enqToServicePtn.langitude ? enqToServicePtn.langitude : long;
             // requestData.Total_cost = enqToServicePay.Total_cost ? enqToServicePay.Total_cost : calculatedAmount;
@@ -2045,8 +2049,9 @@ const Addservice = () => {
             requestData.city_id = srvExtendPtn.city_id ? srvExtendPtn.city_id.city_id : selectedCity;
             requestData.prof_zone_id = srvExtendPtn.prof_zone_id ? srvExtendPtn.prof_zone_id.id : selectedZone;
             requestData.pincode = pincode;
-            requestData.google_address = srvExtendPtn.google_address;
+            // requestData.google_address = srvExtendPtn.google_address;
             requestData.address = srvExtendPtn.address;
+            requestData.google_address = gisAddress;
             requestData.lattitude = srvExtendPtn.lattitude ? srvExtendPtn.lattitude : lat;
             requestData.langitude = srvExtendPtn.langitude ? srvExtendPtn.langitude : long;
         } else if (selectedPatient) {
@@ -2066,8 +2071,9 @@ const Addservice = () => {
             requestData.city_id = selectedCity;
             requestData.prof_zone_id = selectedPatient.zone.prof_zone_id;
             requestData.pincode = selectedPatient.pincode;
-            requestData.google_address = selectedPatient.google_address;
+            // requestData.google_address = selectedPatient.google_address;
             requestData.address = selectedPatient.address;
+            requestData.google_address = gisAddress;
             requestData.lattitude = selectedPatient.lattitude;
             requestData.langitude = selectedPatient.langitude;
             // requestData.day_convinance = dayConvinance;
@@ -2133,22 +2139,16 @@ const Addservice = () => {
             requestData.end_time = endTime;
             requestData.prof_prefered = selectedProfGender;
             requestData.remark = remark;
-            requestData.Total_cost = selectedService === 12 ? medTransAmt*dateCount : calculatedAmount;
-        //    requestData.Total_cost = selectedService === 12 ? medTransAmt : calculatedAmount;
+            // requestData.Total_cost = calculatedAmount;
+            requestData.Total_cost = selectedService === 12 ? medTransAmt * dateCount : calculatedAmount;
             requestData.discount_type = selectedDiscountId === 6 ? 1 : selectedDiscountId;
-            requestData.discount_value = selectedDiscountId === 6 ? couponValue : discountValue;
+            requestData.discount_value = discountValue;
             requestData.coupon_id = selectedCoupon;
             // requestData.final_amount = totalCostValue;
             // requestData.final_amount = totalDiscount;
             requestData.final_amount = selectedDiscountId === 3 ? 0 : totalDiscount || calculatedAmount;
         }
         console.log("POST API Hitting......", requestData)
-        if (hasEmptyFields) {
-            setOpenSnackbar(true);
-            setSnackbarMessage('Please fill all * mark field.');
-            setSnackbarSeverity('error');
-            return;
-        }
         try {
             let apiUrl = `${port}/web/agg_hhc_add_service_details_api/`;
 
@@ -3196,14 +3196,12 @@ const Addservice = () => {
                                                                 },
                                                             }}
                                                         >
-                                                            {zone
-                                                                .filter(option => option.Name !== "All")
-                                                                .map((option) => (
-                                                                    <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
-                                                                        sx={{ fontSize: "14px" }}>
-                                                                        {option.Name}
-                                                                    </MenuItem>
-                                                                ))}
+                                                            {zone.map((option) => (
+                                                                <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
+                                                                    sx={{ fontSize: "14px" }}>
+                                                                    {option.Name}
+                                                                </MenuItem>
+                                                            ))}
                                                         </TextField>
                                                     </Grid>
 
@@ -3235,7 +3233,7 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={6} sm={6} xs={12}>
-                                                <TextField
+                                                {/* <TextField
                                                     required
                                                     label="GIS Address"
                                                     id="google_address"
@@ -3252,9 +3250,69 @@ const Addservice = () => {
                                                             fontSize: '14px',
                                                         },
                                                     }}
-                                                />
+                                                /> */}
+
+                                                {/* {isLoaded && (
+                                                    <Autocomplete onLoad={addressRef.current && handlePlaceChanged}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="GIS Address"
+                                                            ref={addressRef}
+                                                            className="form-control"
+                                                            style={{
+                                                                boxSizing: `border-box`,
+                                                                border: `1px solid transparent`,
+                                                                width: `240px`,
+                                                                height: `32px`,
+                                                                padding: `0 12px`,
+                                                                borderRadius: `3px`,
+                                                                boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+                                                                fontSize: `14px`,
+                                                                outline: `none`,
+                                                                textOverflow: `ellipsis`,
+                                                            }}
+                                                        />
+                                                    </Autocomplete>
+                                                )} */}
+                                                {isLoaded && (
+                                                    // <Autocomplete onLoad={addressRef.current} onPlaceChanged={handlePlaceChanged}>
+                                                    <Autocomplete
+                                                        onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                                                        onPlaceChanged={handlePlaceChanged}
+                                                    >
+                                                        {/* <input
+                                                            type="text"
+                                                            placeholder="GIS Address"
+                                                            name="google_address"
+                                                            value={gisAddress}
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            className="form-control"
+                                                        /> */}
+                                                        <TextField
+                                                            required
+                                                            // select
+                                                            label="GIS Address"
+                                                            id="google_address"
+                                                            name="google_address"
+                                                            placeholder='Search Address..'
+                                                            size="small"
+                                                            fullWidth
+                                                            value={gisAddress}
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            error={!!errors.gisAddress}
+                                                            helperText={errors.gisAddress}
+                                                            sx={{
+                                                                '& input': {
+                                                                    fontSize: '14px',
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Autocomplete>
+                                                )}
                                             </Grid>
-                                            <Grid item lg={6} sm={6} xs={12}>
+                                            {/* <Grid item lg={6} sm={6} xs={12}>
                                                 <Grid container spacing={1}>
                                                     <Grid item xs={6}>
                                                         <TextField
@@ -3311,9 +3369,9 @@ const Addservice = () => {
                                                         />
                                                     </Grid>
                                                 </Grid>
-                                            </Grid>
+                                            </Grid> */}
 
-                                            <Grid item lg={12} sm={12} xs={12}>
+                                            <Grid item lg={6} sm={6} xs={6}>
                                                 <TextField
                                                     required
                                                     label="Manual Address"
@@ -3413,7 +3471,7 @@ const Addservice = () => {
                                                                     name="Age"
                                                                     size="small"
                                                                     fullWidth
-                                                                    value={selectedPatient ? selectedPatient.Age : age}
+                                                                    defaultValue={selectedPatient ? selectedPatient.Age : age}
                                                                     onChange={(e) => selectedPatient ? handleFieldEdit("Age", e.target.value) : handleAgeValidation(e)}
                                                                     error={!selectedPatient.Age ? false : !!validationMessage || !!errors.age}
                                                                     helperText={selectedPatient.Age ? '' : validationMessage || errors.age}
@@ -3453,9 +3511,9 @@ const Addservice = () => {
                                                                     fontSize: '14px',
                                                                 },
                                                             }}
-                                                            // InputLabelProps={{
-                                                            //     shrink: true,
-                                                            // }}
+                                                            InputLabelProps={{
+                                                                shrink: true,
+                                                            }}
                                                             SelectProps={{
                                                                 MenuProps: {
                                                                     PaperProps: {
@@ -3466,8 +3524,6 @@ const Addservice = () => {
                                                                     },
                                                                 },
                                                             }}
-                                                            error={selectedPatient.preferred_hosp.hospital_name === '' && !selectedHospital || !!errors.selectedHospital}
-                                                            helperText={selectedPatient.preferred_hosp.hospital_name === '' && !selectedHospital ? 'Hospital is required' : errors.selectedHospital || ''}
                                                         >
                                                             {referHospital.map((option) => (
                                                                 <MenuItem key={option.hosp_id} value={option.hosp_id}
@@ -3486,7 +3542,7 @@ const Addservice = () => {
                                                             name="Suffered_from"
                                                             placeholder='Remark'
                                                             type="textarea"
-                                                            value={selectedPatient ? selectedPatient.Suffered_from : suffered}
+                                                            defaultValue={selectedPatient ? selectedPatient.Suffered_from : suffered}
                                                             onChange={(e) => selectedPatient ? handleFieldEdit("Suffered_from", e.target.value) : setSuffered(e.target.value)}
                                                             size="small"
                                                             fullWidth
@@ -3534,7 +3590,7 @@ const Addservice = () => {
                                                                     id="patient_email_id"
                                                                     name="patient_email_id"
                                                                     placeholder='example@gmail.com'
-                                                                    value={selectedPatient.patient_email_id ? selectedPatient.patient_email_id : email}
+                                                                    defaultValue={selectedPatient ? selectedPatient.patient_email_id : email}
                                                                     onChange={(e) => selectedPatient ? handleFieldEdit("patient_email_id", e.target.value) : handleEmailChange}
                                                                     size="small"
                                                                     fullWidth
@@ -3543,8 +3599,9 @@ const Addservice = () => {
                                                                             fontSize: '14px',
                                                                         },
                                                                     }}
-                                                                    error={selectedPatient.patient_email_id === null && !email || !!errors.email}
-                                                                    helperText={selectedPatient.patient_email_id === null && !email ? 'Email is required' : errors.email || ''}
+                                                                    InputLabelProps={{
+                                                                        shrink: true,
+                                                                    }}
                                                                 />
                                                             </Grid>
                                                         </Grid>
@@ -3563,6 +3620,8 @@ const Addservice = () => {
                                                                     fullWidth
                                                                     value={selectedPatient ? selectedPatient.doct_cons.doct_cons_id : selectedConsultant}
                                                                     onChange={(e) => selectedPatient ? handleFieldEdit("doct_cons_id", e.target.value) : handleDropdownConsultant}
+                                                                    // defaultValue={selectedConsultant}
+                                                                    // onChange={handleDropdownConsultant}
                                                                     sx={{
                                                                         textAlign: "left",
                                                                         '& input': {
@@ -3579,8 +3638,6 @@ const Addservice = () => {
                                                                             },
                                                                         },
                                                                     }}
-                                                                    error={selectedPatient.doct_cons.cons_fullname === '' && !selectedConsultant || !!errors.selectedConsultant}
-                                                                    helperText={selectedPatient.doct_cons.cons_fullname === '' && !selectedConsultant ? 'Consultant is required' : errors.selectedConsultant || ''}
                                                                 >
                                                                     {consultant.map((option) => (
                                                                         <MenuItem key={option.doct_cons_id} value={option.doct_cons_id}
@@ -3630,6 +3687,8 @@ const Addservice = () => {
                                                                     onChange={(e) => setSelectedState(e.target.value)}
                                                                     size="small"
                                                                     fullWidth
+                                                                    // error={!!errors.selectedState}
+                                                                    // helperText={errors.selectedState}
                                                                     error={selectedPatient ? false : !!errors.selectedState}
                                                                     helperText={selectedPatient ? '' : errors.selectedState}
                                                                     sx={{
@@ -3670,6 +3729,8 @@ const Addservice = () => {
                                                                     onChange={(e) => setSelectedCity(e.target.value)}
                                                                     size="small"
                                                                     fullWidth
+                                                                    // error={!!errors.selectedCity}
+                                                                    // helperText={errors.selectedCity}
                                                                     sx={{
                                                                         textAlign: "left", '& input': {
                                                                             fontSize: '14px',
@@ -3706,10 +3767,12 @@ const Addservice = () => {
                                                                     id="prof_zone_id"
                                                                     name="prof_zone_id"
                                                                     select
-                                                                    value={selectedPatient ? selectedPatient.zone.prof_zone_id : selectedZone}
+                                                                    defaultValue={selectedPatient ? selectedPatient.zone.prof_zone_id : selectedZone}
                                                                     onChange={(e) => selectedPatient ? handleFieldEdit("prof_zone_id", e.target.value) : setSelectedZone(e.target.value)}
                                                                     size="small"
                                                                     fullWidth
+                                                                    // error={!!errors.selectedZone}
+                                                                    // helperText={errors.selectedZone}
                                                                     sx={{
                                                                         textAlign: "left", '& input': {
                                                                             fontSize: '14px',
@@ -3725,8 +3788,6 @@ const Addservice = () => {
                                                                             },
                                                                         },
                                                                     }}
-                                                                    error={selectedPatient.zone.Name === '' && !selectedZone || !!errors.selectedZone}
-                                                                    helperText={selectedPatient.zone.Name === '' && !selectedZone ? 'Zone is required' : errors.selectedZone || ''}
                                                                 >
                                                                     {zone.map((option) => (
                                                                         <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
@@ -3734,6 +3795,20 @@ const Addservice = () => {
                                                                             {option.Name}
                                                                         </MenuItem>
                                                                     ))}
+                                                                    {/* {!selectedPatient && (
+                                                                        <>
+                                                                            {zone.map((option) => (
+                                                                                <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}>
+                                                                                    {option.Name}
+                                                                                </MenuItem>
+                                                                            ))}
+                                                                        </>
+                                                                    )} */}
+                                                                    {/* {selectedPatient && selectedPatient.zone && (
+                                                                        <MenuItem value={selectedPatient.zone.prof_zone_id}>
+                                                                            {selectedPatient.zone.Name}
+                                                                        </MenuItem>
+                                                                    )} */}
                                                                 </TextField>
                                                             </Grid>
 
@@ -3743,7 +3818,7 @@ const Addservice = () => {
                                                                     label="Pincode"
                                                                     placeholder='Pincode'
                                                                     name="pincode"
-                                                                    value={selectedPatient.pincode ? selectedPatient.pincode : pincode}
+                                                                    value={selectedPatient ? selectedPatient.pincode : pincode}
                                                                     onChange={(e) => selectedPatient ? handleFieldEdit("pincode", e.target.value) : handlePincodeChange}
                                                                     size="small"
                                                                     fullWidth
@@ -3753,9 +3828,6 @@ const Addservice = () => {
                                                                             fontSize: '14px',
                                                                         },
                                                                     }}
-                                                                    InputLabelProps={{
-                                                                        shrink: true,
-                                                                    }}
                                                                     error={Boolean(pincodeError)}
                                                                     helperText={pincodeError}
                                                                 />
@@ -3764,7 +3836,7 @@ const Addservice = () => {
                                                     </Grid>
 
                                                     <Grid item lg={6} sm={6} xs={12}>
-                                                        <TextField
+                                                        {/* <TextField
                                                             required
                                                             label="GIS Address"
                                                             id="google_address"
@@ -3772,19 +3844,49 @@ const Addservice = () => {
                                                             placeholder='House No,Building,Street,Area'
                                                             size="small"
                                                             fullWidth
-                                                            value={selectedPatient.google_address ? selectedPatient.google_address : gisAddress}
+                                                            defaultValue={selectedPatient ? selectedPatient.google_address : gisAddress}
                                                             onChange={(e) => selectedPatient ? handleFieldEdit("google_address", e.target.value) : setGisAddress(e.target.value)}
-                                                            error={selectedPatient.google_address === null && !gisAddress || !!errors.gisAddress}
-                                                            helperText={selectedPatient.google_address === null && !gisAddress ? 'Address is required' : errors.gisAddress || ''}
+                                                            // error={!!errors.address}
+                                                            // helperText={errors.address}
                                                             sx={{
                                                                 '& input': {
                                                                     fontSize: '14px',
                                                                 },
                                                             }}
-                                                        />
+                                                        /> */}
+
+                                                        {isLoaded && (
+                                                            <Autocomplete
+                                                                onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                                                                onPlaceChanged={handlePlaceChanged}
+                                                            >
+                                                                <TextField
+                                                                    required
+                                                                    // select
+                                                                    label="GIS Address"
+                                                                    id="google_address"
+                                                                    name="google_address"
+                                                                    placeholder='Search Address..'
+                                                                    size="small"
+                                                                    fullWidth
+                                                                    // value={selectedPatient ? selectedPatient.google_address : gisAddress}
+                                                                    // onChange={(e) => selectedPatient ? handleFieldEdit("google_address", e.target.value) : setGisAddress(e.target.value)}
+                                                                    value={gisAddress}
+                                                                    onChange={(e) => setGisAddress(e.target.value)}
+                                                                    ref={addressRef}
+                                                                    error={!!errors.gisAddress}
+                                                                    helperText={errors.gisAddress}
+                                                                    sx={{
+                                                                        '& input': {
+                                                                            fontSize: '14px',
+                                                                        },
+                                                                    }}
+                                                                />
+                                                            </Autocomplete>
+                                                        )}
                                                     </Grid>
 
-                                                    <Grid item lg={6} sm={6} xs={12}>
+                                                    {/* <Grid item lg={6} sm={6} xs={12}>
                                                         <Grid container spacing={1}>
                                                             <Grid item xs={6}>
                                                                 <TextField
@@ -3795,7 +3897,7 @@ const Addservice = () => {
                                                                     size="small"
                                                                     fullWidth
                                                                     // value={lat}
-                                                                    value={selectedPatient.lattitude ? selectedPatient.lattitude : lat}
+                                                                    value={selectedPatient ? selectedPatient.lattitude : lat}
                                                                     onChange={(event) => {
                                                                         const value = event.target.value;
                                                                         if (!/^-?\d{0,2}(?:\.\d{0,6})?$/.test(value)) {
@@ -3815,9 +3917,8 @@ const Addservice = () => {
                                                                             fontSize: '14px',
                                                                         },
                                                                     }}
-                                                                    InputLabelProps={{
-                                                                        shrink: true,
-                                                                    }}
+                                                                    // error={!!errors.lat}
+                                                                    // helperText={errors.lat}
                                                                     error={selectedPatient.lattitude === null && !lat || !!errors.lat}
                                                                     helperText={selectedPatient.lattitude === null && !lat ? 'Lattitude is required' : errors.lat || ''}
                                                                 />
@@ -3830,7 +3931,7 @@ const Addservice = () => {
                                                                     name="long"
                                                                     size="small"
                                                                     fullWidth
-                                                                    value={selectedPatient.langitude ? selectedPatient.langitude : long}
+                                                                    value={selectedPatient ? selectedPatient.langitude : long}
                                                                     onChange={(event) => {
                                                                         const value = event.target.value;
                                                                         if (!/^-?\d{0,2}(?:\.\d{0,6})?$/.test(value)) {
@@ -3852,17 +3953,14 @@ const Addservice = () => {
                                                                             fontSize: '14px',
                                                                         },
                                                                     }}
-                                                                    InputLabelProps={{
-                                                                        shrink: true,
-                                                                    }}
                                                                     error={selectedPatient.langitude === null && !long || !!errors.long}
                                                                     helperText={selectedPatient.langitude === null && !long ? 'Longitude is required' : errors.long || ''}
                                                                 />
                                                             </Grid>
                                                         </Grid>
-                                                    </Grid>
+                                                    </Grid> */}
 
-                                                    <Grid item lg={12} sm={12} xs={12}>
+                                                    <Grid item lg={6} sm={6} xs={6}>
                                                         <TextField
                                                             required
                                                             label="Manual Address"
@@ -3871,10 +3969,10 @@ const Addservice = () => {
                                                             placeholder='House No,Building,Street,Area'
                                                             size="small"
                                                             fullWidth
-                                                            value={selectedPatient.address ? selectedPatient.address : address}
+                                                            defaultValue={selectedPatient ? selectedPatient.address : address}
                                                             onChange={(e) => selectedPatient ? handleFieldEdit("address", e.target.value) : setAddress(e.target.value)}
-                                                            error={selectedPatient.address === null && !address || !!errors.address}
-                                                            helperText={selectedPatient.address === null && !address ? 'Address is required' : errors.address || ''}
+                                                            // error={!!errors.address}
+                                                            // helperText={errors.address}
                                                             sx={{
                                                                 '& input': {
                                                                     fontSize: '14px',
@@ -4342,7 +4440,7 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={6} sm={6} xs={12}>
-                                                <TextField
+                                                {/* <TextField
                                                     required
                                                     label="GIS Address"
                                                     id="google_address"
@@ -4359,10 +4457,52 @@ const Addservice = () => {
                                                             fontSize: '14px',
                                                         },
                                                     }}
-                                                />
+                                                /> */}
+
+                                                {isLoaded && (
+                                                    // <Autocomplete onLoad={addressRef.current} onPlaceChanged={handlePlaceChanged}>
+                                                    <Autocomplete
+                                                        onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                                                        onPlaceChanged={handlePlaceChanged}
+                                                    >
+                                                        {/* <input
+                                                            type="text"
+                                                            placeholder="GIS Address"
+                                                            name="google_address"
+                                                            value={gisAddress} 
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            className="form-control"
+                                                        /> */}
+                                                        <TextField
+                                                            required
+                                                            // select
+                                                            label="GIS Address"
+                                                            id="google_address"
+                                                            name="google_address"
+                                                            placeholder='Search Address..'
+                                                            size="small"
+                                                            fullWidth
+                                                            value={gisAddress}
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            // value={enqToServicePtn ? enqToServicePtn.google_address : gisAddress}
+                                                            // onChange={(e) => enqToServicePtn ? handleFieldChange("google_address", e.target.value) : setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            error={!!errors.gisAddress}
+                                                            helperText={errors.gisAddress}
+                                                            // error={enqToServicePtn ? false : !!errors.gisAddress}
+                                                            // helperText={enqToServicePtn ? '' : errors.gisAddress}
+                                                            sx={{
+                                                                '& input': {
+                                                                    fontSize: '14px',
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Autocomplete>
+                                                )}
                                             </Grid>
 
-                                            <Grid item lg={6} sm={6} xs={12}>
+                                            {/* <Grid item lg={6} sm={6} xs={12}>
                                                 <Grid container spacing={1}>
                                                     <Grid item xs={6}>
                                                         <TextField
@@ -4458,9 +4598,9 @@ const Addservice = () => {
                                                         />
                                                     </Grid>
                                                 </Grid>
-                                            </Grid>
+                                            </Grid> */}
 
-                                            <Grid item lg={12} sm={12} xs={12}>
+                                            <Grid item lg={6} sm={6} xs={6}>
                                                 <TextField
                                                     required
                                                     label="Manual Address"
@@ -4930,7 +5070,7 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={6} sm={6} xs={12}>
-                                                <TextField
+                                                {/* <TextField
                                                     required
                                                     label="GIS Address"
                                                     id="google_address"
@@ -4947,10 +5087,52 @@ const Addservice = () => {
                                                             fontSize: '14px',
                                                         },
                                                     }}
-                                                />
+                                                /> */}
+
+                                                {isLoaded && (
+                                                    // <Autocomplete onLoad={addressRef.current} onPlaceChanged={handlePlaceChanged}>
+                                                    <Autocomplete
+                                                        onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                                                        onPlaceChanged={handlePlaceChanged}
+                                                    >
+                                                        {/* <input
+                                                            type="text"
+                                                            placeholder="GIS Address"
+                                                            name="google_address"
+                                                            value={gisAddress} 
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            className="form-control"
+                                                        /> */}
+                                                        <TextField
+                                                            required
+                                                            // select
+                                                            label="GIS Address"
+                                                            id="google_address"
+                                                            name="google_address"
+                                                            placeholder='Search Address..'
+                                                            size="small"
+                                                            fullWidth
+                                                            value={gisAddress}
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            // value={enqToServicePtn ? enqToServicePtn.google_address : gisAddress}
+                                                            // onChange={(e) => enqToServicePtn ? handleFieldChange("google_address", e.target.value) : setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            error={!!errors.gisAddress}
+                                                            helperText={errors.gisAddress}
+                                                            // error={enqToServicePtn ? false : !!errors.gisAddress}
+                                                            // helperText={enqToServicePtn ? '' : errors.gisAddress}
+                                                            sx={{
+                                                                '& input': {
+                                                                    fontSize: '14px',
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Autocomplete>
+                                                )}
                                             </Grid>
 
-                                            <Grid item lg={6} sm={6} xs={12}>
+                                            {/* <Grid item lg={6} sm={6} xs={12}>
                                                 <Grid container spacing={1}>
                                                     <Grid item xs={6}>
                                                         <TextField
@@ -5036,9 +5218,9 @@ const Addservice = () => {
                                                         />
                                                     </Grid>
                                                 </Grid>
-                                            </Grid>
+                                            </Grid> */}
 
-                                            <Grid item lg={12} sm={12} xs={12}>
+                                            <Grid item lg={6} sm={6} xs={6}>
                                                 <TextField
                                                     required
                                                     label="Manual Address"
@@ -5494,14 +5676,12 @@ const Addservice = () => {
                                                                 },
                                                             }}
                                                         >
-                                                            {zone
-                                                                .filter(option => option.Name !== "All")
-                                                                .map((option) => (
-                                                                    <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
-                                                                        sx={{ fontSize: "14px" }}>
-                                                                        {option.Name}
-                                                                    </MenuItem>
-                                                                ))}
+                                                            {zone.map((option) => (
+                                                                <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
+                                                                    sx={{ fontSize: "14px" }}>
+                                                                    {option.Name}
+                                                                </MenuItem>
+                                                            ))}
                                                             {/* {enqToServicePtn.prof_zone_id ? (
                                                                 <MenuItem value={enqToServicePtn.prof_zone_id.prof_zone_id} sx={{ fontSize: "14px", }}>
                                                                     {enqToServicePtn.prof_zone_id.Name}
@@ -5539,7 +5719,7 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={6} sm={6} xs={12}>
-                                                <TextField
+                                                {/* <TextField
                                                     required
                                                     label="GIS Address"
                                                     id="google_address"
@@ -5559,10 +5739,52 @@ const Addservice = () => {
                                                             fontSize: '14px',
                                                         },
                                                     }}
-                                                />
+                                                /> */}
+
+                                                {isLoaded && (
+                                                    // <Autocomplete onLoad={addressRef.current} onPlaceChanged={handlePlaceChanged}>
+                                                    <Autocomplete
+                                                        onLoad={(autocomplete) => (addressRef.current = autocomplete)}
+                                                        onPlaceChanged={handlePlaceChanged}
+                                                    >
+                                                        {/* <input
+                                                            type="text"
+                                                            placeholder="GIS Address"
+                                                            name="google_address"
+                                                            value={gisAddress} 
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            className="form-control"
+                                                        /> */}
+                                                        <TextField
+                                                            required
+                                                            // select
+                                                            label="GIS Address"
+                                                            id="google_address"
+                                                            name="google_address"
+                                                            placeholder='Search Address..'
+                                                            size="small"
+                                                            fullWidth
+                                                            value={gisAddress}
+                                                            onChange={(e) => setGisAddress(e.target.value)}
+                                                            // value={enqToServicePtn ? enqToServicePtn.google_address : gisAddress}
+                                                            // onChange={(e) => enqToServicePtn ? handleFieldChange("google_address", e.target.value) : setGisAddress(e.target.value)}
+                                                            ref={addressRef}
+                                                            error={!!errors.gisAddress}
+                                                            helperText={errors.gisAddress}
+                                                            // error={enqToServicePtn ? false : !!errors.gisAddress}
+                                                            // helperText={enqToServicePtn ? '' : errors.gisAddress}
+                                                            sx={{
+                                                                '& input': {
+                                                                    fontSize: '14px',
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Autocomplete>
+                                                )}
                                             </Grid>
 
-                                            <Grid item lg={6} sm={6} xs={12}>
+                                            {/* <Grid item lg={6} sm={6} xs={12}>
                                                 <Grid container spacing={1}>
                                                     <Grid item xs={6}>
                                                         <TextField
@@ -5641,9 +5863,9 @@ const Addservice = () => {
                                                         />
                                                     </Grid>
                                                 </Grid>
-                                            </Grid>
+                                            </Grid> */}
 
-                                            <Grid item lg={12} sm={12} xs={12}>
+                                            <Grid item lg={6} sm={6} xs={6}>
                                                 <TextField
                                                     required
                                                     label="Manual Address"
@@ -5809,6 +6031,8 @@ const Addservice = () => {
                                                     size="small"
                                                     fullWidth
                                                     // multiple
+                                                    // error={!enqToServiceSrv.sub_srv_id || enqToServiceSrv.sub_srv_id.sub_srv_id === '' || !!errors.selectedSubService}
+                                                    // helperText={!enqToServiceSrv.sub_srv_id || enqToServiceSrv.sub_srv_id.sub_srv_id === '' ? 'Sub Service is required' : errors.selectedSubService}
 
                                                     // error={enqToServiceSrv.sub_srv_id === null && !selectedSubService || !!errors.selectedSubService}
                                                     // helperText={enqToServiceSrv.sub_srv_id === null && !selectedSubService ? 'Sub Service is required' : errors.selectedSubService || ''}
@@ -5984,10 +6208,6 @@ const Addservice = () => {
                                                     // onChange={handleDateChange}
                                                     // value={selectedDates}
                                                     onChange={handleSelectedDateChange}
-                                                    // onChange={(dates) => {
-                                                    //     setValues(dates); 
-                                                    //     setSelectedDates(dates); // Keep states in sync
-                                                    // }}
                                                     placeholder='  YYYY/MM/DD'
                                                     containerStyle={{
                                                         width: "100%"
@@ -6132,31 +6352,6 @@ const Addservice = () => {
                                                         ))}
                                                     </TextField>
                                                 )}
-                                                {/* <TextField
-                                                    id="prof_prefered"
-                                                    select
-                                                    name="prof_prefered"
-                                                    label="Preferred Professional"
-                                                    value={enqToServiceSrv.prof_prefered ? enqToServiceSrv.prof_prefered : selectedProfGender}
-                                                    onChange={(e) => enqToServiceSrv.prof_prefered ? handleFieldChange("prof_prefered", e.target.value) : handleDropdownProfGender(e)}
-                                                    size="small"
-                                                    fullWidth
-                                                    InputLabelProps={{
-                                                        shrink: true,
-                                                    }}
-                                                    sx={{
-                                                        textAlign: "left", '& input': {
-                                                            fontSize: '14px',
-                                                        },
-                                                    }}
-                                                >
-                                                    {profGender.map((option) => (
-                                                        <MenuItem key={option.gender_id} value={option.gender_id}
-                                                            sx={{ fontSize: "14px", }}>
-                                                            {option.name}
-                                                        </MenuItem>
-                                                    ))}
-                                                </TextField> */}
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
@@ -6463,31 +6658,6 @@ const Addservice = () => {
                                                         ))}
                                                     </TextField>
                                                 )}
-                                                {/* <TextField
-                                                    id="prof_prefered"
-                                                    select
-                                                    name="prof_prefered"
-                                                    label="Preferred Professional"
-                                                    value={selectedProfGender}
-                                                    onChange={handleDropdownProfGender}
-                                                    size="small"
-                                                    fullWidth
-                                                    InputLabelProps={{
-                                                        shrink: true,
-                                                    }}
-                                                    sx={{
-                                                        textAlign: "left", '& input': {
-                                                            fontSize: '14px',
-                                                        },
-                                                    }}
-                                                >
-                                                    {profGender.map((option) => (
-                                                        <MenuItem key={option.gender_id} value={option.gender_id}
-                                                            sx={{ fontSize: "14px", }}>
-                                                            {option.name}
-                                                        </MenuItem>
-                                                    ))}
-                                                </TextField> */}
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
@@ -6662,6 +6832,62 @@ const Addservice = () => {
                                                 </Box>
                                             </Modal>
 
+                                            {/* <Grid container spacing={1} sx={{ mt: 2, ml: 1 }}>
+                                                <Grid item lg={6} sm={6} xs={6}>
+                                                    <TextField
+                                                        required
+                                                        id="start_date"
+                                                        name="start_date"
+                                                        label="Start Date"
+                                                        type="date"
+                                                        value={startDate}
+                                                        onChange={handleStartDateChange}
+                                                        size="small"
+                                                        fullWidth
+                                                        error={!!errors.startDate}
+                                                        helperText={errors.startDate}
+                                                        sx={{
+                                                            '& input': {
+                                                                fontSize: '14px',
+                                                            },
+                                                        }}
+                                                        InputLabelProps={{
+                                                            shrink: true,
+                                                        }}
+                                                    // inputProps={{
+                                                    //     min: getCurrentDateTimeString(),
+                                                    // }}
+                                                    />
+                                                </Grid>
+
+                                                <Grid item lg={6} sm={6} xs={6}>
+                                                    <TextField
+                                                        required
+                                                        id="end_date"
+                                                        name="end_date"
+                                                        label="End Date"
+                                                        type="date"
+                                                        value={endDate}
+                                                        onChange={handleEndDateChange}
+                                                        size="small"
+                                                        fullWidth
+                                                        sx={{
+                                                            '& input': {
+                                                                fontSize: '14px',
+                                                            },
+                                                        }}
+                                                        InputLabelProps={{
+                                                            shrink: true,
+                                                        }}
+                                                        error={endDateError !== '' || !!errors.endDate}
+                                                        helperText={endDateError || errors.endDate}
+                                                    // inputProps={{
+                                                    //     min: getCurrentDateTimeString(),
+                                                    // }}
+                                                    />
+                                                </Grid>
+                                            </Grid> */}
+
                                             <Grid item lg={12} sm={12} xs={12}>
                                                 <DatePicker
                                                     multiple
@@ -6689,8 +6915,7 @@ const Addservice = () => {
                                                             placeholder='YYYY/MM/DD'
                                                             size="small"
                                                             fullWidth
-                                                            // value={values}
-                                                            value={values ? values.join(", ") : ""}
+                                                            value={values}
                                                             sx={{
                                                                 textAlign: "left",
                                                                 '& input': {
@@ -6764,7 +6989,32 @@ const Addservice = () => {
                                             </Grid>
 
                                             <Grid item lg={12} sm={12} xs={12}>
-                                                {selectedService === 12 ? (
+                                                {/* <TextField
+                                                    id="prof_prefered"
+                                                    select
+                                                    name="prof_prefered"
+                                                    label="Preferred Professional"
+                                                    value={selectedProfGender}
+                                                    onChange={handleDropdownProfGender}
+                                                    size="small"
+                                                    fullWidth
+                                                    InputLabelProps={{
+                                                        shrink: true,
+                                                    }}
+                                                    sx={{
+                                                        textAlign: "left", '& input': {
+                                                            fontSize: '14px',
+                                                        },
+                                                    }}
+                                                >
+                                                    {profGender.map((option) => (
+                                                        <MenuItem key={option.gender_id} value={option.gender_id}
+                                                            sx={{ fontSize: "14px", }}>
+                                                            {option.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </TextField> */}
+                                                {selectedService === 10 ? (
                                                     <TextField
                                                         required
                                                         id="med_Trans_amount"

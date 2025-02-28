@@ -51,15 +51,6 @@ const Invoice = ({ eveID, onClose }) => {
     const accessToken = localStorage.getItem('token');
 
     const [invoice, setInvoice] = useState([]);
-    // const handleDownloadPDF = () => {
-    //     const boxElement = document.getElementById('pdfContent');
-
-    //     html2PDF(boxElement, {
-    //         jsPDF: { unit: 'px', format: 'letter', orientation: 'portrait' },
-    //         imageType: 'image/jpeg',
-    //         output: 'download.pdf',
-    //     });
-    // };
 
     const handleDownloadPDF = () => {
         fetch(`${port}/web/generate_invoice_pdf/${eveID}`, {
@@ -81,7 +72,16 @@ const Invoice = ({ eveID, onClose }) => {
                 console.error('Error generating PDF:', error);
             });
     };
+    
+    // const handleDownloadPDF = () => {
+    //     const boxElement = document.getElementById('pdfContent');
 
+    //     html2PDF(boxElement, {
+    //         jsPDF: { unit: 'px', format: 'letter', orientation: 'portrait' },
+    //         imageType: 'image/jpeg',
+    //         output: 'download.pdf',
+    //     });
+    // };
 
     useEffect(() => {
         const getInvoice = async () => {
@@ -122,10 +122,7 @@ const Invoice = ({ eveID, onClose }) => {
     return (
         <>
             <Box sx={{
-                ...style,
-                width: 750,
-                borderRadius: "5px",
-                border: "none",
+                ...style, width: 'auto', borderRadius: "5px", border: "none",
                 // maxHeight: "100%",
                 // overflowY: 'auto',
                 // overflowX: 'hidden',
@@ -136,6 +133,7 @@ const Invoice = ({ eveID, onClose }) => {
                 <div id="pdfContent" style={{ padding: "2em", fontWeight: "300" }}>
                     <div style={{ display: "flex" }}>
                         <Typography align="center" style={{ fontSize: "25px", fontWeight: 900, marginTop: "10px", marginLeft: "2px", }}>{invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? 'PROFORMA INVOICE' : 'INVOICE'}</Typography>
+                        {/* <img src={logo} alt="" style={{ height: "80px", width: "125px", marginLeft: "15rem", }} /> */}
                         {invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? (
                             <img src={logo} alt="" style={{ height: "80px", width: "125px", marginLeft: "15rem" }} />
                         ) : (
@@ -301,6 +299,7 @@ const Invoice = ({ eveID, onClose }) => {
                             <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Total (INR)</Typography>
                             <Typography variant='subtitle2' sx={{ ml: 56.6 }}>{invoice[0] ? `₹${invoice[0].Total_amount}` : ''}</Typography>
                         </div> */}
+
                         <div style={{ display: "flex", marginLeft: "16px", marginTop: "10px" }}>
                             <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Final Amount (INR)</Typography>
                             <Typography variant='subtitle2' sx={{ ml: 49.6 }}>{invoice[0] ? `₹${invoice[0].Final_amount}` : ''}</Typography>
@@ -367,8 +366,9 @@ const Invoice = ({ eveID, onClose }) => {
                         </CardContent>
                     </Box>
                     <hr style={{
-                        width: "109.8%", height: "5px", background: '#FAAF30', marginLeft: "-32px", marginTop: "-5px",
+                        width: "109.8%", height: "5px", background: '#FAAF30', marginLeft: "-32px",
                         // marginBottom: "-25px", 
+                        marginTop: "-5px",
                     }} />
                 </div>
 

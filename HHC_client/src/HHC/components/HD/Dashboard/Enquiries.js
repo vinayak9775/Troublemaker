@@ -71,7 +71,7 @@ const Enquiries = ({ value }) => {
                 <Grid item lg={6} md={6} xs={12} sx={{ marginTop: "10px" }}>
                     <Stack direction="row" justifyContent="center" spacing={2}>
                         <Typography variant='h5' sx={{ fontWeight: "600" }}>{enquiry.Total_enquiries}</Typography>
-                        <Typography variant='subtitle2' style={{marginTop:"5px"}}>TOTAL ENQUIRIES</Typography>
+                        <Typography variant='subtitle2'>TOTAL ENQUIRIES</Typography>
                     </Stack>
 
                     <Stack direction="row" justifyContent="space-around" style={{ marginTop: "40px" }}>

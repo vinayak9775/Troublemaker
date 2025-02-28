@@ -125,7 +125,7 @@ const ManageProfile = () => {
       const response = await fetch(`${port}/hr/prof_interview_round/${profId}/`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${accessToken}`, 
           "Content-Type": "application/json",
         },
       });
@@ -183,6 +183,7 @@ const ManageProfile = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify(formData),
       });
@@ -645,8 +646,11 @@ const ManageProfile = () => {
                         },
                       }}
                     >
-
-
+                      {intMode.map((option) => (
+                        <MenuItem key={option.intMode_id} value={option.intMode_id} sx={{ fontSize: '14px' }}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Grid>
 

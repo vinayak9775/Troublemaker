@@ -47,7 +47,6 @@ const Permission = () => {
     const port = process.env.REACT_APP_API_KEY;
     ////////////////// Module Fetch API ////////////////////
     const [loginGroup, setLoginGroup] = useState([]);
-    
     const [userGroup, setUserGroup] = useState([]);
     const [userGroupID, setUserGroupID] = useState([]);
     console.log(userGroupID, 'userGroupIDuserGroupID');
@@ -697,26 +696,26 @@ const Permission = () => {
                         <Button onClick={handleSubmit} variant="contained" color="primary">Submit</Button>
                     </Table>
 
-                        <Snackbar
-                            open={openSnackbar}
-                            autoHideDuration={6000}
-                            onClose={handleCloseSnackbar}
-                        >
-                            <SnackbarContent
-                                style={getSnackbarStyle()}
-                                message={snackbarMessage}
-                                action={
-                                    <IconButton
-                                        size="small"
-                                        aria-label="close"
-                                        color="inherit"
-                                        onClick={handleCloseSnackbar}
-                                    >
-                                        <CloseIcon fontSize="small" />
-                                    </IconButton>
-                                }
-                            />
-                        </Snackbar>
+                    <Snackbar
+                        open={openSnackbar}
+                        autoHideDuration={6000}
+                        onClose={handleCloseSnackbar}
+                    >
+                        <SnackbarContent
+                            style={getSnackbarStyle()}
+                            message={snackbarMessage}
+                            action={
+                                <IconButton
+                                    size="small"
+                                    aria-label="close"
+                                    color="inherit"
+                                    onClick={handleCloseSnackbar}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            }
+                        />
+                    </Snackbar>
 
                 </TableContainer>
                 {/* Module Form */}

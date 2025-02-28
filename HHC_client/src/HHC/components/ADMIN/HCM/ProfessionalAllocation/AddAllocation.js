@@ -25,18 +25,18 @@ const AddAllocation = ({ profId, isEditMode, selectedProfAvaibId, start, end, da
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Array of days
     const [selectedDays, setSelectedDays] = useState([]); // State to store selected day indices
     console.log(selectedDays, 'selectedDays............');
-    const isDaySelected = (dayIndex) => selectedDays.includes(dayIndex); 
+    const isDaySelected = (dayIndex) => selectedDays.includes(dayIndex); // Function to check if day is selected
 
     const [fromTime, setFromTime] = useState(null);
     const [toTime, setToTime] = useState(null);
 
-    const [zone, setZone] = useState([]);
-    const [selectedCheckBox, setSelectedCheckBox] = useState([]);
+    const [zone, setZone] = useState([]); // State for fetched zones
+    const [selectedCheckBox, setSelectedCheckBox] = useState([]); // State for selected checkboxes (zones)
 
-    const [isSuccessfullyAdded, setIsSuccessfullyAdded] = useState(false);
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [responseData, setResponseData] = useState(null);
+    const [isSuccessfullyAdded, setIsSuccessfullyAdded] = useState(false); // State to manage "Successfully Added" message
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // State for snackbar visibility
+    const [snackbarMessage, setSnackbarMessage] = useState(''); // State for snackbar message
+    const [responseData, setResponseData] = useState(null);  //to fetch the dataa if already exist edit
 
     console.log('Selected checkbox values:', selectedCheckBox);
 

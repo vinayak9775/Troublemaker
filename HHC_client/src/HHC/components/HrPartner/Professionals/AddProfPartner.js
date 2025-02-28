@@ -16,8 +16,9 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
 import { FormGroup, FormLabel, FormHelperText } from '@mui/material';
 import MuiAlert from "@mui/material/Alert";
+import IconButton from '@mui/material/IconButton';
 import DownloadIcon from '@mui/icons-material/Download';
-import CheckIcon from '@mui/icons-material/Check';
+import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -44,6 +45,10 @@ const title = [
     title_id: 3,
     label: 'Mrs',
   },
+  {
+    title_id: 4,
+    label: 'Ms',
+  },
 ];
 
 const jobType = [
@@ -57,50 +62,52 @@ const jobType = [
   }
 ];
 
+const libraries = ['places'];
+
 function AddProfPartner() {
 
   ///GIS
   const [gisAddress, setGisAddress] = useState('');
 
-  // const { isLoaded } = useJsApiLoader({
-  //   googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-  //   libraries: libraries,
-  // });
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+    libraries: libraries,
+  });
 
-  // const addressRef = useRef();
-  // const [selectedPlace, setSelectedPlace] = useState(null);
-  // const [lat, setLat] = useState(null);
-  // console.log(lat, 'fetchedlat');
+  const addressRef = useRef();
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [lat, setLat] = useState(null);
+  console.log(lat, 'fetchedlat');
 
-  // const [long, setLong] = useState(null);
-  // console.log(long, 'fetchedlong');
+  const [long, setLong] = useState(null);
+  console.log(long, 'fetchedlong');
 
-  // const validateLong = (value) => {
-  //   const longValue = parseFloat(value);
-  //   if (isNaN(longValue) || longValue < -180 || longValue > 180) {
-  //     return 'Invalid longitude';
-  //   }
-  //   return '';
-  // };
+  const validateLong = (value) => {
+    const longValue = parseFloat(value);
+    if (isNaN(longValue) || longValue < -180 || longValue > 180) {
+      return 'Invalid longitude';
+    }
+    return '';
+  };
 
-  // const handlePlaceChanged = () => {
-  //   console.log("place select function hitting...");
-  //   if (addressRef.current) {
-  //     const place = addressRef.current.getPlace();
-  //     setSelectedPlace(place);
-  //     console.log("place select...", place.formatted_address);
-  //     const { lat, lng } = place.geometry.location;
+  const handlePlaceChanged = () => {
+    console.log("place select function hitting...");
+    if (addressRef.current) {
+      const place = addressRef.current.getPlace();
+      setSelectedPlace(place);
+      console.log("place select...", place.formatted_address);
+      const { lat, lng } = place.geometry.location;
 
-  //     const formattedLat = parseFloat(lat().toFixed(6));
-  //     const formattedLng = parseFloat(lng().toFixed(6));
-  //     setGisAddress(place.formatted_address);
+      const formattedLat = parseFloat(lat().toFixed(6));
+      const formattedLng = parseFloat(lng().toFixed(6));
+      setGisAddress(place.formatted_address);
 
-  //     setLat(formattedLat);
-  //     setLong(formattedLng);
-  //     console.log('Latitude:', formattedLat);
-  //     console.log('Longitude:', formattedLng);
-  //   }
-  // };
+      setLat(formattedLat);
+      setLong(formattedLng);
+      console.log('Latitude:', formattedLat);
+      console.log('Longitude:', formattedLng);
+    }
+  };
   ///GIS
 
   const navigate = useNavigate();
@@ -138,7 +145,7 @@ function AddProfPartner() {
 
   //EDUCATIONAL DETAILS
   const [qualification, setQualification] = useState([]);
-  const [selectedQualification, setSelectedQualification] = useState(null);
+  const [selectedQualification, setSelectedQualification] = useState('');
   const [specialization, setSpecialization] = useState([]);
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
   const [certificateRegNo, setCertificateRegNo] = useState('');
@@ -161,7 +168,6 @@ function AddProfPartner() {
   const [emeContact, setEmeContact] = useState('');
   const [selectedRelation, setSelectedRelation] = useState('');
   const [emeName, setEmeName] = useState('');
-  console.log(emeName, 'emeName');
   const [pinCode, setPinCode] = useState('');
   const [manualAddress, setManualAddress] = useState('');
   const [state, setState] = useState([]);
@@ -275,20 +281,20 @@ function AddProfPartner() {
     // Documents
     documentErrors: {},
     gisAddress: '',
-    // lat: '',
-    // long: '',
+    lat: '',
+    long: '',
   });
 
   const handleEmptyField = () => {
     const newErrors = {};
     const subServiceErrorsTemp = {};
 
-    // if (!lat) {
-    //   newErrors.lat = 'Lattitude is required';
-    // }
-    // if (!long) {
-    //   newErrors.long = 'Longitude is required';
-    // }
+    if (!lat) {
+      newErrors.lat = 'Lattitude is required';
+    }
+    if (!long) {
+      newErrors.long = 'Longitude is required';
+    }
 
     if (!selectedTitle) {
       newErrors.selectedTitle = 'Required';
@@ -425,18 +431,10 @@ function AddProfPartner() {
           console.log(data);
           setSnackbarMessage("Professional Validated Successfully");
           setSnackbarSeverity("success");
-        }
-        // else if (response.status === 409) {
-        //   setSnackbarMessage("Phone Number already exists");
-        //   setSnackbarSeverity("error");
-        // } 
-        else if (response.status === 409) {
-          const { message } = await response.json();
-          const errorMessage = message ? message : "An error occurred";
-          setSnackbarMessage(errorMessage);
+        } else if (response.status === 409) {
+          setSnackbarMessage("Phone Number already exists");
           setSnackbarSeverity("error");
-        }
-        else {
+        } else {
           throw new Error("Unexpected response status");
         }
       } catch (error) {
@@ -522,7 +520,6 @@ function AddProfPartner() {
   const handleDropdownQualifictn = (event) => {
     const selectedQualifi = event.target.value;
     setSelectedQualification(selectedQualifi);
-    setSelectedSpecialization('')
   };
 
   const handleDropdownSpeclization = (event) => {
@@ -819,8 +816,8 @@ function AddProfPartner() {
           //   return cvUrl.split('/').pop();
           // }
           // return null;
-          // setLat(data[0].lattitude)
-          // setLong(data[0].langitude)
+          setLat(data[0].lattitude)
+          setLong(data[0].langitude)
         } catch (error) {
           console.error('Error fetching professional data:', error);
         }
@@ -882,6 +879,10 @@ function AddProfPartner() {
     if (cv) {
       formData.append('cv_file', cv);
     }
+    // else if (cvUrl) {
+    //   formData.append('cv_file', cvUrl);
+    // }
+
     formData.append('srv_id', selectedService);
     const subServiceIds = selectedSubService.map(Number);
     const profCosts = selectedSubService.map(subServiceId => {
@@ -900,12 +901,6 @@ function AddProfPartner() {
       formData.append('prof_cost', JSON.stringify(profCosts));
     }
 
-    // Object.keys(uploadedDocuments).forEach(docId => {
-    //   const files = uploadedDocuments[docId];
-    //   for (let i = 0; i < files.length; i++) {
-    //     formData.append(`professional_document[${docId}]`, files[i]);
-    //   }
-    // });
     Object.keys(uploadedDocuments).forEach(docId => {
       const files = uploadedDocuments[docId];
       for (let i = 0; i < files.length; i++) {
@@ -928,8 +923,8 @@ function AddProfPartner() {
     formData.append('added_by', refId);
     formData.append('last_modified_by', refId);
     formData.append('prof_compny', company);
-    // formData.append('langitude', long);
-    // formData.append('lattitude', lat);
+    formData.append('langitude', long);
+    formData.append('lattitude', lat);
 
     console.log("POST API Hitting......", formData);
 
@@ -978,33 +973,6 @@ function AddProfPartner() {
         setSnackbarMessage('Error While Submitting the Form');
         setSnackbarSeverity('error');
       }
-      // else if (response.status === 409) {
-      //   const errorResult = await response.json();
-      //   const errors = errorResult.service_professional_errors;
-
-      //   let formattedMessage = '';
-      //   if (errors.includes("Phone no already exists.") && errors.includes("Certificate registration number already exists.")) {
-      //     formattedMessage = "Phone Number and Certification Number already exist.";
-      //   } else if (errors.includes("Phone no already exists.")) {
-      //     formattedMessage = "Phone Number already exists.";
-      //   } else if (errors.includes("Certificate registration number already exists.")) {
-      //     formattedMessage = "Certification number already exists.";
-      //   } else {
-      //     formattedMessage = errors.join(' ');
-      //   }
-
-      //   let formattedMessage2 = '';
-      //   if (errorResult.conflicts && errorResult.conflicts.length > 0) {
-      //     formattedMessage2 = errorResult.conflicts.join(' ');
-      //   } else {
-      //     formattedMessage2 = "An unknown conflict occurred.";
-      //   }
-
-      //   setOpenSnackbar(true);
-      //   setSnackbarMessage(formattedMessage);
-      //   setSnackbarMessage(formattedMessage2);
-      //   setSnackbarSeverity('error');
-      // }
       else if (response.status === 409) {
         const errorResult = await response.json();
 
@@ -1361,23 +1329,13 @@ function AddProfPartner() {
                       label="Qualification*"
                       size="small"
                       fullWidth
-                      value={selectedQualification || ''}
+                      value={selectedQualification}
                       onChange={handleDropdownQualifictn}
                       error={!!errors.selectedQualification}
                       helperText={errors.selectedQualification}
                       sx={{
                         textAlign: "left", '& input': {
                           fontSize: '14px',
-                        },
-                      }}
-                      SelectProps={{
-                        MenuProps: {
-                          PaperProps: {
-                            style: {
-                              maxHeight: '200px',
-                              maxWidth: '200px',
-                            },
-                          },
                         },
                       }}
                     >
@@ -1528,7 +1486,7 @@ function AddProfPartner() {
                     documentFiles.map((item) => (
                       <>
                         <Grid container spacing={2} alignItems="center" key={item.doc_li_id}>
-                          <Grid item xs={6}>
+                          <Grid item xs={8}>
                             <Typography
                               component="label"
                               variant="body1"
@@ -1578,7 +1536,6 @@ function AddProfPartner() {
                               (() => {
                                 const matchingFile = uploadedDocuments[item.doc_li_id];
 
-                                // Show download button if file is uploaded
                                 return matchingFile && matchingFile.professional_document ? (
                                   <Button
                                     variant="outlined"
@@ -1590,7 +1547,6 @@ function AddProfPartner() {
                                 ) : null;
                               })()
                             ) : (
-                              // If no professionalId, check if the file is uploaded and show download button
                               uploadedDocuments[item.doc_li_id]?.professional_document && (
                                 <Button
                                   variant="outlined"
@@ -1600,14 +1556,6 @@ function AddProfPartner() {
                                   <DownloadIcon />
                                 </Button>
                               )
-                            )}
-                          </Grid>
-
-                          <Grid item xs={1}>
-                            {uploadedDocuments[item.doc_li_id]?.length > 0 && (
-                              <Typography variant="body2" color="primary">
-                                File Uploaded
-                              </Typography>
                             )}
                           </Grid>
                         </Grid>
@@ -2065,15 +2013,13 @@ function AddProfPartner() {
                             value={selectedZone}
                             onChange={(e) => setSelectedZone(e.target.value)}
                           >
-                            {
-                              zone
-                                .filter(option => option.Name !== "All")
-                                .map(option => (
-                                  <MenuItem key={option.prof_zone_id} value={option.Name}>
-                                    {option.Name}
-                                  </MenuItem>
-                                ))
-                            }
+                            {zone
+                              .filter(option => option.Name !== "All")
+                              .map(option => (
+                                <MenuItem key={option.prof_zone_id} value={option.Name}>
+                                  {option.Name}
+                                </MenuItem>
+                              ))}
                           </TextField>
                         </Grid>
 
@@ -2104,7 +2050,7 @@ function AddProfPartner() {
                     </Grid>
 
                     <Grid item lg={6} sm={6} xs={12}>
-                      <TextField
+                      {/* <TextField
                         id="alternate_number"
                         name="alternate_number"
                         label="Google Address*"
@@ -2124,8 +2070,8 @@ function AddProfPartner() {
                         onChange={(e) => setGisAddress(e.target.value)}
                         error={!!errors.gisAddress}
                         helperText={errors.gisAddress}
-                      />
-                      {/* {isLoaded && (
+                      /> */}
+                      {isLoaded && (
                         <Autocomplete
                           onLoad={(autocomplete) => (addressRef.current = autocomplete)}
                           onPlaceChanged={handlePlaceChanged}
@@ -2150,7 +2096,7 @@ function AddProfPartner() {
                             }}
                           />
                         </Autocomplete>
-                      )} */}
+                      )}
                     </Grid>
 
                     <Grid item lg={6} sm={6} xs={12}>
@@ -2162,7 +2108,7 @@ function AddProfPartner() {
                         fullWidth
                         inputProps={{
                           minLength: 10,
-                          // maxLength: 10,
+                          maxLength: 10,
                         }}
                         sx={{
                           textAlign: "left",

@@ -89,7 +89,7 @@ const ClosureFormSix = ({handleEvent,eid,dtlEventID,remark,evtId,formNo,closureS
 
     return (
         <>
-            <Box sx={{ flexGrow: 1, bgcolor: "#ffffff"  }}>
+            <Box sx={{ flexGrow: 1, bgcolor: "#ffffff" }}>
                 <Grid item xs={12} md={12} lg={12} container spacing={1} sx={{ mt: 2 }}>
                     <Grid item xs={12} sm={12} md={6} lg={6}>
                         <TextField
@@ -124,7 +124,7 @@ const ClosureFormSix = ({handleEvent,eid,dtlEventID,remark,evtId,formNo,closureS
                     </Grid>
                 </Grid>
              
-                <Grid item xs={12} sm={12} lg={12} sx={{ mt: 2, mb:2}}>
+                <Grid item xs={12} sm={12} lg={12} sx={{ mt: 2, }}>
                     <Button variant="contained" sx={{ width: '20ch', borderRadius: "12px", ml: "20rem", textTransform: "capitalize" }}
                         onClick={handleClosureSixSubmit}
                     >Submit</Button>

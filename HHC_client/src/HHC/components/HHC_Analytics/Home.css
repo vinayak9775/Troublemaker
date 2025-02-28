@@ -1,0 +1,90 @@
+/* Basic styles for the dropdown */
+.custom-dropdown {
+    width: 200px;
+    font-family: Arial, sans-serif;
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    /* background-color: #f5f1f1; */
+    height: 100%;
+}
+
+.dropdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: grey;
+}
+
+.dropdown-content {
+    position: absolute;
+    /* Make dropdown appear over the map */
+    top: 110%;
+    /* Position right below the dropdown header */
+    left: 0;
+    /* display: block;
+    max-height: 200px;
+    overflow-y: auto; */
+    width: 120%;
+    background-color: #f5f1f1;
+    ;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    z-index: 999;
+}
+
+.optgroup {
+    padding: 5px;
+}
+
+.group-header {
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 5px;
+    color: rgb(63, 62, 62);
+}
+
+.options {
+    align-items: right !important;
+    justify-content: right!important;
+
+}
+
+.option {
+    padding: 5px;
+    cursor: pointer;
+    align-items: right !important;
+    justify-content: right !important;
+    font-size: 13px;
+    color: #aaa;
+}
+
+.option:hover {
+    background-color: #ddd;
+}
+
+.optgroup.open .options {
+    display: block;
+    /* Show options when group is open */
+}
+
+.group-header .arrow {
+    transition: transform 0.6s ease;
+}
+
+.optgroup.open .group-header .arrow {
+    transform: rotate(90deg);
+    /* Rotate arrow when expanded */
+}
+
+.custom-dropdown .dropdown-content {
+    left: 0;
+    /* Ensure submenu aligns to the left */
+}

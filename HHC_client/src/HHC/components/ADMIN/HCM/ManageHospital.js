@@ -221,7 +221,6 @@ const ManageHospital = () => {
 
     const handleSearchInputChange = (event) => {
         setSearchText(event.target.value);
-        setPage(0);
     };
 
     const filteredHospitalData = hospitalData.filter(hospital => hospital.hospital_name.toLowerCase().includes(searchText.toLowerCase()));

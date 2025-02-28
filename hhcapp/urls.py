@@ -30,6 +30,7 @@ urlpatterns=[
     #=====================================Vishal Api========================================
     path('agg_hhc_callers_register_api',views.agg_hhc_callers_register_api.as_view(),name="agg_hhc_callers_api"),#integrated api 
     path("caller_profile_pic",views.caller_profile_pic.as_view(),name="caller_profile_pic"),
+    path("create_service",views.create_service.as_view(),name="create_service"),
     path("completed_services",views.completed_services.as_view(),name="completed_services"),
     path("completed_sessions/<int:event_id>",views.completed_sessions.as_view(),name="completed_sessions"),
     path("active_services",views.active_services.as_view(),name="active_services"),
@@ -41,16 +42,13 @@ urlpatterns=[
     path("cancellation_service_get_api/<int:event_id>",views.cancellation_service_get_api.as_view(),name="cancellation_service_get_api"),#get and creat cancel request here only
     path("Active_Api/<int:event_id>",views.Active_Api.as_view(),name="Active_Api"),
     path("professional_details/<int:dt_eve_id>",views.professional_details.as_view(),name="professional_details"),
-    path('feedback/<int:lan>/', views.feedback.as_view(), name='feedback'),
-    path('feedback/', views.feedback.as_view(), name='feedback'),
+    path("feedback",views.feedback.as_view(),name="feedback"),
     path("cancellation_charges_for_all_app/<int:eve_id>",views.cancellation_charges_for_all_app.as_view(),name="cancellation_charges_for_all_app"),
-    path("wallet/<int:wid>/",views.wallet.as_view(),name="wallet"),# 1 for Hd 2 for professional 3 for community 
-    path("wallet/<int:wid>/<int:phone>/",views.wallet.as_view(),name="wallet"),# 1 for Hd 2 for professional 3 for community 
 
     #-------------------------------Mayank-----------------------------
     path('create_cf_token/', views.create_cf_token, name='create_cf_token'),
     path('feedback_status',views.feedback_status.as_view(),name="feedback_status"),
     path('update_check/<int:device_type>/<str:version_number>/<str:build_number>/<int:App>/',views.update_check.as_view(),name="update_check"),
     path('change/',views.change.as_view(),name="change"),
-    # path('send_whatsapp_message/', views.send_whatsapp_message, name='send_whatsapp_message'),
+
     ]

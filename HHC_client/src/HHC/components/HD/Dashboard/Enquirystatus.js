@@ -23,7 +23,7 @@ const Enquirystatus = ({ value }) => {
                         },
                     });
                     const data = await res.json();
-                    console.log("Enquiries Status Count.........", data);
+                    // console.log("Enquiries Status Count.........", data);
                     setEnqStatus(data);
                 } catch (error) {
                     console.error("Error fetching Enquiries Status Count:", error);
@@ -41,38 +41,32 @@ const Enquirystatus = ({ value }) => {
                 type: 'donut'
             },
 
-            labels: ['Converted into Service', 'In Follow up', 'Pending Enquiry', 'Cancelled Enquiry'],
+            labels: ['Converted', 'In Follow up'],
             legend: {
                 position: 'top',
                 // horizontalAlign: 'left',
             },
-            colors: ['#2EAED6', '#FF8008', '#FD7568', '#FF5508'],
+            colors: ['#2EAED6', '#FF8008'],
             dataLabels: {
                 enabled: false,
             },
-            stroke: {
-                show: false,
-              },
         }
     };
 
     const seriesData = [
         enqStatus["converted_to_service"],
         enqStatus["in_follow_up"],
-        enqStatus["pending_srv"],
-        enqStatus["cancelled_srv"],
-        // 10,20,35,5
     ];
     chartData.series = seriesData;
     return (
-        <Box sx={{ flexGrow: 1, width: "100%",}} style={{ background: '#ffffff', boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)', borderRadius: '8px' }}>
+        <Box sx={{ flexGrow: 1, width: "100%", }} style={{ background: '#ffffff', boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)', borderRadius: '8px' }}>
             <Typography align="left" sx={{ fontSize: 16, fontWeight: 600, pl: "10px", pt: "8px" }} color="text.secondary" gutterBottom>ENQUIRY STATUS</Typography>
             <Grid item xs={12} container spacing={1}>
                 <Chart
                     options={chartData.options}
                     series={chartData.series}
                     type="donut"
-                    height="224"
+                    height="220"
                 />
             </Grid>
         </Box>

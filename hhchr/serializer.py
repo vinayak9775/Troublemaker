@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from hhcweb.models import *
 from datetime import date 
+from hhcspero.settings import SERVER_KEY
 
 class event_Ids_serializer(serializers.ModelSerializer):
     class Meta:
@@ -25,7 +26,7 @@ class DayPrintSerializer(serializers.ModelSerializer):
 
     def get_added_date(self,obj):
         if obj.added_date:
-            date=dt = datetime.fromisoformat(str(obj.added_date))
+            date=dt = datetime.datetime.fromisoformat(str(obj.added_date))
             date_part = dt.date()
             time_part = dt.time().replace(microsecond=0)
             return str(date_part)+" "+str(time_part)
@@ -33,27 +34,33 @@ class DayPrintSerializer(serializers.ModelSerializer):
 
     def get_pay_recived_by(self,obj):
         # doctor=obj.pay_recived_by
-        prof = obj.srv_prof_id
-        if prof:
-            return f'{obj.srv_prof_id.prof_fullname}'
-            # try:
-            #     # doctor1 = agg_hhc_service_professionals.objects.get(srv_prof_id=doctor)
-            #     # return doctor1.prof_fullname
+        # prof = obj.srv_prof_id
+        # if prof:
+        #     return f'{obj.srv_prof_id.prof_fullname}'
 
-            # except:
-            #     return None
+        # else:
+        #     if obj.pay_recived_by:
+        #         return f'{obj.pay_recived_by.clg_last_name} {obj.pay_recived_by.clg_first_name} {obj.pay_recived_by.clg_mid_name}'
+        #     else:
+        #         return None
+        if obj.added_by:
+            if obj.added_by:
 
-        else:
-            if obj.pay_recived_by:
-                return f'{obj.pay_recived_by.clg_last_name} {obj.pay_recived_by.clg_first_name} {obj.pay_recived_by.clg_mid_name}'
+                return obj.added_by
+                # return f'{obj.added_by.clg_last_name} {obj.added_by.clg_first_name} {obj.added_by.clg_mid_name}'
             else:
                 return None
+        else:
+            prof = obj.srv_prof_id
+            if prof:
+                return f'{obj.srv_prof_id.prof_fullname}'
 
-    def get_patient_name(self, obj):
-        try:
-            return obj.eve_id.agg_sp_pt_id.name
-        except:
-            return None
+    # def get_hospital_name(self,obj):
+    #     try:
+    #         return obj.eve_id.agg_sp_pt_id.preferred_hosp_id.hospital_name
+    #     except:
+    #         return None
+
     def get_hospital_name(self,obj):
         try:
             # return obj.eve_id.agg_sp_pt_id.preferred_hosp_id.hospital_name
@@ -66,6 +73,14 @@ class DayPrintSerializer(serializers.ModelSerializer):
         except Exception as e:
             print(str(e))
             return None
+        
+
+    def get_patient_name(self, obj):
+        try:
+            return obj.eve_id.agg_sp_pt_id.name
+        except:
+            return None
+        
     def get_event_code(self, obj):
         try:
             return obj.eve_id.event_code
@@ -98,14 +113,14 @@ class DayPrintSerializer(serializers.ModelSerializer):
             return 'Qr_code'
         elif mode==6:
             return 'NEFT'
-        
+
     def get_invoice(self, obj):
         if obj.eve_id.Invoice_ID:
             return obj.eve_id.Invoice_ID
         else:
             return None
+
         
-    
 class Manage_emp_serializer(serializers.ModelSerializer):
     class Meta:
         model= agg_com_colleague
@@ -146,9 +161,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
             return None
 
         return 1
-    
 
-# ----------------------------- Amit Changes  -----------------------------
+
 # _____________ Onbording Date Of Joining Amit _____________________- 
 class ex_prof(serializers.ModelSerializer):
     class Meta:
@@ -163,6 +177,7 @@ class hr_Onbording_doj_add_serializer(serializers.ModelSerializer):
 
 
 # ______________ Manage Profile Get All data HR Interviw Amit ______________________
+
 class manage_Profiles_status_serializers(serializers.ModelSerializer):
     int_status = serializers.CharField(source='get_int_status_display')
 
@@ -202,8 +217,27 @@ class agg_hhc_srv_prof_all_data_serializer(serializers.ModelSerializer):
         return data
 # ______________ Manage Profile Get All data HR Interviw Amit ______________________
 
+
+
+
+# ___________________________ External Professional _____________- Amit
+
+class extr_prof_aprov_reject_serializer(serializers.ModelSerializer):
     
-    
+    class Meta: 
+        model = external_prof_approve_reject
+        fields = ['extr_pro_ap_re', 'srv_prof_id', 'Remark', 'approve_reject', 'last_modified_by', 'added_by']
+class srv_prof_data_get(serializers.ModelSerializer):
+    # srv_prof_id = extr_prof_aprov_reject_serializer()
+    class Meta: 
+        model = agg_hhc_service_professionals
+        fields = ['srv_prof_id', 'prof_compny']
+
+
+
+
+# ___________________________ External Professional _____________- Amit
+
 
 class agg_hhc_srv_prof_serializer(serializers.ModelSerializer):
     class Meta:
@@ -217,6 +251,8 @@ class agg_hhc_srv_prof_serializer(serializers.ModelSerializer):
     def validate(self, data):
         return data
     
+
+
 
 class ob_1_serializer(serializers.ModelSerializer):
     Job_type = serializers.SerializerMethodField()   
@@ -236,7 +272,9 @@ class ob_1_serializer(serializers.ModelSerializer):
         
     def validate(self, data):
         return data
-    
+
+
+        
 # class agg_hhc_srv_prof_int_dtls_serializer(serializers.ModelSerializer):
 #     class Meta:
 #         model  = agg_hhc_prof_interview_details
@@ -244,7 +282,140 @@ class ob_1_serializer(serializers.ModelSerializer):
         
 #     def validate(self, data):
 #         return data
+
+#  -------------------------------------- Our Employee List ---------------------------------------------------
+# class Our_EMPLOYEE_List_serializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = agg_hhc_service_professionals
+#         fields = [
+#             'srv_prof_id', 'professional_code', 'prof_fullname', 'srv_id', 'phone_no', 
+#             'alt_phone_no', 'role', 'status', 'dob', 'doj', 'doe', 'google_home_location'
+#         ]
+
+class Our_EMPLOYEE_List_serializer(serializers.ModelSerializer):
+    Job_type = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()      
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = [
+            # 'srv_prof_id', 'prof_fullname', 'srv_id', 'phone_no', 
+            # 'alt_phone_no', 'role', 'Job_type'
+            'srv_prof_id', 'professional_code', 'prof_fullname', 'srv_id', 'phone_no', 
+            'alt_phone_no', 'role', 'Job_type', 'status', 'dob', 'doj', 'doe', 'google_home_location'            
+        ]
+    def get_Job_type(self, obj):
+        job_type_mapping = {
+            1: 'On Call',
+            2: 'Full Time',
+            3: 'Part Time'
+        }
+        return job_type_mapping.get(obj.Job_type, '')
+
+    def get_role(self, obj):
+        role_mapping = {
+            1: 'Professional',
+            2: 'Vendor'
+        }
+        return role_mapping.get(obj.role, '')    
+
+
+
+class Our_EMPLOYEE_Active_Inactive_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = [
+            'srv_prof_id', 'srv_id', 'status', 'doj', 'doe', 'last_modified_by']
+
+class EX_professional_Records_keeping(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_EX_professional_Records
+        fields = ['srv_prof_id', 'Remark', 'Join_Date', 'Black_list', 'Exit_Date', 'added_by', 'last_modified_by']
+
+
+
+#  -------------------------------------- Onboarding - SELECTED CANDIDATES - DOCUMENT VERIFICATION ---------------------------------------------------
+class Get_Document_list_names_Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_documents_list
+        fields = ['doc_li_id', 'Documents_name']
+
+
+# ---------------------------------------- Onboarding - SELECTED CANDIDATES - DOCUMENT VERIFICATION Uploded -------------------------------------------
+
+class post_documtnet_serializer(serializers.ModelSerializer):
+    class Meta:
+        model  = agg_hhc_professional_documents
+        fields=['srv_prof_id', 'doc_li_id', 'professional_document', 'rejection_reason', 'status', 'isVerified','added_by', 'last_modified_by']
+
+
+
+
+
+class check_file_API(serializers.ModelSerializer):
+    professional_document = serializers.SerializerMethodField()
+    status_name = serializers.SerializerMethodField()
+    isVerified_name = serializers.SerializerMethodField()
+    doc_li_id_name = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_professional_documents
+        fields = ['prof_doc_id', 'srv_prof_id', 'doc_li_id', 'doc_li_id_name', 'professional_document', 'rejection_reason', 'status', 'status_name', 'isVerified', 'isVerified_name']
+
+
+    def get_doc_li_id_name(self, obj):
+        try:
+            return obj.doc_li_id.Documents_name
+        except:
+            return None
+        
+    def get_status_name(self, obj):
+        status_mapping = {
+            1: 'Verified',
+            2: 'Need More Details',
+            3: 'Rejected',
+            4: 'In Progress'
+        }
+        return status_mapping.get(obj.status, '') 
     
+
+    def get_isVerified_name(self, obj):
+        isVerified_mapping = {
+            1: 'True',
+            2: 'False'
+        }
+        return isVerified_mapping.get(obj.isVerified, '') 
+    
+
+    # def get_professional_document(self, obj):
+    #     request = self.context.get('request')
+    #     if request:
+    #         sign_url = request.build_absolute_uri(obj.professional_document.url)
+    #         logger.info(f"Generated sign URL: {sign_url}")
+    #         return sign_url
+    #     logger.info(f"Relative sign URL: {obj.professional_document.url}")
+    #     return obj.professional_document.url
+
+    def get_professional_document(self, obj):
+        request = self.context.get('request')
+        if obj.professional_document:
+            if request:
+                # This ensures that the URL is fully qualified, including the domain and protocol.
+                return request.build_absolute_uri(obj.professional_document.url)
+            # In case request context is not available, return the relative URL
+            return obj.professional_document.url
+        return None 
+
+
+
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+
+
+
 
 class get_service_prof_details_serializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
@@ -254,23 +425,26 @@ class get_service_prof_details_serializer(serializers.ModelSerializer):
         fields = [
             'srv_prof_id', 'prof_fullname', 'srv_id', 'phone_no', 
             'alt_phone_no', 'role', 'Job_type'
-        ]
+        ]    
     def get_role(self, obj):
+        # Define the mapping dictionary for Job_type within the method
         role_mapping = {
             1: 'Professional',
             2: 'Vendor'
         }
+        # Return the corresponding job type name
         return role_mapping.get(obj.role, '')
     
     def get_Job_type(self, obj):
+        # Define the mapping dictionary for Job_type within the method
         job_type_mapping = {
             1: 'On Call',
             2: 'Full Time',
             3: 'Part Time'
         }
+        # Return the corresponding job type name
         return job_type_mapping.get(obj.Job_type, '')    
 
-#  --------------------------------------------------------------------------- Amit -------
 class agg_hhc_srv_prof_int_dtls_serializer(serializers.ModelSerializer):
     srv_prof_id = get_service_prof_details_serializer()
     int_mode = serializers.SerializerMethodField()  
@@ -278,14 +452,22 @@ class agg_hhc_srv_prof_int_dtls_serializer(serializers.ModelSerializer):
         model  = agg_hhc_prof_interview_details
         fields=['srv_prof_int_id', 'int_round', 'int_mode', 'int_schedule_with', 'int_schedule_date', 'int_schedule_time', 'srv_prof_id', 'int_status']
 
+
+	 
+	 
     def get_int_mode(self, obj):
+        # Define the mapping dictionary for Job_type within the method
         int_mode_mapping = {
             1: 'Online',
             2: 'Offline'
         }
+        # Return the corresponding job type name
         return int_mode_mapping.get(obj.int_mode, '')
+    
+        
     def validate(self, data):
         return data
+
 
 class InterviewScheduleProfStatusSerializer(serializers.ModelSerializer):
     status_name = serializers.SerializerMethodField()
@@ -300,9 +482,12 @@ class InterviewScheduleProfStatusSerializer(serializers.ModelSerializer):
             3: 'OnHold',
             4: 'Pending',
             5: 'Shortlisted'
+
         }
         return status_mapping.get(obj.int_status, '')
-    
+
+
+
 
 class EX_professional_Records_serializer(serializers.ModelSerializer):
     class Meta:
@@ -314,15 +499,16 @@ class Professionals_Not_Qualified_for_Interview_serializer(serializers.ModelSeri
         model = agg_hhc_Records_of_Professionals_Not_Qualified_for_Interview
         fields = ['srv_prof_id', 'Remark', 'last_modified_by']
 
-class Professionals_Qualified_for_Interview_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'doj', 'last_modified_by']
+
 
 class SelectedCandidatesIndTraiIDSerializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professionals
         fields = ['srv_prof_id', 'induction', 'training', 'id_card', 'last_modified_by'] 
+
+
+# ___________________________________ External Professional LIST API Get Amit _______________________
+
 
 class Exte_Prof_get_Prof_service11_serializers(serializers.ModelSerializer):
     
@@ -349,7 +535,8 @@ class exter_prof_Aproved_Rejected_status(serializers.ModelSerializer):
             2: 'Rejected',
 
         }
-        return status_mapping.get(obj.approve_reject, '')        
+        return status_mapping.get(obj.approve_reject, '')       
+
 
 class External_Prof_List_Get_Serializer_API(serializers.ModelSerializer):
     sub_srv_name = serializers.SerializerMethodField()
@@ -377,13 +564,10 @@ class External_Prof_List_Get_Serializer_API(serializers.ModelSerializer):
             return obj.prof_compny.company_name
         except AttributeError:
             return None          
-        
+                
 
-
-
-
-
-
+# ___________________________________ External Professional LIST API Get Amit _______________________
+   
 # ___________________________________ External_Professional Prof get API ________________________________
 class External_Professional_get_sub_service_serializers(serializers.ModelSerializer):
     class Meta:
@@ -401,23 +585,9 @@ class Exte_Prof_get_Prof_service_serializers(serializers.ModelSerializer):
         try:
             return obj.sub_srv_id.recommomded_service
         except AttributeError:
-            return None 
+            return None   
 
 from django.conf import settings
-
-
-
-class Add_Proffesional_Service_Professionals_Table_amit11_Serializer(serializers.ModelSerializer):
-    # srv_id = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['title','prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
-    def to_representation(self, instance):        
-        representation = super().to_representation(instance)
-        request = self.context.get('request')
-        if request and instance.prof_CV:
-            representation['prof_CV'] = request.build_absolute_uri(instance.prof_CV.url)
-        return representation  
 
 
 class Exte_Prof_get_Prof_interview_details_serializer(serializers.ModelSerializer):
@@ -453,7 +623,7 @@ class Exte_Prof_get_Prof_interview_details_serializer(serializers.ModelSerialize
         request = self.context.get('request')
         if request and instance.prof_CV:
             representation['prof_CV'] = request.build_absolute_uri(instance.prof_CV.url)
-        return representation        
+        return representation      
 
 class ExternalProfDocumentSerializer(serializers.ModelSerializer):
     doc_li_id = serializers.SerializerMethodField()
@@ -472,12 +642,13 @@ class ExternalProfDocumentSerializer(serializers.ModelSerializer):
         try:
             return obj.doc_li_id.Documents_name
         except AttributeError:
-            return None  
+            return None    
         
 class exter_prof_zone_locations_serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_professional_location
         fields = ['srv_prof_id', 'location_name']
+
 
 
 class Exter_Prof_Action_Get_Serializer(serializers.ModelSerializer):
@@ -577,117 +748,7 @@ class Exter_Prof_Action_Get_Serializer(serializers.ModelSerializer):
             return [{"availability_date": "Error fetching interview availabilities"}]
 
 
-
 # ___________________________________ External_Professional Prof get API ________________________________
-
-
-# ___________________________________ Manage Professionals LIST API Get _______________________
-
-
-class Manage_Prof_List_Get_Serializerssss_API(serializers.ModelSerializer):
-    # sub_srv_name = serializers.SerializerMethodField()
-    status_name = serializers.SerializerMethodField()
-    HR_status_remark = serializers.SerializerMethodField()
-    # notification = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'Job_type', 'prof_compny', 'prof_fullname', 'phone_no', 'email_id', 'srv_id', 'status', 'status_name', 'HR_status_remark']
-
-class Manage_Prof_List_Get_Serializer_API(serializers.ModelSerializer):
-    # sub_srv_name = serializers.SerializerMethodField()
-    status_name = serializers.SerializerMethodField()
-    HR_status_remark = serializers.SerializerMethodField()
-    # notification = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'Job_type', 'prof_compny', 'prof_fullname', 'phone_no', 'email_id', 'srv_id', 'status', 'status_name', 'HR_status_remark']
-
-
-    # def get_notification(self, obj):
-    #     # Count records based on hr_status values
-    #     approved_count = agg_hhc_prof_interview_details.objects.filter(
-    #         srv_prof_id=obj.srv_prof_id, hr_status=1
-    #     ).count()
-
-
-    #     if approved_count:
-    #             return {
-
-    #                 "Approved_Count": approved_count,
-
-    #             }
-
-    #         # Return counts with default values if no latest interview exists
-    #     return {
-    #         "Approved_Count": approved_count,
-
-    #     }
-
-
-
-    def get_status_name(self, obj):
-        role_mapping = {
-            1: 'Active',
-            2: 'Inactive',
-            3: 'Delete',
-        }
-        return role_mapping.get(obj.status, '')
-    
-    def get_HR_status_remark(self, obj):
-        latest_interview = agg_hhc_prof_interview_details.objects.filter(
-            srv_prof_id=obj.srv_prof_id
-        ).order_by('srv_prof_int_id').last()
-
-        if latest_interview:
-            return {
-                "hr_status": latest_interview.hr_status,
-                "int_round_Remark": latest_interview.int_round_Remark,
-            }
-        return {
-            "hr_status": None,
-            "int_round_Remark": None,
-        }
-    
-        
-
-    # def get_prof_compny(self, obj):
-    #     try:
-    #         return obj.prof_compny.company_name
-    #     except AttributeError:
-    #         return None   
-# ___________________________________ Manage Professionals LIST API Get _______________________
-
-# ___________________________________ Professional Interview Round ___________________________
-
-class Prof_interview_round_serializers(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_prof_interview_details
-        fields = ['srv_prof_id', 'int_round', 'int_mode', 'int_schedule_with', 'int_schedule_date', 'int_status', 'int_round_Remark', 'Schedule_Selected', 'added_by', 'last_modified_by']
-
-
-
-# ___________________________________ Professional Interview Round ___________________________
-
-# ___________________________________ External Added New Professionals Active/Inactive Delete API _____________________
-class ExProfessionalRecordSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_EX_professional_Records
-        fields = ['srv_prof_id', 'Remark', 'status', 'added_by', 'last_modified_by']
-
-class External_clg_prof_Active_inactive_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_com_colleague
-        fields = [ 'clg_ref_id', 'is_active', 'last_modified_by' ]
-class External_prof_Active_Inactive_serializer(serializers.ModelSerializer):
-    clg_details = External_clg_prof_Active_inactive_serializer(source='clg_ref_id', read_only=True)
-        
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'status', 'last_modified_by', 'clg_ref_id', 'clg_details']
-
-# ___________________________________ External Added New Professionals Active/Inactive Delete API _____________________
 # ___________________________________ External Professional Ongoing Service API ________________________________
 from django.db.models import Sum
 class Ongoing_Eve_serializer(serializers.ModelSerializer):
@@ -719,7 +780,7 @@ class Ongoing_Eve_serializer(serializers.ModelSerializer):
     
     def get_payment(self, obj):
         final_amount = obj.final_amount
-        # paid=agg_hhc_payment_details.objects.filter(eve_id=obj.eve_id,overall_status='SUCCESS', status=1).values('amount_paid').aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+        # paid=models.agg_hhc_payment_details.objects.filter(eve_id=obj.eve_id,overall_status='SUCCESS', status=1).values('amount_paid').aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
         ammt = agg_hhc_payment_details.objects.filter(eve_id=obj.eve_id,overall_status='SUCCESS', status=1)
         paid = ammt.values('amount_paid').aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
         # dt = []
@@ -802,40 +863,120 @@ class Ongoing_Eve_serializer(serializers.ModelSerializer):
         }
         return data
 
+# ___________________________________ External Professional Ongoing Service API ________________________________
 
 
 
 
+# ___________________________________ Manage Professionals LIST API Get _______________________
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# -------------------------------------- Closure_Revalidate Amit --------------------------------------
-class Event_Plan_of_Care_Staus(serializers.ModelSerializer):
+class Manage_Prof_List_Get_Serializer_API(serializers.ModelSerializer):
+    # sub_srv_name = serializers.SerializerMethodField()
+    status_name = serializers.SerializerMethodField()
+    HR_status_remark = serializers.SerializerMethodField()
+    # notification = serializers.SerializerMethodField()
     
     class Meta:
-        model = agg_hhc_event_plan_of_care
-        fields = ['eve_id','start_date','status','serivce_dates']
+        model = agg_hhc_service_professionals
+        fields = ['srv_prof_id', 'Job_type', 'prof_compny', 'prof_fullname', 'phone_no', 'email_id', 'srv_id', 'status', 'status_name', 'HR_status_remark']
+
+
+    # def get_notification(self, obj):
+    #     # Count records based on hr_status values
+    #     approved_count = agg_hhc_prof_interview_details.objects.filter(
+    #         srv_prof_id=obj.srv_prof_id, hr_status=1
+    #     ).count()
+
+
+    #     if approved_count:
+    #             return {
+
+    #                 "Approved_Count": approved_count,
+
+    #             }
+
+    #         # Return counts with default values if no latest interview exists
+    #     return {
+    #         "Approved_Count": approved_count,
+
+    #     }
+
+
+
+    def get_status_name(self, obj):
+        role_mapping = {
+            1: 'Active',
+            2: 'Inactive',
+            3: 'Delete',
+        }
+        return role_mapping.get(obj.status, '')
     
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=instance.eve_id, status=1).values_list('actual_StartDate_Time', flat=True)
-        representation['serivce_dates'] = [date.strftime('%Y-%m-%d') for date in dtl if date]
-        return representation
+    def get_HR_status_remark(self, obj):
+        latest_interview = agg_hhc_prof_interview_details.objects.filter(
+            srv_prof_id=obj.srv_prof_id
+        ).order_by('srv_prof_int_id').last()
+
+        if latest_interview:
+            return {
+                "hr_status": latest_interview.hr_status,
+                "int_round_Remark": latest_interview.int_round_Remark,
+            }
+        return {
+            "hr_status": None,
+            "int_round_Remark": None,
+        }
+    
+
+    # def get_prof_compny(self, obj):
+    #     try:
+    #         return obj.prof_compny.company_name
+    #     except AttributeError:
+    #         return None   
+# ___________________________________ Manage Professionals LIST API Get _______________________
+# ___________________________________ Professional Interview Round ___________________________
+
+class Prof_interview_round_serializers(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_prof_interview_details
+        fields = ['srv_prof_id', 'int_round', 'int_mode', 'int_schedule_with', 'int_schedule_date', 'int_status', 'int_round_Remark', 'Schedule_Selected', 'added_by', 'last_modified_by']
 
 
+
+
+# ___________________________________ Professional Interview Round ___________________________
+    
+
+# ___________________________________ External Added New Professionals Active/Inactive Delete API _____________________
+class ExProfessionalRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_EX_professional_Records
+        fields = ['srv_prof_id', 'Remark', 'status', 'added_by', 'last_modified_by']
+
+
+class External_clg_prof_Active_inactive_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_com_colleague
+        fields = [ 'clg_ref_id', 'is_active', 'last_modified_by' ]
+class External_prof_Active_Inactive_serializer(serializers.ModelSerializer):
+    clg_details = External_clg_prof_Active_inactive_serializer(source='clg_ref_id', read_only=True)
+        
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['srv_prof_id', 'status', 'last_modified_by', 'clg_ref_id', 'clg_details']
+
+
+# ___________________________________ External Added New Professionals Active/Inactive Delete API _____________________
+
+
+
+
+
+
+# __________________________________ Closure Revalidate Amit ______________________________________________________
+import requests
+
+from datetime import timedelta
 
 class Closure_Revalidate_serializer(serializers.ModelSerializer):
     agg_sp_pt_id=serializers.SerializerMethodField()
@@ -941,17 +1082,11 @@ class Closure_Revalidate_serializer(serializers.ModelSerializer):
         return data
 
 
+class Event_Plan_of_Care_Staus(serializers.ModelSerializer):
 
-
-
-
-import requests
-
-from datetime import timedelta
-
-
-
-
+    class Meta:
+        model = agg_hhc_event_plan_of_care
+        fields = ['start_date','status','serivce_dates']
 
 
 class Detail_Event_Plan_of_Care_Staus(serializers.ModelSerializer):
@@ -965,34 +1100,29 @@ class Event_Staus(serializers.ModelSerializer):
     per_session_cost = serializers.SerializerMethodField()
     completed_session_amt = serializers.SerializerMethodField()
     refund_amt = serializers.SerializerMethodField()
-
-
+    
     class Meta:
         model = agg_hhc_events
         fields = ['eve_id','Total_cost','status','Total_session','per_session_cost','completed_session_amt','refund_amt']
        
 
     def get_Total_session(self, obj):
-        # queryset = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id, Session_status=1)
         queryset = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id,status=1)
         return queryset.count()
 
     def get_per_session_cost(self, obj):
-        Total_cost = obj.Total_cost  # Access Total_cost field of the obj
-        Total_session = self.get_Total_session(obj)  # Call the previously defined method
+        Total_cost = obj.Total_cost  
+        Total_session = self.get_Total_session(obj) 
         return int(Total_cost / Total_session) if Total_session > 0 else 0
     
     def get_completed_session_amt(self, obj):
         queryset = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id, Session_status=2,status=1)
-        # return queryset.count()
+      
         completed_session = queryset.count()
         per_session = self.get_per_session_cost(obj)
         return int(per_session * completed_session)
     
     def get_refund_amt(self,obj):
-        # total_cost = obj.Total_cost
-        # com_ses_amt = self.get_completed_session_amt(obj)
-        # ref_amt = total_cost - com_ses_amt
         current_date = timezone.now().date() 
         previous_24_hours = timezone.now() - timedelta(hours=24)
         previous_48_hours = timezone.now() - timedelta(hours=48)
@@ -1000,24 +1130,21 @@ class Event_Staus(serializers.ModelSerializer):
         previous_48_hours_date = previous_48_hours.date()
 
         refaund_amt = 0
+        cancelation_charge = cancelation_charges.objects.filter(status=1)
+        print(cancelation_charge.latest('added_date'),';ll;l;l;ll;')
         cancelation_charge = cancelation_charges.objects.filter(status=1).latest('added_date')
         srv_start_date = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.eve_id,status=1)
         for srv_start_dates in srv_start_date:
-            # if srv_start_dates.start_date.date() <= current_date:
-            #     refaund_amt = 200
-            # elif srv_start_dates.start_date.date() >= previous_24_hours_date:
-            #     refaund_amt = 200
-            # elif srv_start_dates.start_date.date() >= previous_48_hours_date:
-            #     refaund_amt = 0
-
+        
+            print(cancelation_charge,'cancelation_charge')
             if srv_start_dates.start_date <= current_date:
                 refaund_amt = cancelation_charge.charges
             elif srv_start_dates.start_date >= previous_24_hours_date:
                 refaund_amt = cancelation_charge.charges
             elif srv_start_dates.start_date >= previous_48_hours_date:
                 refaund_amt = 0
-        
-        # return int(ref_amt - refaund_amt)
+            
+        print(refaund_amt, ';;;;;;;;;;;;;;;;;;')
         return int(refaund_amt)
     
 class post_in_session_cancellation_history(serializers.ModelSerializer):
@@ -1026,63 +1153,31 @@ class post_in_session_cancellation_history(serializers.ModelSerializer):
         fields = ['event_id','agg_sp_dt_eve_poc_id','cancellation_by','can_amt', 'convineance_chrg', 'remark', 'reason', 'last_modified_by']
 
 
+
 class ServiceCancellationSerializer(serializers.ModelSerializer):
     DetaileventStaus = Detail_Event_Plan_of_Care_Staus(source='event_id',read_only=True)
     eventPlanStaus = Event_Plan_of_Care_Staus(source='event_id',read_only=True)
     eventStaus = Event_Staus(source='event_id',read_only=True)
  
-
     class Meta:
         model = agg_hhc_cancellation_history
-        # fields = ['canc_his_id','event_id','cancellation_by','reason','cancelled_date','DetaileventStaus','eventPlanStaus','eventStaus','cost_per_session']
         fields = ['canc_his_id','event_id','cancellation_by','reason','remark','DetaileventStaus','eventPlanStaus','eventStaus', 'last_modified_by']
 
     
     def finds(self, pros, eve_id,event_poc_queryset):
             tokn=[j.token for j in DeviceToken.objects.filter(clg_id__in=agg_com_colleague.objects.filter(clg_ref_id__in=[pro.clg_ref_id for pro in pros]), is_login=True)]
-            event_poc_queryset=agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=event_poc_queryset).last() 
-            # print(eve_id.eve_id, ';;...................')
-            # print(eve_poc_id, ';;...................')
+          
             body=f'Patient: {eve_id.agg_sp_pt_id.name}\nService: {event_poc_queryset.sub_srv_id.recommomded_service}\nStart DateTime:\n {event_poc_queryset.start_date} {event_poc_queryset.start_time}\nEnd DateTime:\n {event_poc_queryset.end_date} {event_poc_queryset.end_time}'
             notification={ 'title': 'Approved request for service cancellation.', 'body': body }
             for tk in tokn:    
                 response = (requests.post('https://fcm.googleapis.com/fcm/send', json={'to': tk,'notification': notification}, headers={'Authorization': f'key={SERVER_KEY}', 'Content-Type': 'application/json'})).json()
 
-    # def create(self, validated_data):
-    #     event = validated_data.get('event_id')
-    #     if event:
-    #         try:
-
-    #             detail_event_poc=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=event,status=1)
-    #             event_poc=agg_hhc_event_plan_of_care.objects.filter(eve_id=event,status=1)
-    #             event_model=agg_hhc_events.objects.filter(eve_id=event.eve_id,status=1)
-    #             pro=set([i.srv_prof_id for i in detail_event_poc])
-    #             for detail_event_poc_queryset in detail_event_poc:
-    #                 detail_event_poc_queryset.status= status_enum.Inactive.value
-    #                 detail_event_poc_queryset.is_cancelled = 1
-    #                 detail_event_poc_queryset.save()
-                
-    #             for event_poc_queryset in event_poc:
-    #                 event_poc_queryset.status= status_enum.Inactive.value
-    #                 event_poc_queryset.save()
-                
-    #             for event_queryset in event_model:
-    #                 event_queryset.status= status_enum.Inactive.value
-    #                 event_queryset.srv_cancelled= 1
-    #                 event_queryset.save()
-    #             self.finds(pro,event)
-    #             print('5')
-    #         except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
-    #             print("this is not available")
-    #             pass  
-    #     cancellation_history = agg_hhc_cancellation_history.objects.create(**validated_data)
-    #     return cancellation_history
 
     def create(self, validated_data):
+        print(validated_data,"validated_data")
         event = validated_data.get('event_id')
         prof = validated_data.get('srv_prof_id')
         patient = validated_data.get('agg_sp_pt_id')
-
         if prof:
             print('1')
             if event:
@@ -1192,7 +1287,10 @@ class ServiceCancellationSerializer(serializers.ModelSerializer):
                         detail_event_poc_queryset.status= status_enum.Inactive.value
                         detail_event_poc_queryset.is_cancelled = 1
                         detail_event_poc_queryset.save()
-                    d=''
+                    d=[]
+                    print(event_poc,'event_poc')
+                    print(detail_event_poc,'detail_event_poc')
+                    print(event_model,'event_model')
                     for event_poc_queryset in event_poc:
                         event_poc_queryset.status= status_enum.Inactive.value
                         d=event_poc_queryset
@@ -1224,45 +1322,6 @@ class post_in_cancellation_history(serializers.ModelSerializer):
         fields = ['event_id','agg_sp_dt_eve_poc_id','cancellation_by','can_amt', 'convineance_chrg', 'remark', 'reason', 'last_modified_by']
 
 
-
-class patient_get_zone_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_zone
-        fields = ['prof_zone_id', 'Name']
-class preffered_proffesional(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_doctors_consultants
-        fields = ['doct_cons_id','cons_fullname','mobile_no']
-class hospital_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_hospitals
-        fields = ['hosp_id', 'hospital_name']
-
-class patient_detail_serializer(serializers.ModelSerializer):
-    preferred_hosp_id=hospital_serializer()
-    doct_cons_id=preffered_proffesional()
-    prof_zone_id=patient_get_zone_serializer()
-    state_id = agg_hhc_state()
-    city_id = agg_hhc_city()
-    gender_name = serializers.SerializerMethodField() 
-    class Meta:
-        model = agg_hhc_patients
-        fields = ['agg_sp_pt_id','name', 'gender_id','gender_name', 'Suffered_from', 'preferred_hosp_id', 'phone_no', 'patient_email_id','doct_cons_id','Age', 'state_id' ,'city_id' ,'address' ,'google_address','pincode' ,'prof_zone_id']
-    
-    def get_gender_name(self, obj):
-        return obj.gender_id.name if obj.gender_id else None
-
-class agg_hhc_callers_seralizer(serializers.ModelSerializer):
-    gender_name = serializers.SerializerMethodField()
-    class Meta:
-        model=agg_hhc_callers
-        fields=['caller_id','clg_ref_id','phone','otp','otp_expire_time','caller_fullname','purp_call_id','Age','gender','gender_name','email','alter_contact','Address','city','locality','state','pincode','emp_id','profile_pic','status','service_taken','last_modified_by']
-
-    def get_gender_name(self, obj):
-        return obj.gender.name if obj.gender else None
-    
-
-
 class agg_hhc_session_job_closure_serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_jobclosure_detail
@@ -1271,386 +1330,6 @@ class agg_hhc_session_job_closure_serializer(serializers.ModelSerializer):
 
     def validate(self, data):
         return data
-
-
-
-class agg_hhc_session_job_closure_H_serializer(serializers.ModelSerializer):
-    # status=serializers.SerializerMethodField()
-    # Walker_stick=serializers.SerializerMethodField()
-    # Strength_exer=serializers.SerializerMethodField()
-    # Stretch_exer=serializers.SerializerMethodField()
-    # Walk_indep=serializers.SerializerMethodField()
-    Baseline=serializers.SerializerMethodField()
-    Airway=serializers.SerializerMethodField()
-    Breathing=serializers.SerializerMethodField()
-    Circulation=serializers.SerializerMethodField()
-    Skin_Perfusion=serializers.SerializerMethodField()
-    Wound=serializers.SerializerMethodField()
-    Oozing=serializers.SerializerMethodField()
-    Discharge=serializers.SerializerMethodField()
-    Inj_site_IM=serializers.SerializerMethodField()
-    Procedure=serializers.SerializerMethodField()
-    Dressing_status=serializers.SerializerMethodField()
-    Catheter_type=serializers.SerializerMethodField()
-    Sutures_type=serializers.SerializerMethodField()
-    Wound_dehiscence=serializers.SerializerMethodField()
-    Strength_exer=serializers.SerializerMethodField()
-    is_patient_death=serializers.SerializerMethodField()
-    Stretch_exer=serializers.SerializerMethodField()
-    Walk_indep=serializers.SerializerMethodField()
-    Walker_stick=serializers.SerializerMethodField()
-    Movin_or_moveout=serializers.SerializerMethodField()
-    Getin_or_getout=serializers.SerializerMethodField()
-    ChairTobed_or_bedTochair=serializers.SerializerMethodField()
-    Situp_onbed=serializers.SerializerMethodField()
-    Unocp_or_ocp_bed=serializers.SerializerMethodField()
-    Showershampoo=serializers.SerializerMethodField()
-    Incontinent_care=serializers.SerializerMethodField()
-    Mouth_care=serializers.SerializerMethodField()
-    Shaving=serializers.SerializerMethodField()
-    Hand_care=serializers.SerializerMethodField()
-    Foot_care=serializers.SerializerMethodField()
-    Vital_care=serializers.SerializerMethodField()
-    motion_care=serializers.SerializerMethodField()
-    Grooming=serializers.SerializerMethodField()
-    Bed_bath=serializers.SerializerMethodField()
-    Bed_pan=serializers.SerializerMethodField()
-    added_by_type=serializers.SerializerMethodField()
-    status=serializers.SerializerMethodField()
-    
-    class Meta:
-        model = agg_hhc_jobclosure_detail_H
-        fields = ['jcolse_id_H','jcolse_id','srv_prof_id','dtl_eve_id','prof_sub_srv_id','Baseline','Airway','Breathing','Circulation','Skin_Perfusion','Wound','Oozing','Discharge','Inj_site_IM','Procedure','Size_catheter','Size_RT','Temp_core','TBSL','Pulse','SpO2','RR','GCS_Total','BP','diastolic','Remark','Name_injection_fld','Dose_freq','Num_Sutures_staples','Dressing_status','Catheter_type','Sutures_type','Wound_dehiscence','Strength_exer','is_patient_death','Stretch_exer','Walk_indep','Walker_stick','Movin_or_moveout','Mobin_or_moveout_datetime_remark','Getin_or_getout','Getin_or_getout_datetime_remark','ChairTobed_or_bedTochair','ChairTobed_or_bedTochair_datetime_remark','Situp_onbed','Situp_onbed_datetime_remark','Unocp_or_ocp_bed','Unocp_or_ocp_bed_datetime_remark','Showershampoo','Showershampoo_datetime_remark','Incontinent_care','Incontinent_care_datetime_remark','Mouth_care','Mouth_care_datetime_remark','Shaving','Shaving_datetime_remark','Hand_care','Hand_care_datetime_remark','Foot_care','Foot_care_datetime_remark','Vital_care','vital_care_datetime_remark','motion_care','motion_care_datetime_remark','Grooming','Grooming_datetime_remark','Bed_bath','Bed_bath_datetime_remark','Feeding','Feeding_datetime_remark','Reposition_patient','Reposition_patient_datetime_remark','Bed_pan','Bed_pan_datetime_remark','added_by_type','status','last_modified_by']
-
-    def get_Baseline(self, obj):
-        if obj.Baseline=='A':
-            return 1
-        elif obj.Baseline=='V':
-            return 2
-        elif obj.Baseline=='P':
-            return 3
-        elif obj.Baseline=='U':
-            return 4
-        else:
-            return None
-    
-    def get_Airway(self, obj):
-        if obj.Airway=='Open':
-            return 1
-        elif obj.Airway=='Close':
-            return 2
-        else:
-            return None
-        
-    def get_Breathing(self, obj):
-        if obj.Breathing=='Present':
-            return 1
-        elif obj.Breathing=='Comprom':
-            return 2
-        elif obj.Breathing=='Absent':
-            return 3
-        else:
-            return None
-            
-    def get_Circulation(self, obj):
-        if obj.Circulation=='Radial':
-            return 1
-        elif obj.Circulation=='Present':
-            return 2
-        elif obj.Circulation=='Absent':
-            return 3
-        else:
-            return None
-                
-    def get_Skin_Perfusion(self, obj):
-        if obj.Skin_Perfusion=='Normal':
-            return 1
-        elif obj.Skin_Perfusion=='Abnormal':
-            return 2
-        else:
-            return None
-                
-    def get_Wound(self, obj):
-        if obj.Wound=='Healthy':
-            return 1
-        elif obj.Wound=='Unhealthy':
-            return 2
-        else:
-            return None
-                
-
-    def get_Oozing(self, obj):
-        if obj.Oozing=='Present':
-            return 1
-        elif obj.Oozing=='Absent':
-            return 2
-        else:
-            return None
-        
-    def get_Discharge(self, obj):
-        if obj.Discharge=='Serous':
-            return 1
-        elif obj.Discharge=='Serosqnguinous':
-            return 2
-        elif obj.Discharge=='Sanguinous':
-            return 3
-        elif obj.Discharge=='Purulent':
-            return 4
-        else:
-            return None
-        
-    def get_Inj_site_IM(self, obj):
-        if obj.Inj_site_IM=='Gluteal':
-            return 1
-        elif obj.Inj_site_IM=='Deltoid':
-            return 2
-        else:
-            return None
-        
-    def get_Procedure(self, obj):
-        if obj.Procedure=='Eventful':
-            return 1
-        elif obj.Procedure=='Uneventful':
-            return 2
-        else:
-            return None
-        
-    def get_Dressing_status(self, obj):
-        if obj.Dressing_status=='Healing':
-            return 1
-        elif obj.Dressing_status=='Non_healing':
-            return 2
-        else:
-            return None
-         
-    def get_Catheter_type(self, obj):
-        if obj.Catheter_type=='Silicon':
-            return 1
-        elif obj.Catheter_type=='Simple':
-            return 2
-        else:
-            return None
-         
-    def get_Sutures_type(self, obj):
-        if obj.Sutures_type=='Sutures':
-            return 1
-        elif obj.Sutures_type=='Staples':
-            return 2
-        else:
-            return None
-        
-    def get_Wound_dehiscence(self, obj):
-        if obj.Wound_dehiscence=='yes':
-            return 1
-        elif obj.Wound_dehiscence=='no':
-            return 2
-        else:
-            return None
-         
-    def get_Strength_exer(self, obj):
-        if obj.Strength_exer=='yes':
-            return 1
-        elif obj.Strength_exer=='no':
-            return 2
-        else:
-            return None
-        
-    def get_is_patient_death(self, obj):
-        if obj.is_patient_death=='yes':
-            return 1
-        elif obj.is_patient_death=='no':
-            return 2
-        else:
-            return None
-        
-    def get_Stretch_exer(self, obj):
-        if obj.Stretch_exer=='yes':
-            return 1
-        elif obj.Stretch_exer=='no':
-            return 2
-        else:
-            return None
-                        
-    def get_Walk_indep(self, obj):
-        if obj.Walk_indep=='yes':
-            return 1
-        elif obj.Walk_indep=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Walker_stick(self,obj):
-        if obj.Walker_stick=='Walker':
-            return 1
-        if obj.Walker_stick=='Stick':
-            return 2
-        if obj.Walker_stick=='Independently':
-            return 3
-        else:
-            return None
-                
-    def get_Movin_or_moveout(self, obj):
-        if obj.Movin_or_moveout=='yes':
-            return 1
-        elif obj.Movin_or_moveout=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Getin_or_getout(self, obj):
-        if obj.Getin_or_getout=='yes':
-            return 1
-        elif obj.Getin_or_getout=='no':
-            return 2
-        else:
-            return None
-                
-    def get_ChairTobed_or_bedTochair(self, obj):
-        if obj.ChairTobed_or_bedTochair=='yes':
-            return 1
-        elif obj.ChairTobed_or_bedTochair=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Situp_onbed(self, obj):
-        if obj.Situp_onbed=='yes':
-            return 1
-        elif obj.Situp_onbed=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Unocp_or_ocp_bed(self, obj):
-        if obj.Unocp_or_ocp_bed=='yes':
-            return 1
-        elif obj.Unocp_or_ocp_bed=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Showershampoo(self, obj):
-        if obj.Showershampoo=='yes':
-            return 1
-        elif obj.Showershampoo=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Incontinent_care(self, obj):
-        if obj.Incontinent_care=='yes':
-            return 1
-        elif obj.Incontinent_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Mouth_care(self, obj):
-        if obj.Mouth_care=='yes':
-            return 1
-        elif obj.Mouth_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Shaving(self, obj):
-        if obj.Shaving=='yes':
-            return 1
-        elif obj.Shaving=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Hand_care(self, obj):
-        if obj.Hand_care=='yes':
-            return 1
-        elif obj.Hand_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Foot_care(self, obj):
-        if obj.Foot_care=='yes':
-            return 1
-        elif obj.Foot_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Vital_care(self, obj):
-        if obj.Vital_care=='yes':
-            return 1
-        elif obj.Vital_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_motion_care(self, obj):
-        if obj.motion_care=='yes':
-            return 1
-        elif obj.motion_care=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Grooming(self, obj):
-        if obj.Grooming=='yes':
-            return 1
-        elif obj.Grooming=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Bed_bath(self, obj):
-        if obj.Bed_bath=='yes':
-            return 1
-        elif obj.Bed_bath=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Feeding(self, obj):
-        if obj.Feeding=='yes':
-            return 1
-        elif obj.Feeding=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Reposition_patient(self, obj):
-        if obj.Reposition_patient=='yes':
-            return 1
-        elif obj.Reposition_patient=='no':
-            return 2
-        else:
-            return None
-                
-    def get_Bed_pan(self, obj):
-        if obj.Bed_pan=='yes':
-            return 1
-        elif obj.Bed_pan=='no':
-            return 2
-        else:
-            return None
-        
-    def get_added_by_type(self, obj):
-        if obj.added_by_type=='System':
-            return 1
-        elif obj.added_by_type=='App':
-            return 2
-        else:
-            return None
-        
-    def get_status(self, obj):
-        if obj.status=='Active':
-            return 1
-        elif obj.status=='Inactive':
-            return 2
-        elif obj.status=='Delete':
-            return 3
-        else:
-            return None
-        
 
 
 
@@ -1696,8 +1375,16 @@ class patient_detail_serializer(serializers.ModelSerializer):
         return obj.gender_id.name if obj.gender_id else None
 
 
+class agg_hhc_callers_seralizer(serializers.ModelSerializer):
+    gender_name = serializers.SerializerMethodField()
+    class Meta:
+        model=agg_hhc_callers
+        fields=['caller_id','clg_ref_id','phone','otp','otp_expire_time','caller_fullname','purp_call_id','Age','gender','gender_name','email','alter_contact','Address','city','locality','state','pincode','emp_id','profile_pic','status','service_taken','last_modified_by']
 
+    def get_gender_name(self, obj):
+        return obj.gender.name if obj.gender else None
     
+
 class all_dtl_evnts_closure_Revalidate_serializer(serializers.ModelSerializer):
     class Meta:
         model  = agg_hhc_detailed_event_plan_of_care
@@ -1707,12 +1394,13 @@ class all_dtl_evnts_closure_Revalidate_serializer(serializers.ModelSerializer):
 
 
 
+
 class jc_qustions_serializerM(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_job_closure_questions
         fields = ['jcq_id','jcq_question_mar','srv_id','que_shrt_name','date_time_remark_q_wise_name']
 
-class get_selected_job_clousre_que_serializerM(serializers.ModelSerializer):
+class get_selected_job_Closure_Revalidate_que_serializerM(serializers.ModelSerializer):
     jcq_id = jc_qustions_serializerM()
     class Meta:
         model = agg_hhc_events_wise_jc_question
@@ -1724,7 +1412,7 @@ class jc_qustions_serializerH(serializers.ModelSerializer):
         model = agg_hhc_job_closure_questions
         fields = ['jcq_id','jcq_question_hindi','srv_id','que_shrt_name','date_time_remark_q_wise_name']
 
-class get_selected_job_clousre_que_serializerH(serializers.ModelSerializer):
+class get_selected_job_Closure_Revalidate_que_serializerH(serializers.ModelSerializer):
     jcq_id = jc_qustions_serializerH()
     class Meta:
         model = agg_hhc_events_wise_jc_question
@@ -1736,22 +1424,21 @@ class jc_qustions_serializer(serializers.ModelSerializer):
         model = agg_hhc_job_closure_questions
         fields = ['jcq_id','jcq_question','srv_id','que_shrt_name','date_time_remark_q_wise_name']
 
-class get_selected_job_clousre_que_serializer(serializers.ModelSerializer):
+class get_selected_job_Closure_Revalidate_que_serializer(serializers.ModelSerializer):
     jcq_id = jc_qustions_serializer()
     class Meta:
         model = agg_hhc_events_wise_jc_question
         fields = ['eve_jcq_id','eve_id','srv_id','jcq_id','is_srv_enq_q']
 
 
+class agg_hhc_sub_services_jc_form_Closure_Revalidate_serializer(serializers.ModelSerializer): 
+    class Meta:
+        model = agg_hhc_jobclosure_form_numbering
+        fields = ['jc_form_id','prof_sub_srv_id','form_number','status']
 
-# class agg_hhc_session_job_closure_serializer_form_2(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_jobclosure_detail
-#         fields = ['srv_prof_id','dtl_eve_id', 'prof_sub_srv_id', 'Movin_or_moveout','Mobin_or_moveout_datetime_remark', 'Getin_or_getout','Getin_or_getout_datetime_remark', 'ChairTobed_or_bedTochair','ChairTobed_or_bedTochair_datetime_remark', 'Situp_onbed','Situp_onbed_datetime_remark','Unocp_or_ocp_bed','Unocp_or_ocp_bed_datetime_remark','Showershampoo','Showershampoo_datetime_remark','Incontinent_care','Incontinent_care_datetime_remark','Mouth_care','Mouth_care_datetime_remark','Shaving','Shaving_datetime_remark','Hand_care','Hand_care_datetime_remark','Foot_care','Foot_care_datetime_remark','Vital_care','vital_care_datetime_remark', 'motion_care','motion_care_datetime_remark', 'Grooming','Grooming_datetime_remark', 'Bed_bath','Bed_bath_datetime_remark', 'Feeding','Feeding_datetime_remark', 'Reposition_patient','Reposition_patient_datetime_remark', 'Bed_pan','Bed_pan_datetime_remark', 'added_by','last_modified_by', 'closure_revalidate', 'closure_revalidate_remark']
+    def validate(self, data):
+        return data
 
-#     def validate(self, data):
-#         return data
-    
 
 
 
@@ -1843,270 +1530,31 @@ class agg_hhc_session_job_closure_serializer_form_10(serializers.ModelSerializer
         return data
 
 
-
-
-
+    
 class deteailed_session_st_ed_time_date(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_detailed_event_plan_of_care
         fields = ['agg_sp_dt_eve_poc_id','prof_session_start_date','prof_session_end_date','prof_session_start_time','prof_session_end_time']
 
 
-class agg_hhc_sub_services_jc_form_Closure_Revalidate_serializer(serializers.ModelSerializer): 
-    class Meta:
-        model = agg_hhc_jobclosure_form_numbering
-        fields = ['jc_form_id','prof_sub_srv_id','form_number','status']
 
-    def validate(self, data):
-        return data
 
 
 
 
 
 
-# -------------------------------------- Closure_Revalidate Amit --------------------------------------
 
 
 
+# __________________________________ Closure Revalidate Amit ______________________________________________________
 
-class Onging_service_prof_event_details_serialize(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'professional_code', 'prof_fullname', 'clg_ref_id', 'prof_compny', 'srv_id', 'prof_sub_srv_id']
 
-        
 
-# ___________________________________ External Professional Ongoing Service API ________________________________
 
 
 
 
-
-
-
-
-
-
-#  --------------------------------------------------------------------------- Amit -------
-
-
-
-
-
-
-import logging
-
-logger = logging.getLogger(__name__)
-
-class Our_EMPLOYEE_List_serializer(serializers.ModelSerializer):
-    Job_type = serializers.SerializerMethodField()
-    role = serializers.SerializerMethodField()      
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = [
-            # 'srv_prof_id', 'prof_fullname', 'srv_id', 'phone_no', 
-            # 'alt_phone_no', 'role', 'Job_type'
-            'srv_prof_id', 'professional_code', 'prof_fullname', 'srv_id', 'phone_no', 
-            'alt_phone_no', 'role', 'Job_type', 'status', 'dob', 'doj', 'doe', 'google_home_location'            
-        ]
-    def get_Job_type(self, obj):
-        job_type_mapping = {
-            1: 'On Call',
-            2: 'Full Time',
-            3: 'Part Time'
-        }
-        return job_type_mapping.get(obj.Job_type, '')
-
-    def get_role(self, obj):
-        role_mapping = {
-            1: 'Professional',
-            2: 'Vendor'
-        }
-        return role_mapping.get(obj.role, '')    
-
-
-
-# class our_employee_list_serializer(serializers.modelserializer):
-#     class meta:
-#         Model = agg_hhc_service_professionals
-#         fields = [
-#             'srv_prof_id', 'professional_code', 'prof_fullname', 'srv_id', 'phone_no', 
-#             'alt_phone_no', 'role', 'status', 'dob', 'doj', 'doe', 'google_home_location'
-#         ]
-
-class Our_EMPLOYEE_Active_Inactive_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = [
-            'srv_prof_id', 'srv_id', 'status', 'doj', 'doe', 'last_modified_by']
-        
-class EX_professional_Records_keeping(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_EX_professional_Records
-        fields = ['srv_prof_id', 'Remark', 'Join_Date', 'Black_list', 'Exit_Date', 'added_by', 'last_modified_by']
-
-
-
-
-class check_file_API(serializers.ModelSerializer):
-    professional_document = serializers.SerializerMethodField()
-    status_name = serializers.SerializerMethodField()
-    isVerified_name = serializers.SerializerMethodField()
-    doc_li_id_name = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_professional_documents
-        fields = ['prof_doc_id', 'srv_prof_id', 'doc_li_id', 'doc_li_id_name', 'professional_document', 'rejection_reason', 'status', 'status_name', 'isVerified', 'isVerified_name']
-
-
-    def get_doc_li_id_name(self, obj):
-        try:
-            return obj.doc_li_id.Documents_name
-        except:
-            return None
-        
-    def get_status_name(self, obj):
-        status_mapping = {
-            1: 'Verified',
-            2: 'Need More Details',
-            3: 'Rejected',
-            4: 'In Progress'
-        }
-        return status_mapping.get(obj.status, '') 
-    
-
-    def get_isVerified_name(self, obj):
-        isVerified_mapping = {
-            1: 'True',
-            2: 'False'
-        }
-        return isVerified_mapping.get(obj.isVerified, '') 
-    
-
-    # def get_professional_document(self, obj):
-    #     request = self.context.get('request')
-    #     if request:
-    #         sign_url = request.build_absolute_uri(obj.professional_document.url)
-    #         logger.info(f"Generated sign URL: {sign_url}")
-    #         return sign_url
-    #     logger.info(f"Relative sign URL: {obj.professional_document.url}")
-    #     return obj.professional_document.url
-
-    def get_professional_document(self, obj):
-        request = self.context.get('request')
-        if obj.professional_document:
-            if request:
-                # This ensures that the URL is fully qualified, including the domain and protocol.
-                return request.build_absolute_uri(obj.professional_document.url)
-            # In case request context is not available, return the relative URL
-            return obj.professional_document.url
-        return None    
-
-
-
-
-
-
-class Get_Document_list_names_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_documents_list
-        fields = ['doc_li_id', 'Documents_name']
-
-
-
-class post_documtnet_serializer(serializers.ModelSerializer):
-    class Meta:
-        model  = agg_hhc_professional_documents
-        fields=['srv_prof_id', 'doc_li_id', 'professional_document', 'rejection_reason', 'status', 'isVerified','added_by', 'last_modified_by']
-
-
-# ----------------------------- Amit Changes  -----------------------------
-
-
-
-#  ______________________ Professional Payment Details API __________________________________________
-class Sub_srv_prof_details_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_sub_services
-        fields = ['sub_srv_id', 'recommomded_service', 'srv_id']
-
-class srv_prof_name_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_services
-        fields = ['srv_id', 'service_title']
-        
-class get_prof_payment_details_serializer(serializers.ModelSerializer):
-    srv_id = srv_prof_name_serializer()
-    prof_sub_srv_id = Sub_srv_prof_details_serializer()
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'srv_id', 'prof_sub_srv_id']
-
-class Prof_payement_details_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_sub_services
-        fields = ['prof_sub_srv_id', 'prof_cost', 'last_modified_by']
-    
-    def to_internal_value(self, data):
-        # Map `cost_prof_given` to `prof_cost` before validating the data
-        if 'cost_prof_given' in data:
-            data['prof_cost'] = data.pop('cost_prof_given')
-        return super().to_internal_value(data)        
-
-
-class service_prof_cost_history_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = service_prof_cost_history
-        fields = ['srv_prof_id', 'sub_srv', 'prof_cost', 'status', 'added_by', 'last_modified_by']
-
-
-class add_service_prof_cost_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_sub_services
-        fields = ['srv_prof_id', 'sub_srv_id', 'prof_cost', 'last_modified_by' ]
-
-
-#  ______________________ Professional Payment Details API __________________________________________
-
-
-#  ___________________________ Onboarding Amit ___________________________________
-class Onbording_statusinper_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'induction', 'training', 'id_card' ]
-
-class Onbording_document_status_serializer(serializers.ModelSerializer):
-    class meta:
-        model = agg_hhc_professional_documents
-        fields = ['srv_prof_id', 'doc_li_id', 'isVerified' ]
-
-class document_list_status_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_documents_list
-        fields = ['doc_li_id', 'prof_doc']
-
-
-
-#  ___________________________ Onboarding ___________________________________
-
-
-# ___________________________ External Professional _____________- Amit
-
-class extr_prof_aprov_reject_serializer(serializers.ModelSerializer):
-    
-    class Meta: 
-        model = external_prof_approve_reject
-        fields = ['extr_pro_ap_re', 'srv_prof_id', 'Remark', 'approve_reject', 'last_modified_by', 'added_by']
-class srv_prof_data_get(serializers.ModelSerializer):
-    # srv_prof_id = extr_prof_aprov_reject_serializer()
-    class Meta: 
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'prof_compny']
-
-
-
-
-# ___________________________ External Professional _____________- Amit
 
 
 
@@ -2147,48 +1595,6 @@ class colleage_add_prof_data(serializers.ModelSerializer):
         model = agg_com_colleague
         # fields = ['','clg_email','']
         fields = ['clg_email', 'clg_first_name', 'clg_gender', 'clg_mobile_no', 'clg_Work_phone_number','clg_Date_of_birth','clg_address', 'clg_state','clg_district']
-        
-class add_prof_zones_serializer(serializers.ModelSerializer):
-    location_name = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_professional_location
-        fields = ['prof_loc_id', 'srv_prof_id', 'location_name', 'last_modified_by', 'added_by']
-
-    def get_location_name(self, obj):
-        print(obj.location_name, 'lkjh')
-        existing_zone1 = agg_hhc_professional_zone.objects.filter(Name=obj.location_name).first()
-        return existing_zone1.prof_zone_id
-class add_prof_sub_services_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_sub_services
-        fields = ['prof_sub_srv_id', 'srv_prof_id', 'sub_srv_id', 'last_modified_by', 'added_by']
-
-class show_prof_sub_services_serializer(serializers.ModelSerializer):
-    sub_srv_name = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_professional_sub_services
-        fields = ['prof_sub_srv_id', 'srv_prof_id', 'sub_srv_id', 'sub_srv_name']
-    def get_sub_srv_name(self, obj):
-        if obj.sub_srv_id:
-            return obj.sub_srv_id.recommomded_service
-        else:
-            return ""
-
-class add_prof_schedule_interview(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_prof_interview_details
-        fields = ['srv_prof_int_id','srv_prof_id','int_round','int_mode', 'int_schedule_with', 'int_schedule_date', 'int_schedule_time']
-
-class qualifications_serializer(serializers.ModelSerializer):
-    class Meta:
-        model=qualifications
-        fields=['quali_id','qualification']
-
-
-class qualification_specialization_serializer(serializers.ModelSerializer):
-    class Meta:
-        model=qualification_specialization
-        fields=['quali_sp','specialization']
 
 class Register_professioanl_for_colleague(serializers.ModelSerializer):
     class Meta:
@@ -2202,11 +1608,26 @@ class Register_professioanl_for_colleague(serializers.ModelSerializer):
         user.save()
         return user
 
+
 class Register_professioanl_for_professional1(serializers.ModelSerializer):
-    # srv_id=serializers.SerializerMethodField()
+    # srv_id = serializers.SerializerMethodField() 
     class Meta:
         model = agg_hhc_service_professionals
         fields = ['srv_prof_id','clg_ref_id','role', 'title','email_id','prof_fullname','gender','eme_contact_relation','phone_no','dob','address', 'pin_code_id','state_name','city','eme_contact_no', 'eme_conact_person_name','alt_phone_no','certificate_registration_no', 'mode_of_service', 'Job_type', 'srv_id', 'added_by',  'last_modified_by']
+    # def get_srv_id(self, obj):
+        # try:
+        # print(obj)
+        # return obj.srv_id.srv_id
+        # except:
+        #     return None
+
+class Register_professioanl_for_professional11(serializers.ModelSerializer):
+    # srv_id = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['srv_prof_id','clg_ref_id','role', 'title','email_id','prof_fullname','gender','eme_contact_relation','phone_no','dob','address', 'pin_code_id','state_name','city','eme_contact_no', 'eme_conact_person_name','alt_phone_no','certificate_registration_no', 'mode_of_service', 'Job_type', 'srv_id', 'added_by',  'last_modified_by']
+
+
 
 class Register_professioanl_for_professional(serializers.ModelSerializer):
     srv_id=serializers.SerializerMethodField()
@@ -2224,19 +1645,65 @@ class Register_professioanl_for_professional(serializers.ModelSerializer):
             return obj.srv_id
         except:
             return None
+
+
+class add_prof_sub_services_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_professional_sub_services
+        fields = ['prof_sub_srv_id', 'srv_prof_id', 'sub_srv_id', 'last_modified_by', 'added_by']
+
+class show_prof_sub_services_serializer(serializers.ModelSerializer):
+    sub_srv_name = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_professional_sub_services
+        fields = ['prof_sub_srv_id', 'srv_prof_id', 'sub_srv_id', 'sub_srv_name']
+    def get_sub_srv_name(self, obj):
+        if obj.sub_srv_id:
+            return obj.sub_srv_id.recommomded_service
+        else:
+            return ""
+                
+
+
+#  ______________________ Professional Payment Details API __________________________________________
+class Sub_srv_prof_details_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_sub_services
+        fields = ['sub_srv_id', 'recommomded_service', 'srv_id']
+
+class srv_prof_name_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_services
+        fields = ['srv_id', 'service_title']
         
-class Register_professioanl_for_professional1(serializers.ModelSerializer):
-    # srv_id=serializers.SerializerMethodField()
+class get_prof_payment_details_serializer(serializers.ModelSerializer):
+    srv_id = srv_prof_name_serializer()
+    prof_sub_srv_id = Sub_srv_prof_details_serializer()
     class Meta:
         model = agg_hhc_service_professionals
-        fields = ['srv_prof_id','clg_ref_id','role', 'title','email_id','prof_fullname','gender','eme_contact_relation','phone_no','dob','address', 'pin_code_id','state_name','city','eme_contact_no', 'eme_conact_person_name','alt_phone_no','certificate_registration_no', 'mode_of_service', 'Job_type', 'srv_id', 'prof_compny',  'added_by', 'last_modified_by', 'work_phone_no']
+        fields = ['srv_prof_id', 'srv_id', 'prof_sub_srv_id']
 
-    # def get_srv_id(self, obj):
-    #     try:
-    #         return obj.srv_id.srv_id
-    #     except:
-    #         return None
-        
+class Prof_payement_details_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_professional_sub_services
+        fields = ['prof_sub_srv_id', 'prof_cost', 'last_modified_by']
+    
+    def to_internal_value(self, data):
+        # Map `cost_prof_given` to `prof_cost` before validating the data
+        if 'cost_prof_given' in data:
+            data['prof_cost'] = data.pop('cost_prof_given')
+        return super().to_internal_value(data)        
+
+
+class add_service_prof_cost_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_professional_sub_services
+        fields = ['srv_prof_id', 'sub_srv_id', 'prof_cost', 'last_modified_by' ]
+
+
+#  ______________________ Professional Payment Details API __________________________________________
+
+
 class add_prof_qualification_serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professional_details
@@ -2245,7 +1712,40 @@ class add_prof_qualification_serializer(serializers.ModelSerializer):
 class add_prof_schedule_interview(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_prof_interview_details
-        fields = ['srv_prof_int_id','srv_prof_id','int_round','int_mode', 'int_schedule_date', 'int_schedule_time', 'last_modified_by', 'added_by']
+        fields = ['srv_prof_int_id','srv_prof_id','int_round','int_mode', 'int_schedule_with', 'int_schedule_date', 'int_schedule_time', 'last_modified_by', 'added_by']
+    
+
+class qualifications_serializer(serializers.ModelSerializer):
+    class Meta:
+        model=qualifications
+        fields=['quali_id','qualification']
+    
+class qualification_specialization_serializer(serializers.ModelSerializer):
+    class Meta:
+        model=qualification_specialization
+        fields=['quali_sp','specialization']
+
+class add_prof_zones_serializer(serializers.ModelSerializer):
+    location_name = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_professional_location
+        fields = ['prof_loc_id', 'srv_prof_id', 'location_name', 'last_modified_by', 'added_by']
+
+    def get_location_name(self, obj):
+        print(obj.location_name, 'lkjh')
+        existing_zone1 = agg_hhc_professional_zone.objects.filter(Name=obj.location_name).first()
+        return existing_zone1.prof_zone_id
+    
+class prof_status_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['srv_prof_id', 'induction', 'training', 'id_card']
+
+
+
+
+
+
 
 
 class GET_prof_sub_services_serializer(serializers.ModelSerializer):
@@ -2259,16 +1759,16 @@ class GET_prof_qualification_serializer(serializers.ModelSerializer):
         fields = ['srv_prof_dt_id', 'srv_prof_id', 'qualification', 'specialization', 'prof_CV', 'availability_for_interview', 'added_by', 'last_modified_by']
         extra_kwargs = {
             'prof_CV': {'required': False}  # Make it optional if it's not always provided
-        }   
-    
-    
+        }          
+     
+
 class Get_Register_professioanl_for_professional(serializers.ModelSerializer):
     # qualification = GET_prof_qualification_serializer()
     qualification = serializers.SerializerMethodField()
     prof_sub_srv_id = GET_prof_sub_services_serializer()
     class Meta:
         model = agg_hhc_service_professionals
-        fields = ['srv_prof_id','clg_ref_id','role', 'title','email_id','prof_fullname','gender','phone_no','dob','address', 'pin_code_id', 'state_name','city','eme_contact_no', 'eme_conact_person_name','alt_phone_no','certificate_registration_no', 'mode_of_service', 'Job_type', 'srv_id','qualification','prof_sub_srv_id']
+        fields = ['srv_prof_id','clg_ref_id','role', 'title','email_id','prof_fullname','gender','phone_no','dob','address','state_name','city','eme_contact_no', 'eme_conact_person_name','alt_phone_no','certificate_registration_no', 'mode_of_service', 'Job_type', 'srv_id','qualification','prof_sub_srv_id']
 
 
 
@@ -2287,39 +1787,6 @@ class Get_Register_professioanl_for_professional(serializers.ModelSerializer):
         return seri0.data
     
 
-    
-
-
-class prof_status_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'induction', 'training', 'id_card']
-
-class prof_doc_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_documents_list
-        fields = ['doc_li_id', 'professional_role', 'Documents_name', 'isManadatory', 'gracePeriod']
-
-class documents_list_serializer(serializers.ModelSerializer):
-    prof_documents=serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_documents_list
-        fields = ['doc_li_id','Documents_name', 'prof_documents']
-
-    def get_prof_documents(self, obj):
-        # print(obj.Documents_name)
-
-        doc=obj.professional_document
-        # except:
-        #     doc=None 
-        # return 0
-        return {"docname":obj.Documents_name,"document":doc}
-    
-class post_documents_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_documents
-        fields =['doc_li_id','srv_prof_id', 'professional_document']
-        
 
 #-------------------------Mohin Serializers Start--------------------------------------    
 class register_company_post_serializer(serializers.ModelSerializer):
@@ -2399,60 +1866,6 @@ class CompanyUpdateSerializer(serializers.ModelSerializer):
                 )
         return instance
 
-# class Add_Proffesional_Service_Professionals_Table_amit1111_Serializer(serializers.ModelSerializer):
-#     srv_id = serializers.PrimaryKeyRelatedField(
-#         queryset=agg_hhc_services.objects.all(),
-#         source='srv_id.srv_id'
-#     )
-#     class Meta:
-#         model = agg_hhc_service_professionals
-#         fields = ['title','prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
-
-class Add_Proffesional_Service_Professionals_Table_amit_get_Serializer(serializers.ModelSerializer):
-    srv_id = serializers.PrimaryKeyRelatedField(
-        queryset=agg_hhc_services.objects.all(),
-        source='srv_id.srv_id'
-    )
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['title','role', 'prof_fullname','gender','dob','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
-
-
-class Add_Proffesional_Service_Professionals_Table_amit_Serializer(serializers.ModelSerializer):
-    # srv_id = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['title', 'role', 'prof_fullname','gender','dob','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address', 'address', 'pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified', 'work_phone_no']
-
-class Add_Proffesional_Service_Professionals_Table_amit111111_Serializer(serializers.ModelSerializer):
-    srv_id = serializers.PrimaryKeyRelatedField(
-        queryset=agg_hhc_services.objects.all(),
-        source='srv_id.srv_id'
-    )    
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['title','prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
-
-
-
-
-
-    
-    
-class Add_Proffesional_Service_Professionals_Table_Serializer(serializers.ModelSerializer):
-    # srv_id = serializers.SerializerMethodField()
-    class Meta:
-        model = agg_hhc_service_professionals
-        fields = ['title','prof_fullname','gender','dob','doj','Education_level','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified','work_phone_no','address']
-
-
-        
-class Add_Proffesional_Clg_Table_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_com_colleague
-        fields = ['clg_first_name','clg_gender','clg_Date_of_birth','clg_joining_date','clg_qualification','clg_specialization','clg_Work_phone_number','clg_work_email_id','clg_mobile_no','clg_state','clg_address','added_by','last_modified_by','password','grp_id','clg_hos_id','prof_compny']
-
-
 class Add_Proffesional_Clg_Table_amit_Serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_com_colleague
@@ -2464,8 +1877,70 @@ class Add_Proffesional_Service_Professionals_amit_Table_Serializer(serializers.M
         model = agg_hhc_service_professionals
         fields = ['title', 'role', 'prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city', 'address', 'prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified', 'work_phone_no']
 
+class Professional_CV_Details_amit_Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_hhc_service_professional_details
+        fields = ['srv_prof_id','qualification','specialization', 'availability_for_interview', 'added_by','last_modified_by'] 
 
 
+# class Add_Proffesional_Service_Professionals_Table_amit1111_Serializer(serializers.ModelSerializer):
+#     srv_id = serializers.PrimaryKeyRelatedField(
+#         queryset=agg_hhc_services.objects.all(),
+#         source='srv_id.srv_id'
+#     )
+#     class Meta:
+#         model = agg_hhc_service_professionals
+#         fields = ['title','prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
+
+
+
+
+
+class Add_Proffesional_Service_Professionals_Table_amit11_Serializer(serializers.ModelSerializer):
+    # srv_id = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['title','prof_fullname','gender','dob','doj','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
+    def to_representation(self, instance):        
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and instance.cv_file:
+            representation['cv_file'] = request.build_absolute_uri(instance.cv_file.url)
+        return representation  
+
+    
+class Add_Proffesional_Service_Professionals_Table_amit_Serializer(serializers.ModelSerializer):
+    # srv_id = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['title', 'role', 'prof_fullname','gender','dob','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address', 'address', 'pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified', 'work_phone_no']
+
+class Add_Proffesional_Service_Professionals_Table_amit_get_Serializer(serializers.ModelSerializer):
+    srv_id = serializers.PrimaryKeyRelatedField(
+        queryset=agg_hhc_services.objects.all(),
+        source='srv_id.srv_id'
+    )
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['title','role', 'prof_fullname','gender','dob','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified']
+
+
+
+
+class Add_Proffesional_Service_Professionals_Table_Serializer(serializers.ModelSerializer):
+    # srv_id = serializers.SerializerMethodField()
+    class Meta:
+        model = agg_hhc_service_professionals
+        fields = ['title','prof_fullname','gender','dob','doj','Education_level','certificate_registration_no','cv_file','srv_id','Job_type','phone_no','email_id','alt_phone_no','eme_contact_no','eme_conact_person_name','eme_contact_relation','state_name','city','prof_address','pin_code_id','prof_zone_id','lattitude','langitude','added_by','last_modified_by','google_home_location','clg_ref_id','prof_compny','prof_registered','prof_interviewed','prof_doc_verified','work_phone_no','address']
+
+
+
+
+       
+class Add_Proffesional_Clg_Table_Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = agg_com_colleague
+        fields = ['clg_first_name','clg_gender','clg_Date_of_birth','clg_joining_date','clg_qualification','clg_specialization','clg_Work_phone_number','clg_work_email_id','clg_mobile_no','clg_state','clg_address','added_by','last_modified_by','password','grp_id','clg_hos_id','prof_compny']
 
 
 class Get_Proffesional_Documents_serializer(serializers.ModelSerializer):
@@ -2473,64 +1948,26 @@ class Get_Proffesional_Documents_serializer(serializers.ModelSerializer):
         model = agg_hhc_documents_list
         fields = ['doc_li_id','Documents_name']  
         
-class Proffesional_Documents_save_amit_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_documents
-        fields = ['doc_li_id', 'professional_document','srv_prof_id','added_by','last_modified_by'] 
-
 class Proffesional_Documents_save_Serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_professional_documents
         fields = ['doc_li_id', 'professional_document','srv_prof_id','added_by','last_modified_by'] 
         
-class Professional_Sub_Services_amit_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_professional_sub_services
-        fields = ['srv_prof_id','sub_srv_id','prof_cost','added_by','last_modified_by'] 
-
 class Professional_Sub_Services_Serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_professional_sub_services
         fields = ['srv_prof_id','sub_srv_id','prof_cost','added_by','last_modified_by'] 
         
-class Professional_CV_Details_amit_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_service_professional_details
-        fields = ['srv_prof_id','qualification','specialization', 'availability_for_interview', 'added_by','last_modified_by'] 
-
-        
-
 class Professional_CV_Details_Serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professional_details
-        fields = ['srv_prof_id','qualification','specialization','prof_CV','added_by','last_modified_by'] 
+        fields = ['srv_prof_id','qualification','specialization','added_by','last_modified_by'] 
         
-# class Profesional_status_Serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_service_professionals
-#         fields = '__all__'
-
-# 
-# __________________________________ chnaged Amit 30_12_2024 _________________________________ 
 class Profesional_status_Serializer(serializers.ModelSerializer):
-    Remark = serializers.SerializerMethodField()
     class Meta:
         model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'Remark', 'status', 'added_by', 'last_modified_by']
-
-    def get_Remark(self, obj):
-        # Fetch the latest `int_round_Remark` for the corresponding `srv_prof_id`.
-        latest_interview_detail = agg_hhc_prof_interview_details.objects.filter(
-            srv_prof_id=obj.srv_prof_id
-        ).order_by('-added_date').first()
-
-        if latest_interview_detail:
-            return latest_interview_detail.int_round_Remark
-        return None
-    
+        fields = '__all__'
         
-# __________________________________ chnaged Amit 30_12_2024 _________________________________ 
-
 class Profesional_Details_Get_Serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professionals
@@ -2591,7 +2028,7 @@ class Professional_Details_Get_Update_Serializer(serializers.ModelSerializer):
             return obj.srv_id.srv_id
         except:
             return None
-        
+
 
 class Professional_Details_Get_Update_Serializer1(serializers.ModelSerializer):
     # doc_details = Proffesional_Documents_Details_Get_Update_Serializer(source='agg_hhc_professional_documents_set', many=True, read_only=True)
@@ -2621,16 +2058,11 @@ class Professional_Details_Get_Update_Serializer1(serializers.ModelSerializer):
             return obj.srv_id.srv_id
         except:
             return None
-        
+
 class cv_serializer(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professional_details
-        fields = ['prof_CV']
+        fields = ['prof_CV1']
+
         
-class Company_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = agg_hhc_company
-        fields = ['company_pk_id','company_name']
-
 #-------------------------Mohin Serializers End--------------------------------------    
-

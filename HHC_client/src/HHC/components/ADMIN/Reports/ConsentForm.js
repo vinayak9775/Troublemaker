@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import HRNavbar from '../../HR/HRNavbar';
 import Box from '@mui/material/Box';
-import AppBar from '@mui/material/AppBar';
 import Stack from '@mui/material/Stack';
-import { TextField, Button, TablePagination, Modal } from '@mui/material';
+import { TextField, Button, TablePagination } from '@mui/material';
 import MenuItem from '@mui/material/MenuItem';
 import InputBase from '@mui/material/InputBase';
 import Table from '@mui/material/Table';
@@ -12,7 +11,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import CardContent from '@mui/material/CardContent';
-import { Container, styled } from '@mui/system';
+import { styled } from '@mui/system';
 import Card from '@mui/material/Card';
 import Typography from "@mui/material/Typography";
 import CircularProgress from '@mui/material/CircularProgress';
@@ -21,14 +20,6 @@ import { saveAs } from 'file-saver';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { TableCell } from '@mui/material';
 import Footer from '../../../Footer';
-import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
-import Grid from '@mui/material/Grid';
-import CloseIcon from '@mui/icons-material/Close';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DescriptionIcon from '@mui/icons-material/Description';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import GetAppIcon from '@mui/icons-material/GetApp';
-
 
 const ConsentCards = styled(Card)({
     display: 'flex',
@@ -48,20 +39,8 @@ const ConsentCards = styled(Card)({
     fontWeight: "200"
 });
 
-
-const style = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    pt: 2,
-    px: 4,
-    pb: 3,
-};
-
 const ConsentForm = () => {
+
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [RerfundData, setRerfundData] = useState([]);
@@ -163,109 +142,6 @@ const ConsentForm = () => {
 
     const today = new Date().toISOString().split('T')[0]; // Get today's date in 'YYYY-MM-DD' format
 
-
-    const [openCaller, setOpenCaller] = useState(false);
-
-    const handleOpenCaller = () => setOpenCaller(true);
-
-    const handleCloseCaller = () => setOpenCaller(false);
-
-    const [data, setData] = useState([]);
-
-    //   useEffect(() => {
-    const fetchDocumentData = async (id) => {
-        try {
-            const response = await fetch(`${port}/hhc_repo/consent_doc_sign_View/${id}/`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const result = await response.json();
-            setData(result);
-            handleOpenCaller()
-        } catch (error) {
-            console.error('There was an error fetching the data!', error);
-        }
-    };
-
-    //     fetchDocumentData();
-    //   }, [id]);
-
-    const handleFileClick = (fileUrl) => {
-        // Open the document in a new tab
-        window.open(fileUrl, '_blank');
-    };
-
-    // #####################################################
-    // Function to get file extension
-    const getFileExtension = (filename) => {
-        return filename.split('.').pop().toLowerCase();
-    };
-
-    // Function to render file preview based on extension
-    const renderFilePreview = (doc) => {
-        const extension = getFileExtension(doc.file);
-
-        switch (extension) {
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-            case 'gif':
-                return (
-                    <img
-                        key={doc.ds_id}
-                        src={doc.file}
-                        alt={`Document ${doc.ds_id}`}
-                        onClick={() => handleFileClick(doc.file)}
-                        style={{ cursor: 'pointer', maxWidth: '100%', marginTop: '10px' }}
-                    />
-                );
-            case 'pdf':
-                return (
-                    <Box key={doc.ds_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '10px' }}>
-                    <Button
-                        onClick={() => handleFileClick(doc.file)}
-                        startIcon={<PictureAsPdfIcon />}
-                        style={{ display: 'block', marginBottom: '5px' }}
-                    >
-                        View PDF
-                    </Button>
-                    {/* <Button
-                        href={doc.file}
-                        target="_blank"
-                        download
-                        startIcon={<GetAppIcon />}
-                        style={{ display: 'block' }}
-                    >
-                        Download PDF
-                    </Button> */}
-                </Box>
-                );
-            case 'xlsx':
-            case 'csv':
-                return (
-                    <Button
-                        key={doc.ds_id}
-                        onClick={() => handleFileClick(doc.file)}
-                        startIcon={<DescriptionIcon />}
-                        style={{ display: 'block', marginTop: '10px' }}
-                    >
-                        Download {extension.toUpperCase()}
-                    </Button>
-                );
-            default:
-                return (
-                    <Button
-                        key={doc.ds_id}
-                        onClick={() => handleFileClick(doc.file)}
-                        startIcon={<InsertDriveFileIcon />}
-                        style={{ display: 'block', marginTop: '10px' }}
-                    >
-                        Download File
-                    </Button>
-                );
-        }
-    };
-
     return (
         <div style={{ marginBottom: '2em' }}>
             <HRNavbar />
@@ -337,7 +213,7 @@ const ConsentForm = () => {
                                 }}
                                 value={endDate}
                                 onChange={handleEndDateChange}
-                                max={today}
+                                max={today} 
                             />
                         </Box>
 
@@ -363,7 +239,7 @@ const ConsentForm = () => {
                                     <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Sr No</Typography>
                                     </CardContent>
-                                    <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
+                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Event ID</Typography>
                                     </CardContent>
                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
@@ -380,9 +256,6 @@ const ConsentForm = () => {
                                     </CardContent>
                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant='subtitle2'>Added Date</Typography>
-                                    </CardContent>
-                                    <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
-                                        <Typography variant='subtitle2'>view</Typography>
                                     </CardContent>
                                 </ConsentCards>
                             </TableRow>
@@ -409,7 +282,7 @@ const ConsentForm = () => {
                                                     <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                                         <Typography variant='subtitle2'>{page * rowsPerPage + index + 1}</Typography>
                                                     </CardContent>
-                                                    <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
+                                                    <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                                         <Typography variant='subtitle2'>{refund.eve || '-'}</Typography>
                                                     </CardContent>
                                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
@@ -426,9 +299,6 @@ const ConsentForm = () => {
                                                     </CardContent>
                                                     <CardContent style={{ flex: 3, borderRight: "1px solid #FFFFFF" }}>
                                                         <Typography variant='subtitle2'>{refund.added_date.split(' ')[0] || '-'}</Typography>
-                                                    </CardContent>
-                                                    <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
-                                                        <Typography variant='subtitle2' onClick={() => fetchDocumentData(refund.eve)}><RemoveRedEyeIcon /></Typography>
                                                     </CardContent>
                                                 </ConsentCards>
                                             </TableRow>
@@ -447,86 +317,6 @@ const ConsentForm = () => {
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
-
-                <Grid container spacing={1}>
-
-                    <Grid item xs={12}>
-                        <Card style={{ background: '#ffffff', boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)', borderRadius: '10px' }}>
-
-                            <Modal
-                                open={openCaller}
-                                onClose={handleCloseCaller}
-                                aria-labelledby="modal-modal-title"
-                                aria-describedby="modal-modal-description"
-                            >
-                                <Box sx={{ ...style, width: 1000, borderRadius: "10px" }}>
-
-                                    <AppBar position="static" style={{
-                                        background: 'linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)',
-                                        width: '66.5rem',
-                                        height: '3rem',
-                                        marginTop: '-16px',
-                                        marginBottom: '1rem',
-                                        marginLeft: "-32px",
-                                        borderRadius: "8px 10px 0 0",
-                                    }}>
-                                        <div style={{ display: "flex" }}>
-                                            <Typography align="left" style={{ fontSize: "16px", fontWeight: 600, color: "#FFFFFF", marginTop: "10px", marginLeft: "18px" }}>Discharge Summary Documents</Typography>
-                                            <Button onClick={handleCloseCaller} sx={{ marginLeft: "46rem", color: "#FFFFFF", marginTop: "2px", }}><CloseIcon /></Button>
-                                        </div>
-                                    </AppBar>
-                                    <Grid container spacing={2} sx={{mb:'20px'}}>
-                                    {data.map((item) => (
-                                        <Grid item xs={12} sm={6} md={4} key={item.con_id}>
-                                            <Card style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <CardContent style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              
-                                                    <Typography variant="h6" gutterBottom>
-                                                        Event ID: {item.eve_id}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                                                        Signature:
-                                                    </Typography>
-                                                    <img
-                                                        src={item.sign}
-                                                        alt={`Signature for Event ${item.eve_id}`}
-                                                        onClick={() => handleFileClick(item.sign)}
-                                                        style={{ cursor: 'pointer', maxWidth: '100px', marginBottom: '10px' ,maxHeight:'50px'}}
-                                                    />
-
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                    </Grid>
-
-                                    {/* <Box>
-                                    <Typography variant='h6'>Discharge Summary Documents</Typography>
-                                    </Box> */}
-                                    
-                                    <Grid container spacing={2}>
-        {data.map((item) => (
-            <React.Fragment key={item.con_id}>
-                {item.Discharge_summ_docs.map((doc) => (
-                    <Grid item xs={12} sm={6} md={4} key={doc.ds_id}>
-                        <Card style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <CardContent style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Typography variant="h6" gutterBottom>
-                                    Event ID: {item.eve_id}
-                                </Typography>
-                                {renderFilePreview(doc)}
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </React.Fragment>
-        ))}
-    </Grid>
-                                </Box>
-                            </Modal>
-                        </Card>
-                    </Grid>
-                </Grid>
             </Box>
             <Footer />
         </div>

@@ -111,12 +111,8 @@ export default function Login() {
                     else if (data.token.user_group === "MANAGEMENT") {
                         navigate("/management/management-dashboard");
                     }
-                    // else if (data.token.user_group === "clincal_gov") {
-                    //     navigate("/hhc/clinical");
-                    // }
                     else if (data.token.user_group === "clincal_gov") {
-                        // navigate("/hhc/clinical");
-                        navigate("/hhc/clinical/closure");
+                        navigate("/hhc/clinical");
                     }
 
                     else if (data.token.user_group === "HHC_Analytics") {

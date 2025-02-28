@@ -519,21 +519,15 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
         console.log("patientID", patientValue);
         console.log("callerID", callerValue);
         console.log("eventPlanID", eventPlanValue);
-        // Sneha's code
-        if (jobClosureStatus === sesCount) {
-          setOpenProfessional(true);
-          //Sneha's code end
-        } else {
-          navigate("/viewservice", {
-            state: {
-              patientID: patientValue,
-              callerID: callerValue,
-              eventPlanID: eventPlanValue,
-              eventID: eventValue,
-              flag: 2,
-            },
-          });
-        }
+        navigate("/viewservice", {
+          state: {
+            patientID: patientValue,
+            callerID: callerValue,
+            eventPlanID: eventPlanValue,
+            eventID: eventValue,
+            flag: 2,
+          },
+        });
       } catch (error) {
         console.error("Error fetching Request Allocation:", error);
       }
@@ -563,7 +557,6 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
     setTempSearchValue("");
     // setOnServices([]);
     setLoading(false);
-    setPage(0);
   };
 
   const handleFilterTypeChange = (event) => {
@@ -587,7 +580,6 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
     // setLoading(true);
     setSearchValue(tempSearchValue);
     setStartDateTime(tempStartDateTime);
-    setPage(0);
     // getOngoingServices();
   };
 
@@ -1013,7 +1005,7 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                     <Typography variant="subtitle2">Patient Name</Typography>
                   </CardContent>
                   <CardContent
-                    style={{ flex: 1.6, borderRight: "1px solid #FFFFFF" }}
+                    style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}
                   >
                     <Typography variant="subtitle2">Caller No</Typography>
                   </CardContent>
@@ -1052,6 +1044,9 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                   >
                     <Typography variant="subtitle2">Added by</Typography>
                   </CardContent>
+                  {/* <CardContent style={{ width: "5%", borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant='subtitle2'>Status</Typography>
+                                    </CardContent> */}
                   <CardContent style={{ flex: 0.5 }}>
                     <Typography variant="subtitle2">Action</Typography>
                   </CardContent>
@@ -1063,7 +1058,7 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                 <CircularProgress />
               </Box>
             ) : (
-              <TableBody >
+              <TableBody>
                 {filteredData.length === 0 ? (
                   <TableRow>
                     <CardContent>
@@ -1078,18 +1073,15 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                         key={index}
                         sx={{
                           "&:last-child td, &:last-child th": { border: 0 },
-                          height: "auto",
-                          textAlign: 'left',
-                          alignItems: 'left'
                         }}
                       >
-                        <OngoingServiceCard style={{ height: "auto"}}>
+                        <OngoingServiceCard style={{ height: "auto" }}>
                           <CardContent style={{ flex: 0.5 }}>
                             <Typography variant="body2">
                               {index + 1 + page * rowsPerPage}
                             </Typography>
                           </CardContent>
-                          <CardContent style={{ flex: 2, textAlign: 'left', alignItems: 'left' }}>
+                          <CardContent style={{ flex: 2 }}>
                             <button
                               onClick={() => {
                                 eventIDRequest(row.eve_id);
@@ -1100,10 +1092,9 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                 background: "none",
                                 outline: "none",
                                 cursor: "pointer",
+                                height: "40px",
                                 display: "flex",
-                                alignItems: "left",
-                                textAlign: "left",
-                                color: "#000000",
+                                alignItems: "center",
                               }}
                             >
                               {" "}
@@ -1135,25 +1126,38 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                 background: "none",
                                 outline: "none",
                                 cursor: "pointer",
+                                height: "40px",
                                 display: "flex",
-                                alignItems: "left",
-                                flexWrap: "wrap",
+                                alignItems: "center",
                               }}
                             >
-                              <Typography
-                                variant="body2"
-                                textAlign="left"
-                                style={{
-                                  whiteSpace: 'normal',
-                                  wordBreak: 'break-word',
-                                  maxWidth: '100%',
-                                  color: "#000000",
-                                }}
+                              {/* <Tooltip
+                                title={
+                                  row?.agg_sp_pt_id?.name || "No name available"
+                                }
+                                arrow
                               >
+                                <Typography
+                                  variant="body2"
+                                  textAlign="left"
+                                  noWrap
+                                >
+                                  {row?.agg_sp_pt_id?.name
+                                    ? row?.agg_sp_pt_id?.name.length > 8
+                                      ? row?.agg_sp_pt_id?.name.substring(
+                                        0,
+                                        8
+                                      ) + "..."
+                                      : row?.agg_sp_pt_id?.name
+                                    : ""}
+                                </Typography>
+                              </Tooltip> */}
+                              <Typography variant="body2" textAlign="left">
                                 {row?.agg_sp_pt_id?.name ? row?.agg_sp_pt_id?.name : ""}
                               </Typography>
                             </button>
 
+                            {/* code change////////////////////////////////////////// */}
                             {patient && (
                               <Modal
                                 open={openPatientDetails}
@@ -1218,7 +1222,8 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                               </Modal>
                             )}
                           </CardContent>
-                          <CardContent style={{ flex: 1.6 }}>
+
+                          <CardContent style={{ flex: 2 }}>
                             <button
                               onClick={() => {
                                 eventIDRequest(
@@ -1228,14 +1233,15 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                 );
                                 handleOpenDetails2();
                               }}
+                              // 9665485378
                               style={{
                                 border: "none",
                                 background: "none",
                                 outline: "none",
                                 cursor: "pointer",
+                                height: "40px",
                                 display: "flex",
                                 alignItems: "center",
-                                color: "#000000",
                               }}
                             >
                               <Typography variant="body2">
@@ -1309,20 +1315,24 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                           </CardContent>
 
                           <CardContent style={{ flex: 2 }}>
+                            {/* <Tooltip title={row.job_closure ? row.job_closure.service_professional : ""}>
+                              <Typography variant="body2" textAlign="left">
+                                {row.job_closure && row.job_closure.service_professional
+                                  ? `${row.job_closure.service_professional.slice(0, 10)}...`
+                                  : ""}
+                              </Typography>
+                            </Tooltip> */}
                             <Typography variant="body2" textAlign="left">
-                              {row.job_closure &&
-                                row.job_closure.service_professional
+                              {row.job_closure && row.job_closure.service_professional
                                 ? `${row.job_closure.service_professional}`
                                 : ""}
                             </Typography>
                           </CardContent>
-
                           <CardContent style={{ flex: 2 }}>
                             <Typography variant="body2" textAlign="left">
                               {row.service ? row.service.service : ""}
                             </Typography>
                           </CardContent>
-
                           <CardContent style={{ flex: 1.5 }}>
                             <Typography variant="body2">
                               {formatDate(
@@ -1337,20 +1347,71 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                               )}
                             </Typography>
                           </CardContent>
-                          <CardContent style={{ flex: 2 }}>
+                          {/* <CardContent style={{ flex: 2 }}>
                             {row.payment.pending_amount === 0 ? (
                               <div style={{ display: "flex" }}>
-                                <CheckCircleIcon
-                                  style={{ fontSize: "16px", color: "#3D8A00" }}
-                                />
+                                <CheckCircleIcon style={{ fontSize: "16px", color: "#3D8A00" }} />
                                 <Typography
                                   variant="body2"
                                   textAlign="left"
                                   sx={{
-                                    cursor:
-                                      row.payment.payment_status === 1
-                                        ? "pointer"
-                                        : "default",
+                                    cursor: row.payment.payment_status === 1 ? "pointer" : "default",
+                                  }}
+                                  onClick={
+                                    row.payment.payment_status === 1
+                                      ? () => {
+                                        eventIDRequest(row.eve_id);
+                                        handleOpenRecPayment();
+                                      }
+                                      : undefined
+                                  }
+                                >
+                                  {row.payment.payment_status === 1 ? (
+                                    "Received by professional"
+                                  ) : row.payment.payment_status === 100 ? (
+                                    <Tooltip title="Complementary" arrow>
+                                      <span>
+                                        {"Complementary".slice(0, 8) + "..."}
+                                      </span>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip title="Received by desk" arrow>
+                                      <span>
+                                        {"Received by desk".slice(0, 8) + "..."}
+                                      </span>
+                                    </Tooltip>
+                                  )}
+                                </Typography>
+                              </div>
+                            ) : (
+                              <Typography variant="body2" textAlign="left">
+                                {row.payment.payment_status === 100 ? (
+                                  <Tooltip title="Complementary" arrow>
+                                    <span>
+                                      {"Complementary".slice(0, 8) + "..."}
+                                    </span>
+                                  </Tooltip>
+                                ) : (
+                                  <>
+                                    ₹{" "}
+                                    <span style={{ color: "#DA0000" }}>
+                                      {parseInt(row.payment.pending_amount, 10)}
+                                    </span>
+                                    /{parseInt(row.payment.final_amount, 10)}
+                                  </>
+                                )}
+                              </Typography>
+                            )}
+                          </CardContent> */}
+                          <CardContent style={{ flex: 2 }}>
+                            {row.payment.pending_amount === 0 ? (
+                              <div style={{ display: "flex" }}>
+                                <CheckCircleIcon style={{ fontSize: "16px", color: "#3D8A00" }} />
+                                <Typography
+                                  variant="body2"
+                                  textAlign="left"
+                                  sx={{
+                                    cursor: row.payment.payment_status === 1 ? "pointer" : "default",
                                   }}
                                   onClick={
                                     row.payment.payment_status === 1
@@ -1458,10 +1519,7 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                             </Typography>
                           </CardContent>
                           <CardContent style={{ flex: 1.5 }}>
-                            <Tooltip
-                              title={row ? row.added_by : "No data available"}
-                              arrow
-                            >
+                            <Tooltip title={row ? row.added_by : "No data available"} arrow>
                               <Typography variant="body2" textAlign="left">
                                 {row ? `${row.added_by.slice(0, 5)}...` : "-"}
                               </Typography>
@@ -1584,7 +1642,8 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                     Feedback
                                   </MenuItem>
                                 </Menu>
-
+                                {/* {row.job_closure.job_closure_count === row.job_closure.total_session &&
+                                                                    } */}
                                 {/* Anjali's Code  End */}
 
                                 <Modal
@@ -1613,81 +1672,53 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                       border: "none",
                                     }}
                                   >
-                                    {jobClosureStatus === sesCount ? (
-                                      <Button
-                                        variant="contained"
-                                        sx={{
-                                          mt: 1,
-                                          ml: 1,
-                                          background: "#2CDFAA",
-                                          borderRadius: "10px",
-                                          textTransform: "capitalize",
-                                          fontWeight: "bold",
-                                          color: "#fff",
-                                          fontSize: "14px",
-                                          boxShadow:
-                                            "0px 4px 8px rgba(0, 0, 0, 0.1)",
-                                          "&:hover": {
-                                            backgroundColor: "#1bb78d",
-                                            boxShadow:
-                                              "0px 6px 12px rgba(0, 0, 0, 0.2)",
-                                          },
-                                        }}
-                                      >
-                                        Job closure completed. Service reschedule is no longer possible.
-
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <AppBar
-                                          position="static"
+                                    <AppBar
+                                      position="static"
+                                      style={{
+                                        background:
+                                          "linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)",
+                                        width: "22.8rem",
+                                        height: "3rem",
+                                        marginTop: "-16px",
+                                        marginLeft: "-32px",
+                                        borderRadius: "8px 10px 0 0",
+                                      }}
+                                    >
+                                      <div style={{ display: "flex" }}>
+                                        <Typography
+                                          align="center"
                                           style={{
-                                            background:
-                                              "linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)",
-                                            width: "22.8rem",
-                                            height: "3rem",
-                                            marginTop: "-16px",
-                                            marginLeft: "-32px",
-                                            borderRadius: "8px 10px 0 0",
+                                            fontSize: "16px",
+                                            fontWeight: 600,
+                                            color: "#FFFFFF",
+                                            marginTop: "10px",
+                                            marginLeft: "15px",
                                           }}
                                         >
-                                          <div style={{ display: "flex" }}>
-                                            <Typography
-                                              align="center"
-                                              style={{
-                                                fontSize: "16px",
-                                                fontWeight: 600,
-                                                color: "#FFFFFF",
-                                                marginTop: "10px",
-                                                marginLeft: "15px",
-                                              }}
-                                            >
-                                              SERVICE RESCHEDULE
-                                            </Typography>
-                                            <Button
-                                              onClick={handleCloseReschedule}
-                                              sx={{
-                                                marginLeft: "100px",
-                                                color: "#FFFFFF",
-                                                marginTop: "2px",
-                                              }}
-                                            >
-                                              <CloseIcon />
-                                            </Button>
-                                          </div>
-                                        </AppBar>
-                                        <Reschedule
-                                          eventID={eventID}
-                                          eveStartDate={startDT}
-                                          eveEndDate={endDateTime}
-                                          open={openReschedule}
-                                          jobClosureStatus={jobClosureStatus}
-                                          sesCount={sesCount}
-                                          getEventIDRequest={getEventIDRequest}
-                                          onClose={handleCloseReschedule}
-                                        />
-                                      </>
-                                    )}
+                                          SERVICE RESCHEDULE
+                                        </Typography>
+                                        <Button
+                                          onClick={handleCloseReschedule}
+                                          sx={{
+                                            marginLeft: "100px",
+                                            color: "#FFFFFF",
+                                            marginTop: "2px",
+                                          }}
+                                        >
+                                          <CloseIcon />
+                                        </Button>
+                                      </div>
+                                    </AppBar>
+                                    <Reschedule
+                                      eventID={eventID}
+                                      eveStartDate={startDT}
+                                      eveEndDate={endDateTime}
+                                      open={openReschedule}
+                                      jobClosureStatus={jobClosureStatus}
+                                      sesCount={sesCount}
+                                      getEventIDRequest={getEventIDRequest}
+                                      onClose={handleCloseReschedule}
+                                    />
                                   </Box>
                                 </Modal>
 
@@ -1730,7 +1761,8 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                     </div>
                                     <div style={{ marginTop: "25px" }}>
                                       <Typography variant="subtitle2">
-                                        Are you sure want to extend the service?
+                                        Are you sure want to extend the
+                                        service?
                                       </Typography>
                                       <Button
                                         varaint="contained"
@@ -1780,68 +1812,64 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                           fontWeight: "bold",
                                           color: "#fff",
                                           fontSize: "14px",
-                                          boxShadow:
-                                            "0px 4px 8px rgba(0, 0, 0, 0.1)",
+                                          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
                                           "&:hover": {
                                             backgroundColor: "#1bb78d",
-                                            boxShadow:
-                                              "0px 6px 12px rgba(0, 0, 0, 0.2)",
+                                            boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.2)",
                                           },
                                         }}
                                       >
-                                        Job closure has already completed.
-                                        Cannot cancel the service !!!
+                                        Job closure has already completed. Cannot cancel the service !!!
                                       </Button>
 
-                                    ) :
-                                      (
-                                        <>
-                                          <AppBar
-                                            position="static"
-                                            style={{
-                                              background:
-                                                "linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)",
-                                              width: "22.8rem",
-                                              height: "3rem",
-                                              marginTop: "-16px",
-                                              marginLeft: "-32px",
-                                              borderRadius: "8px 10px 0 0",
-                                            }}
-                                          >
-                                            <div style={{ display: "flex" }}>
-                                              <Typography
-                                                align="center"
-                                                style={{
-                                                  fontSize: "16px",
-                                                  fontWeight: 600,
-                                                  color: "#FFFFFF",
-                                                  marginTop: "10px",
-                                                  marginLeft: "15px",
-                                                }}
-                                              >
-                                                SERVICE CANCELLATION
-                                              </Typography>
-                                              <Button
-                                                onClick={handleCloseCancel}
-                                                sx={{
-                                                  marginLeft: "6rem",
-                                                  color: "#FFFFFF",
-                                                  marginTop: "2px",
-                                                }}
-                                              >
-                                                <CloseIcon />
-                                              </Button>
-                                            </div>
-                                          </AppBar>
-                                          <Cancellation
-                                            eventID={eventID}
-                                            subSrvID={subSrvID}
-                                            jobClosureStatus={jobClosureStatus}
-                                            endDateTime={endDateTime}
-                                            onClose={handleCloseCancel}
-                                          />
-                                        </>
-                                      )}
+                                    ) : (
+                                      <>
+                                        <AppBar
+                                          position="static"
+                                          style={{
+                                            background:
+                                              "linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)",
+                                            width: "22.8rem",
+                                            height: "3rem",
+                                            marginTop: "-16px",
+                                            marginLeft: "-32px",
+                                            borderRadius: "8px 10px 0 0",
+                                          }}
+                                        >
+                                          <div style={{ display: "flex" }}>
+                                            <Typography
+                                              align="center"
+                                              style={{
+                                                fontSize: "16px",
+                                                fontWeight: 600,
+                                                color: "#FFFFFF",
+                                                marginTop: "10px",
+                                                marginLeft: "15px",
+                                              }}
+                                            >
+                                              SERVICE CANCELLATION
+                                            </Typography>
+                                            <Button
+                                              onClick={handleCloseCancel}
+                                              sx={{
+                                                marginLeft: "6rem",
+                                                color: "#FFFFFF",
+                                                marginTop: "2px",
+                                              }}
+                                            >
+                                              <CloseIcon />
+                                            </Button>
+                                          </div>
+                                        </AppBar>
+                                        <Cancellation
+                                          eventID={eventID}
+                                          subSrvID={subSrvID}
+                                          jobClosureStatus={jobClosureStatus}
+                                          endDateTime={endDateTime}
+                                          onClose={handleCloseCancel}
+                                        />
+                                      </>
+                                    )}
                                   </Box>
                                 </Modal>
 
@@ -2030,83 +2058,55 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                       border: "none",
                                     }}
                                   >
-                                    {jobClosureStatus === sesCount ? (
-                                      <Button
-                                        variant="contained"
-                                        sx={{
-                                          mt: 1,
-                                          ml: 1,
-                                          background: "#2CDFAA",
-                                          borderRadius: "10px",
-                                          textTransform: "capitalize",
-                                          fontWeight: "bold",
-                                          color: "#fff",
-                                          fontSize: "14px",
-                                          boxShadow:
-                                            "0px 4px 8px rgba(0, 0, 0, 0.1)",
-                                          "&:hover": {
-                                            backgroundColor: "#1bb78d",
-                                            boxShadow:
-                                              "0px 6px 12px rgba(0, 0, 0, 0.2)",
-                                          },
-                                        }}
-
-                                      >
-                                        Job closure completed. Professional Reschedule is no longer possible.
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <AppBar
-                                          position="static"
+                                    <AppBar
+                                      position="static"
+                                      style={{
+                                        background:
+                                          "linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)",
+                                        width: "22.8rem",
+                                        height: "3rem",
+                                        marginTop: "-16px",
+                                        marginLeft: "-32px",
+                                        borderRadius: "8px 10px 0 0",
+                                      }}
+                                    >
+                                      <div style={{ display: "flex" }}>
+                                        <Typography
+                                          align="center"
                                           style={{
-                                            background:
-                                              "linear-gradient(45deg,rgb(81, 84, 84) 38.02%, #0E8FE4 100%)",
-                                            width: "22.8rem",
-                                            height: "3rem",
-                                            marginTop: "-16px",
-                                            marginLeft: "-32px",
-                                            borderRadius: "8px 10px 0 0",
+                                            fontSize: "16px",
+                                            fontWeight: 600,
+                                            color: "#FFFFFF",
+                                            marginTop: "10px",
+                                            marginLeft: "15px",
                                           }}
                                         >
-                                          <div style={{ display: "flex" }}>
-                                            <Typography
-                                              align="center"
-                                              style={{
-                                                fontSize: "16px",
-                                                fontWeight: 600,
-                                                color: "#FFFFFF",
-                                                marginTop: "10px",
-                                                marginLeft: "15px",
-                                              }}
-                                            >
-                                              PROFESSIONAL RESCHEDULE
-                                            </Typography>
-                                            <Button
-                                              onClick={handleCloseProfessional}
-                                              sx={{
-                                                marginLeft: "50px",
-                                                color: "#FFFFFF",
-                                                marginTop: "2px",
-                                              }}
-                                            >
-                                              <CloseIcon />
-                                            </Button>
-                                          </div>
-                                        </AppBar>
-                                        <Professional
-                                          eveID={eventID}
-                                          serviceID={serviceID}
-                                          subSrvID={subSrvID}
-                                          ptnName={ptnName}
-                                          ptnPhn={ptnPhn}
-                                          evePlanID={evePlanID}
-                                          ptnZone={ptnZone}
-                                          startDateTime={startDateTime}
-                                          endDateTime={endDateTime}
-                                          onClose={handleCloseProfessional}
-                                        />
-                                      </>
-                                    )}
+                                          PROFESSIONAL RESCHEDULE
+                                        </Typography>
+                                        <Button
+                                          onClick={handleCloseProfessional}
+                                          sx={{
+                                            marginLeft: "50px",
+                                            color: "#FFFFFF",
+                                            marginTop: "2px",
+                                          }}
+                                        >
+                                          <CloseIcon />
+                                        </Button>
+                                      </div>
+                                    </AppBar>
+                                    <Professional
+                                      eveID={eventID}
+                                      serviceID={serviceID}
+                                      subSrvID={subSrvID}
+                                      ptnName={ptnName}
+                                      ptnPhn={ptnPhn}
+                                      evePlanID={evePlanID}
+                                      ptnZone={ptnZone}
+                                      startDateTime={startDateTime}
+                                      endDateTime={endDateTime}
+                                      onClose={handleCloseProfessional}
+                                    />
                                   </Box>
                                 </Modal>
 
@@ -2164,7 +2164,8 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                       aria-labelledby="parent-modal-title"
                                       aria-describedby="parent-modal-description"
                                     >
-                                      {totalSessionCount === jobClosureCount ? (
+                                      {totalSessionCount ===
+                                        jobClosureCount ? (
                                         <Box
                                           sx={{
                                             ...style,
@@ -2189,7 +2190,8 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
                                             <Box
                                               sx={{
                                                 display: "flex",
-                                                justifyContent: "space-between",
+                                                justifyContent:
+                                                  "space-between",
                                                 alignItems: "center",
                                                 px: 2,
                                               }}
@@ -2272,7 +2274,7 @@ const Ongoingservice = ({ eveId, onClose, rows }) => {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
-      </Box>
+      </Box >
       <Footer />
     </>
   );

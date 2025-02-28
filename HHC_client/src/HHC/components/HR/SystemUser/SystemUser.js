@@ -21,7 +21,6 @@ import { useLocation } from 'react-router-dom';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DownloadIcon from '@mui/icons-material/Download';
-import Tooltip from '@mui/material/Tooltip';
 
 const VisuallyHiddenInput = styled('input')({
     clip: 'rect(0 0 0 0)',
@@ -55,12 +54,6 @@ const UserCard = styled(Card)({
 const SystemUser = () => {
 
     const [company, setCompany] = useState(null);
-    const [refId, setRefId] = useState(null);
-
-    useEffect(() => {
-        const ref_id = localStorage.getItem('clgrefId');
-        setRefId(ref_id);
-    }, []);
 
     useEffect(() => {
         const id = localStorage.getItem('companyID');
@@ -204,6 +197,7 @@ const SystemUser = () => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     }
+
 
     const fetchUserDetails = async () => {
         setLoading(true);
@@ -400,57 +394,82 @@ const SystemUser = () => {
     ////// Form Validation
     const handleChange = async (e) => {
         const { name, value } = e.target;
-    
+
+        setFormData((prevFormData) => ({
+            ...prevFormData,
+            [name]: value,
+        }));
+
         if (name === "clg_mobile_no") {
-            // Remove non-numeric characters and limit to 10 digits
-            const numericValue = value.replace(/\D/g, '').slice(0, 10);
-    
-            setFormData((prevData) => ({
-                ...prevData,
-                [name]: numericValue,
-            }));
-        } else if (name === "clg_first_name" || name === "clg_ref_id") {
-            // Remove numeric characters
-            const textValue = value.replace(/[0-9]/g, '');
-    
-            setFormData((prevData) => ({
-                ...prevData,
-                [name]: textValue,
-            }));
+            const numericValue = value.replace(/\D/g, '');
+            if (numericValue.length <= 10) {
+                setFormData(prevData => ({
+                    ...prevData,
+                    [name]: numericValue
+                }));
+            }
         } else {
-            setFormData((prevData) => ({
+            setFormData(prevData => ({
                 ...prevData,
-                [name]: value,
+                [name]: value
             }));
         }
-    
-        // Clear error messages
+
+        if (name === "clg_first_name" || name === "clg_ref_id") {
+            const textValue = value.replace(/[0-9]/g, '');
+
+            setFormData(prevData => ({
+                ...prevData,
+                [name]: textValue
+            }));
+        } else {
+            setFormData(prevData => ({
+                ...prevData,
+                [name]: value
+            }));
+        }
+
         setErrors((prevErrors) => ({
             ...prevErrors,
             [name]: '',
         }));
-    
+
+        // try {
+        //     const response = await fetch(`${port}/hr/clg_is_already_exists/?clg_Work_phone_number=${formData.clg_first_name}&clg_work_email_id=${formData.clg_first_name}&clg_ref_id=${formData.clg_first_nam}`, {
+        //         headers: {
+        //             'Authorization': `Bearer ${accessToken}`,
+        //             'Content-Type': 'application/json'
+        //         }
+        //     });
+        //     console.log(response.data.message);
+        // } catch (error) {
+        //     console.log('Error while fetching data', error);
+        // } finally {
+        //     setLoading(false);
+        // }
+
+
         try {
             let queryParam = [];
-    
+
             if (name === "clg_mobile_no" && value) {
                 queryParam.push(`clg_Work_phone_number=${value}`);
             }
-    
+
             if (name === "clg_email" && value) {
                 queryParam.push(`clg_work_email_id=${value}`);
             }
-    
+
             if (name === "clg_ref_id" && value) {
                 queryParam.push(`clg_ref_id=${value}`);
             }
-    
+
             if (queryParam.length === 0) {
                 return;
             }
-    
+
             const apiUrl = `${port}/hr/clg_is_already_exists/?${queryParam.join('&')}`;
-    
+
             const response = await fetch(apiUrl, {
                 method: "GET",
                 headers: {
@@ -458,9 +477,9 @@ const SystemUser = () => {
                     "Authorization": `Bearer ${accessToken}`,
                 },
             });
-    
+
             const data = await response.json();
-    
+
             if (response.ok) {
                 setErrors((prevErrors) => ({
                     ...prevErrors,
@@ -479,132 +498,6 @@ const SystemUser = () => {
             }));
         }
     };
-    
-    // const handleChange = async (e) => {
-    //     const { name, value } = e.target;
-
-    //     setFormData((prevFormData) => ({
-    //         ...prevFormData,
-    //         [name]: value,
-    //     }));
-
-    //     // if (name === "clg_mobile_no") {
-    //     //     const numericValue = value.replace(/\D/g, '');
-    //     //     if (numericValue.length <= 10) {
-    //     //         setFormData(prevData => ({
-    //     //             ...prevData,
-    //     //             [name]: numericValue
-    //     //         }));
-    //     //     }
-    //     // } else {
-    //     //     setFormData(prevData => ({
-    //     //         ...prevData,
-    //     //         [name]: value
-    //     //     }));
-    //     // }
-    //     if (name === "clg_mobile_no") {
-    //         // Remove all non-numeric characters from the value
-    //         const numericValue = value.replace(/\D/g, '');
-
-    //         // Limit to 10 digits
-    //         if (numericValue.length <= 10) {
-    //             // Update the form data with the sanitized value (only numbers)
-    //             setFormData(prevData => ({
-    //                 ...prevData,
-    //                 [name]: numericValue
-    //             }));
-    //         }
-    //     } else {
-    //         // For other fields, update the form data normally
-    //         setFormData(prevData => ({
-    //             ...prevData,
-    //             [name]: value
-    //         }));
-    //     }
-
-    //     if (name === "clg_first_name" || name === "clg_ref_id") {
-    //         const textValue = value.replace(/[0-9]/g, '');
-
-    //         setFormData(prevData => ({
-    //             ...prevData,
-    //             [name]: textValue
-    //         }));
-    //     } else {
-    //         setFormData(prevData => ({
-    //             ...prevData,
-    //             [name]: value
-    //         }));
-    //     }
-
-    //     setErrors((prevErrors) => ({
-    //         ...prevErrors,
-    //         [name]: '',
-    //     }));
-
-    //     // try {
-    //     //     const response = await fetch(`${port}/hr/clg_is_already_exists/?clg_Work_phone_number=${formData.clg_first_name}&clg_work_email_id=${formData.clg_first_name}&clg_ref_id=${formData.clg_first_nam}`, {
-    //     //         headers: {
-    //     //             'Authorization': `Bearer ${accessToken}`,
-    //     //             'Content-Type': 'application/json'
-    //     //         }
-    //     //     });
-    //     //     console.log(response.data.message);
-    //     // } catch (error) {
-    //     //     console.log('Error while fetching data', error);
-    //     // } finally {
-    //     //     setLoading(false);
-    //     // }
-
-
-    //     try {
-    //         let queryParam = [];
-
-    //         if (name === "clg_mobile_no" && value) {
-    //             queryParam.push(`clg_Work_phone_number=${value}`);
-    //         }
-
-    //         if (name === "clg_email" && value) {
-    //             queryParam.push(`clg_work_email_id=${value}`);
-    //         }
-
-    //         if (name === "clg_ref_id" && value) {
-    //             queryParam.push(`clg_ref_id=${value}`);
-    //         }
-
-    //         if (queryParam.length === 0) {
-    //             return;
-    //         }
-
-    //         const apiUrl = `${port}/hr/clg_is_already_exists/?${queryParam.join('&')}`;
-
-    //         const response = await fetch(apiUrl, {
-    //             method: "GET",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 "Authorization": `Bearer ${accessToken}`,
-    //             },
-    //         });
-
-    //         const data = await response.json();
-
-    //         if (response.ok) {
-    //             setErrors((prevErrors) => ({
-    //                 ...prevErrors,
-    //                 [name]: '',
-    //             }));
-    //         } else {
-    //             setErrors((prevErrors) => ({
-    //                 ...prevErrors,
-    //                 [name]: data.message || 'Invalid input',
-    //             }));
-    //         }
-    //     } catch (error) {
-    //         setErrors((prevErrors) => ({
-    //             ...prevErrors,
-    //             [name]: 'Error checking value',
-    //         }));
-    //     }
-    // };
 
     const validateForm = () => {
         let formErrors = {};
@@ -612,12 +505,7 @@ const SystemUser = () => {
         if (!formData.clg_ref_id) formErrors.clg_ref_id = 'User Name is required';
         if (!formData.clg_first_name) formErrors.clg_first_name = 'Full Name is required';
         if (!formData.clg_email) formErrors.clg_email = 'Email ID is required';
-        // if (!formData.clg_mobile_no) formErrors.clg_mobile_no = 'Mobile Number is required';
-        if (!formData.clg_mobile_no) {
-            formErrors.clg_mobile_no = 'Mobile Number is required';
-        } else if (formData.clg_mobile_no.length !== 10) {
-            formErrors.clg_mobile_no = 'Mobile Number must be exactly 10 digits';
-        }
+        if (!formData.clg_mobile_no) formErrors.clg_mobile_no = 'Mobile Number is required';
         if (!formData.clg_gender) formErrors.clg_gender = 'Gender is required';
         if (!formData.clg_marital_status) formErrors.clg_marital_status = 'Marital Status is required';
         if (!formData.clg_Date_of_birth) formErrors.clg_Date_of_birth = 'Date of Birth is required';
@@ -643,7 +531,6 @@ const SystemUser = () => {
                     clg_work_email_id: formData.clg_email,
                     clg_Work_phone_number: formData.clg_mobile_no,
                     prof_compny: company,
-                    last_modified_by: refId
                 };
 
                 let response;
@@ -653,6 +540,7 @@ const SystemUser = () => {
                         method: "PUT",
                         headers: {
                             "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`,
                         },
                         body: JSON.stringify(formDataToSubmit),
                     });
@@ -661,6 +549,7 @@ const SystemUser = () => {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
+                            "Authorization": `Bearer ${accessToken}`,
                         },
                         body: JSON.stringify(formDataToSubmit),
                     });
@@ -669,7 +558,6 @@ const SystemUser = () => {
                 if (response.ok && response.status === 201) {
                     const result = await response.json();
                     setTableData((prevData) => [...prevData, result]);
-                    await fetchUserDetails();
                     setSnackbarMessage("User Registered Successfully!");
                     setSnackbarSeverity("success");
                     setSnackbarOpen(true);
@@ -1312,7 +1200,7 @@ const SystemUser = () => {
                                                 <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant="subtitle2">Email ID</Typography>
                                                 </CardContent>
-                                                <CardContent style={{ flex: 1.6, borderRight: "1px solid #FFFFFF" }}>
+                                                <CardContent style={{ flex: 2, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant="subtitle2">Mobile Number</Typography>
                                                 </CardContent>
                                                 <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
@@ -1321,7 +1209,7 @@ const SystemUser = () => {
                                                 <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant="subtitle2">Added Date</Typography>
                                                 </CardContent>
-                                                <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
+                                                <CardContent style={{ flex: 0.5, borderRight: "1px solid #FFFFFF" }}>
                                                     <Typography variant="subtitle2">Action</Typography>
                                                 </CardContent>
                                             </UserCard>
@@ -1355,42 +1243,23 @@ const SystemUser = () => {
                                                                     <CardContent style={{ flex: 1.6 }}>
                                                                         <Typography variant="subtitle2">{user.clg_first_name || '-'}</Typography>
                                                                     </CardContent>
-                                                                    {/* <CardContent style={{ flex: 1.6 }}>
-                                                                        <Typography variant="subtitle2">{user.clg_ref_id || '-'}</Typography>
-                                                                    </CardContent> */}
                                                                     <CardContent style={{ flex: 1.6 }}>
-                                                                        <Tooltip title={user.clg_ref_id || '-'} arrow>
-                                                                            <Typography variant="subtitle2" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                                {user.clg_ref_id && user.clg_ref_id.length > 17
-                                                                                    ? `${user.clg_ref_id.substring(0, 17)}...`
-                                                                                    : user.clg_ref_id || '-'}
-                                                                            </Typography>
-                                                                        </Tooltip>
+                                                                        <Typography variant="subtitle2">{user.clg_ref_id || '-'}</Typography>
                                                                     </CardContent>
                                                                     <CardContent style={{ flex: 2 }}>
-                                                                        <Tooltip title={user.clg_email || '-'} arrow>
-                                                                            <Typography variant="subtitle2" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                                {user.clg_email && user.clg_email.length > 17
-                                                                                    ? `${user.clg_email.substring(0, 17)}...`
-                                                                                    : user.clg_email || '-'}
-                                                                            </Typography>
-                                                                        </Tooltip>
+                                                                        <Typography variant="subtitle2">{user.clg_email || '-'}</Typography>
                                                                     </CardContent>
-                                                                    <CardContent style={{ flex: 1.6 }}>
+                                                                    <CardContent style={{ flex: 2 }}>
                                                                         <Typography variant="subtitle2">{user.clg_Work_phone_number || '-'}</Typography>
                                                                     </CardContent>
                                                                     <CardContent style={{ flex: 1 }}>
-                                                                        <Typography variant="subtitle2">
-                                                                            {user.type
-                                                                                ? user.type.charAt(0).toUpperCase() + user.type.slice(1).toLowerCase()
-                                                                                : '-'}
-                                                                        </Typography>
+                                                                        <Typography variant="subtitle2">{user.type || '-'}</Typography>
                                                                     </CardContent>
-                                                                    <CardContent style={{ flex: 1 }}>
+                                                                    <CardContent style={{}}>
                                                                         <Typography variant="subtitle2">{new Date(user.added_date).toLocaleDateString()}</Typography>
                                                                     </CardContent>
                                                                     <CardContent style={{ flex: 1 }}>
-                                                                        <EditIcon sx={{ cursor: "pointer", color: "#17A2F4" }} onClick={() => handleEditClick(user)} />
+                                                                        <EditIcon sx={{ cursor: "pointer", color: "#17A2F4", ml: 4 }} onClick={() => handleEditClick(user)} />
                                                                         {user.clg_status === "True" ? (
                                                                             <>
                                                                                 <CancelIcon sx={{ color: 'red' }} onClick={() => handleStatusChange(user.pk, user.clg_status)} />
@@ -1401,12 +1270,90 @@ const SystemUser = () => {
                                                                             </>
                                                                         )}
                                                                     </CardContent>
+                                                                    {/* <Box style={{ display: 'flex', alignItems: 'center', flex: 0.5 }}>
+                                                                        <CardContent style={{ cursor: 'pointer' }} onClick={() => handleEditClick(user)}>
+                                                                            <EditIcon sx={{ color: 'black' }} />
+                                                                        </CardContent>
+                                                                        <CardContent style={{ cursor: 'pointer' }}
+                                                                            onClick={() => handleStatusChange(user.pk, user.clg_status)}
+                                                                        >
+                                                                            <Typography
+                                                                                variant="body1"
+                                                                                sx={{ p: 1, display: 'flex', alignItems: 'center', cursor: 'pointer', width: '7em' }}
+                                                                            >
+                                                                                {user.clg_status === "True" ? (
+                                                                                    <>
+                                                                                        <CancelIcon sx={{ mr: 1, color: 'red' }} />
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <CheckCircleIcon sx={{ mr: 1, color: 'green' }} />
+                                                                                    </>
+                                                                                )}
+                                                                            </Typography>
+                                                                        </CardContent>
+                                                                    </Box> */}
                                                                 </UserCard>
                                                             </TableRow>
                                                         ))
                                                 )
                                         }
                                     </TableBody>
+                                    {/* <CardContent style={{ flex: 0.5 }}>
+                                                                        <IconButton
+                                                                            onClick={(event) => handleMoreIconClick(event, index)}
+                                                                            sx={{ fontSize: "18px", mt: 1.5, color: 'black' }}
+                                                                        >
+                                                                            <MoreHorizIcon />
+                                                                        </IconButton>
+
+                                                                        <Popover
+                                                                            open={Boolean(anchorEl)}
+                                                                            anchorEl={anchorEl}
+                                                                            onClose={handleClose}
+                                                                            anchorOrigin={{
+                                                                                vertical: 'bottom',
+                                                                                horizontal: 'left',
+                                                                            }}
+                                                                            transformOrigin={{
+                                                                                vertical: 'top',
+                                                                                horizontal: 'left',
+                                                                            }}
+                                                                            style={{ marginRight: '2em' }}
+                                                                        >
+                                                                            <div style={{
+                                                                                flexDirection: 'column', marginRight: '10px'
+                                                                            }}>
+                                                                                <Typography
+                                                                                    variant="body1"
+                                                                                    onClick={() => handleStatusChange(user.pk, user.clg_status)}
+                                                                                    sx={{ p: 1, display: 'flex', alignItems: 'center', cursor: 'pointer', width: '7em' }}
+                                                                                >
+                                                                                    {user.clg_status === "True" ? (
+                                                                                        <>
+                                                                                            <CancelIcon sx={{ mr: 1, color: 'red' }} />
+                                                                                            InActivate
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <>
+                                                                                            <CheckCircleIcon sx={{ mr: 1, color: 'green' }} />
+                                                                                            Activate
+                                                                                        </>
+                                                                                    )}
+                                                                                </Typography>
+
+
+                                                                                <Typography
+                                                                                    variant="body1"
+                                                                                    sx={{ p: 1, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                                                                                    onClick={() => handleEditClick(user)}
+                                                                                >
+                                                                                    <EditIcon sx={{ mr: 1, color: 'black' }} /> Edit
+                                                                                </Typography>
+
+                                                                            </div>
+                                                                        </Popover>
+                                                                    </CardContent> */}
                                 </Table>
 
                                 <TablePagination
@@ -1569,9 +1516,8 @@ const SystemUser = () => {
                                                             error={!!errors.clg_mobile_no}
                                                             helperText={errors.clg_mobile_no}
                                                             inputProps={{
-                                                                maxLength: 10,   // Limits the number of characters to 10
-                                                                pattern: "[0-9]{10}", // Ensures exactly 10 digits are entered
-                                                                inputMode: "numeric", // Improves numeric input on mobile
+                                                                maxLength: 10,
+                                                                pattern: "[0-9]*",
                                                             }}
                                                             sx={{
                                                                 '& input': {

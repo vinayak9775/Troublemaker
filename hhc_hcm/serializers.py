@@ -8,6 +8,10 @@ class NewHospitalRegistrationSerializer(serializers.ModelSerializer):
       fields=['hosp_id','branch','hospital_name','hospital_short_code','phone_no','website_url','address','status','lattitude','langitude','distance_km','price_change_km','km_price','last_modified_by']
     #   fields = '__all__'
       
+# class ServicesSerializer(serializers.ModelSerializer):
+#     class Meta:
+#       model = models.agg_hhc_services
+#       fields = ['srv_id', 'service_title', 'status','added_by','last_modified_by','added_date']
 class ServicesSerializer(serializers.ModelSerializer):
     class Meta:
       model = models.agg_hhc_services
@@ -24,16 +28,10 @@ class SubServicesSerializer(serializers.ModelSerializer):
     class Meta:
       model = models.agg_hhc_sub_services
       fields=['sub_srv_id','recommomded_service','srv_id','srv_name','cost','tax','deposit','supplied_by','UOM','status','tf','Instruction','Specimen','last_modified_by']
-    
+    #   fields = '__all__'
+
     def get_srv_name(self, obj):
         return obj.srv_id.service_title
-
-
-class ProfSubSrvCostSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = models.agg_hhc_professional_sub_services
-        fields = ['prof_sub_srv_id', 'srv_prof_id', 'sub_srv_id', 'prof_cost']
       
 class ConsultantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,13 +43,17 @@ class CallBackBtnSerializer(serializers.ModelSerializer):
     class Meta:
       model = models.agg_hhc_prof_call_back_btn_rec
       fields=['call_back_btn_id','srv_prof_id','agg_sp_dt_eve_poc_id','last_modified_by']
+    #   fields = '__all__'
+
+    #   fields = '__all__'
 
 class Prof_aval_serializer(serializers.ModelSerializer):
    class Meta:
       model = models.agg_hhc_professional_availability
+      # fields = '__all__'
       fields = ['professional_avaibility_id', 'srv_prof_id', 'date']
 
-class agg_hhc_prof_avail_serializer2(serializers.ModelSerializer):
+class agg_hhc_prof_avail_serializer(serializers.ModelSerializer):
 
     srv_prof_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_service_professionals.objects.all(),many=False)
 
@@ -76,11 +78,9 @@ class agg_hhc_prof_avail_serializer2(serializers.ModelSerializer):
         return instance
 
 
-class agg_hhc_professional_avail_detail_serializer2(serializers.ModelSerializer):
+class agg_hhc_professional_avail_detail_serializer(serializers.ModelSerializer):
 
-    prof_avaib_id = agg_hhc_prof_avail_serializer2()
-    # prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_professional_availability.objects.all(),many=False)
-
+    prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_professional_availability.objects.all(),many=False)
    #  prof_loc_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_professional_location.objects.all(),many=False)
 
     class Meta:
@@ -88,21 +88,6 @@ class agg_hhc_professional_avail_detail_serializer2(serializers.ModelSerializer)
 
       #   fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time', 'prof_loc_id']
         fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time']
-
-
-
-class agg_hhc_professional_avail_detail_serializer3(serializers.ModelSerializer):
-
-    # prof_avaib_id = agg_hhc_prof_avail_serializer()
-    prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_professional_availability.objects.all(),many=False)
-
-    prof_loc_id = serializers.PrimaryKeyRelatedField(queryset=models.agg_hhc_professional_location.objects.all(),many=False)
-
-    class Meta:
-        model  = models.agg_hhc_professional_availability_detail
-
-        fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time', 'prof_loc_id']
-        # fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time']
 
     
     def is_time_slot_available(self, requested_start, requested_end, occupied_slots):
@@ -138,10 +123,10 @@ class agg_hhc_professional_avail_detail_serializer3(serializers.ModelSerializer)
     
     def create(self, validated_data):
         prof_avaib_id = validated_data.pop('prof_avaib_id')
-        prof_loc_id = validated_data.pop('prof_loc_id')
+      #   prof_loc_id = validated_data.pop('prof_loc_id')
 
         validated_data['prof_avaib_id'] = prof_avaib_id
-        validated_data['prof_loc_id'] = prof_loc_id
+      #   validated_data['prof_loc_id'] = prof_loc_id
 
         pro_loc_details = models.agg_hhc_professional_availability_detail.objects.create(**validated_data)
         pro_loc_details.save(force_insert=False)
@@ -163,10 +148,6 @@ class VIP_event_update_serailzer(serializers.ModelSerializer):
         fields = ['eve_id', 'discount_type']
         # fields = ['eve_id', 'discount_type', 'last_modified_by']
 
-class FeedBack_Questions_serializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.FeedBack_Questions
-        fields = ['F_questions','Questions','question_for']
 
 
 
@@ -207,14 +188,21 @@ class reschedule_cancle_request_pro_seri(serializers.ModelSerializer):
 
 
 # ==============================================================================================================================
+
 class logedin_prof_serializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     class Meta:
         model = models.agg_com_colleague
         fields = ['id','clg_ref_id', 'name', 'clg_mobile_no','clg_email', 'clg_gender', 'clg_is_login']
 
+
     def get_name(self, obj):
         return f'{obj.clg_first_name} {obj.clg_mid_name} {obj.clg_last_name}'
+    
+    # def get_clg_gender(self, obj):
+    #     return
+
+
 
 
 

@@ -59,7 +59,7 @@ const AllocatedProfessional = ({ profId, profFullname }) => {
 
     const snackbarStyle = snackbarType === 'success' ? styles.success : styles.error;
 
-
+    
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarColor, setSnackbarColor] = useState(''); // New state for snackbar color
 
@@ -96,7 +96,7 @@ const AllocatedProfessional = ({ profId, profFullname }) => {
         fetchZone();
     }, [port, accessToken]);
 
-    ////// clicked checkbox for delete
+    ////// clicked checbox for delet 
     const [selectedIds, setSelectedIds] = useState([]);
 
     console.log('fetched Professional Id Wise Card Data......', profId);

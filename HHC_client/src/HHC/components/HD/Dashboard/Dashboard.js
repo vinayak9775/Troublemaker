@@ -80,18 +80,15 @@ const Dashboard = () => {
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                <Grid item lg={4} md={12} xs={12} xl={4}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Enquirystatus value={1} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
-                                        <Grid item lg={6} md={12} xs={12}>
+                                        <Grid item lg={12} md={12} xs={12}>
                                             <Cancellation value={1} />
-                                        </Grid>
-                                        <Grid item lg={6} md={12} xs={12}>
-                                            <Feedback value={1} />
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                {/* <Grid item lg={2} md={12} xs={12} xl={2}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Feedback value={1} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
                                         <Grid item lg={12} md={12} xs={12} xl={12}>
@@ -105,7 +102,7 @@ const Dashboard = () => {
                                             </Box>
                                         </Grid>
                                     </Grid>
-                                </Grid> */}
+                                </Grid>
                             </Grid>
                         </TabPanel>
                         <TabPanel value="2">
@@ -124,18 +121,15 @@ const Dashboard = () => {
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                <Grid item lg={4} md={12} xs={12} xl={4}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Enquirystatus value={2} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
-                                        <Grid item lg={6} md={12} xs={12}>
+                                        <Grid item lg={12} md={12} xs={12}>
                                             <Cancellation value={2} />
-                                        </Grid>
-                                        <Grid item lg={6} md={12} xs={12}>
-                                            <Feedback value={2} />
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                {/* <Grid item lg={2} md={12} xs={12} xl={2}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Feedback value={2} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
                                         <Grid item lg={12} md={12} xs={12} xl={12}>
@@ -149,7 +143,7 @@ const Dashboard = () => {
                                             </Box>
                                         </Grid>
                                     </Grid>
-                                </Grid> */}
+                                </Grid>
                             </Grid>
                         </TabPanel>
                         <TabPanel value="3">
@@ -168,18 +162,15 @@ const Dashboard = () => {
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                <Grid item lg={4} md={12} xs={12} xl={4}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Enquirystatus value={3} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
-                                        <Grid item lg={6} md={12} xs={12}>
+                                        <Grid item lg={12} md={12} xs={12}>
                                             <Cancellation value={3} />
-                                        </Grid>
-                                        <Grid item lg={6} md={12} xs={12}>
-                                            <Feedback value={3} />
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                {/* <Grid item lg={2} md={12} xs={12} xl={2}>
+                                <Grid item lg={2} md={12} xs={12} xl={2}>
                                     <Feedback value={3} />
                                     <Grid item xs={12} container spacing={1} sx={{ marginTop: 0 }}>
                                         <Grid item lg={12} md={12} xs={12} xl={12}>
@@ -193,7 +184,7 @@ const Dashboard = () => {
                                             </Box>
                                         </Grid>
                                     </Grid>
-                                </Grid> */}
+                                </Grid>
                             </Grid>
                         </TabPanel>
                     </Box>

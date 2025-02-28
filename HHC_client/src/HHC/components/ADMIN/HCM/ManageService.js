@@ -73,6 +73,7 @@ const ManageService = () => {
     const [formData, setFormData] = useState({
         srv_id: '',
         service_title: '',
+        // status: null,
         image_path: ''
     });
 
@@ -94,6 +95,7 @@ const ManageService = () => {
             ...formData,
             srv_id: item.srv_id,
             service_title: item.service_title,
+            // status: item.status,
         });
 
         console.log('srv id:', item.srv_id);
@@ -394,7 +396,63 @@ const ManageService = () => {
             [name]: '' // Clear error message on input change
         });
     };
-   
+    // const handleSubServiceForm = () => {
+    //     const accessToken = localStorage.getItem('token');
+
+    //     if (!accessToken) {
+    //         console.error('Access token not found.');
+    //         return;
+    //     }
+
+    //     let url = `${port}/hhc_hcm/manage_sub_srv/`;
+    //     let method = 'POST'; // Default to POST
+
+    //     // Prepare the data to be sent in the request body
+    //     const requestData = {
+    //         srv_id: selectedService ? selectedService.srv_id : "",
+    //         recommomded_service: subService.recommomded_service,
+    //         cost: subService.cost,
+    //         tax: subService.tax,
+    //         deposit: subService.deposit,
+    //         UOM: subService.UOM,
+    //     };
+
+    //     // Log the submitted data
+    //     console.log('Submitted Data:', requestData);
+
+    //     fetch(url, {
+    //         method: method,
+    //         headers: {
+    //             'Content-Type': 'application/json',
+    //             'Authorization': `Bearer ${accessToken}`
+    //         },
+    //         body: JSON.stringify(requestData), // Include requestData in the body
+    //     })
+    //         .then(response => {
+    //             if (!response.ok) {
+    //                 throw new Error('Network response was not ok');
+    //             }
+    //             return response.json();
+    //         })
+    //         .then(data => {
+    //             console.log('Submitted the Sub Service Form:', data);
+    //             console.log(subService, 'kkkkkk');
+    //             setSubService({
+    //                 sub_srv_id : null,
+    //                 srv_id: selectedService ? selectedService.srv_id : "",
+    //                 recommomded_service: "",
+    //                 cost: "",
+    //                 tax: null,
+    //                 deposit: null,
+    //                 UOM: null,
+    //             });
+    //             closeSubServiceModal();
+    //         })
+    //         .catch(error => {
+    //             console.error('Error while Submitting Sub-Service Form:', error);
+    //         });
+    // };
+
     ////// Sub Service Table Open Modal
     const [subServiceTable, setSubServiceTable] = useState(false);
 

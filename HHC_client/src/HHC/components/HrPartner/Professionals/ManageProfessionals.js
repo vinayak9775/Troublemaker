@@ -135,7 +135,7 @@ const ManageProfessionals = () => {
     const handleIconClick = (id) => {
         console.log("professional ID Fetching...", id);
         setShowSubmit(false);
-        navigate('/hrpartner/Add professionals', {
+        navigate('/hr partner/Add professionals', {
             state: { professionalId: id, showSubmit: false }
         });
     };
@@ -289,7 +289,7 @@ const ManageProfessionals = () => {
                                 sx={{ background: "#69A5EB", textTransform: "capitalize", height: "40px", borderRadius: "8px" }}
                             >
                                 <PersonAddAltOutlinedIcon sx={{ mr: 1, fontSize: "18px" }} />
-                                Add Professional
+                                Add Professionals
                             </Button>
                         </Link>
                     )}

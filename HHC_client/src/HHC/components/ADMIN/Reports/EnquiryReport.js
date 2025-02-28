@@ -192,8 +192,10 @@ const EnquiryReport = () => {
             <HRNavbar />
             <Box sx={{ flexGrow: 1, ml: 1, mr: 1, mt: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'left' }}>
-                    <Stack direction="row" alignItems="center" spacing={1} style={{ overflowX: 'auto', marginTop: '0.3em' }}>
+                    <Stack direction="row" alignItems="center" spacing={1} style={{ overflowX: 'auto' }}>
+
                         <Typography sx={{ fontSize: 16, fontWeight: 600, marginTop: "20px", marginLeft: "10px" }} color="text.secondary" gutterBottom>Enquiry Report</Typography>
+
                         <Box sx={{ mb: 1, width: 300, marginLeft: '1rem' }}>
                             <TextField
                                 select

@@ -16,14 +16,28 @@ import ClosureEvents from '../ClosureEvents';
 const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, formNo, evtId }) => {
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
-    console.log(dtlEventID, 'eeeeee');
-    console.log(events, 'eventseventseventseventsevents');
+    console.log(dtlEventID,events, 'eeeeee');
+
+    // const [selectedOptions, setSelectedOptions] = useState(events.map(event => event.remark_type === "Remark" ? "2" : "1"));
+    // const [remarks, setRemarks] = useState(() =>
+    //     events.map(item => {
+    //         const remarkKey = Object.keys(item).find(key => key.endsWith('_datetime_remark'));
+    //         return remarkKey ? item[remarkKey] : ""; // Get the remark value if key found, otherwise empty string
+    //     })
+    // );
+
+    // const initializeSelectedOptions = () => events.map(event => event.remark_type === "Remark" ? "2" : "1");
     const initializeSelectedOptions = () =>
         events.map(event =>
             event.remark_type === undefined
                 ? ""
                 : (event.remark_type === "Remark" ? "2" : "1")
         );
+    // const initializeRemarks = () =>
+    //     events.map(item => {
+    //         const remarkKey = Object.keys(item).find(key => key.endsWith('_datetime_remark'));
+    //         return remarkKey ? item[remarkKey] : "";
+    //     });
 
     const initializeRemarks = () =>
         events.map(item => {
@@ -31,16 +45,17 @@ const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, f
                 const remarkKey = Object.keys(item).find(key => key.endsWith('_datetime_remark'));
                 return remarkKey ? item[remarkKey] : "";
             }
-            return ""; 
+            return ""; // For entries that do not have remark_type "Remark"
         });
 
+    // const initializeDateAndTime = () => events.map(() => ({ dateAndTime: "" }));
     const initializeDateAndTime = () =>
         events.map(item => {
             if (item.remark_type === "Datetime") {
                 const remarkKey = Object.keys(item).find(key => key.endsWith('_datetime_remark'));
                 return remarkKey ? item[remarkKey] : "";
             }
-            return "";
+            return ""; // For entries that do not have remark_type "Remark"
         });
     const initializeRadioValues = () => events.map(item => (item.remark_type === "Remark" ? "1" : "2"));
     const [selectedOptions, setSelectedOptions] = useState(initializeSelectedOptions);
@@ -65,6 +80,12 @@ const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, f
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
+
+    // const handleDateTimeChange = (e, index) => {
+    //     const newDateAndTime = [...dateAndTime];
+    //     newDateAndTime[index] = { dateAndTime: e.target.value };
+    //     setDateAndTime(newDateAndTime);
+    // };
     const [dynamicDateTimes, setDynamicDateTimes] = useState({});
     const handleDateTimeChange = (e, index, item) => {
         console.log(item);
@@ -88,12 +109,29 @@ const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, f
         setDynamicDateTimes(newDynamicRemarks);
     };
 
+    // const handleOptionChange = (event, index, sel) => {
+    //     console.log(sel,event.target.value);
+    //     const newSelectedOptions = [...selectedOptions];
+    //     newSelectedOptions[index] = event.target.value;
+    //     setSelectedOptions(newSelectedOptions);
+
+    //     // Logic to open modal if necessary
+    //     // if (event.target.value === "1") {
+    //     //     setModalContent('dateAndTime');
+    //     //     setModalIndex(index);
+    //     //     setOpenModal(true);
+    //     // } else {
+    //     //     // Handle 'No' selection if necessary
+    //     // }
+    // };
+
     const [keyValuePairs, setKeyValuePairs] = useState({});
     const handleOptionChange = (event, index, secondKey) => {
         const newSelectedOptions = [...selectedOptions];
         newSelectedOptions[index] = event.target.value;
         setSelectedOptions(newSelectedOptions);
 
+        // Update the keyValuePairs state
         setKeyValuePairs(prevState => ({
             ...prevState,
             [secondKey]: event.target.value,
@@ -136,6 +174,7 @@ const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, f
                     return;
                 }
                 const result = await response.json();
+                // alert("Updated Succesfully..");
                 setOpenSnackbar(true);
                 setSnackbarMessage('Closure data updated successfully!');
                 console.log("Closure data", result);
@@ -255,8 +294,8 @@ const ClosureFormtwo = ({ handleEvent, eid, dtlEventID, events, closureStatus, f
                 >
                     <Alert variant="filled"
                         onClose={handleSnackbarClose}
-                        // severity="success"
-                        severity={snackbarSeverity}
+                        severity="success"
+                        // severity={snackbarSeverity}
                         sx={{ width: "20rem", ml: 52, mb: 10 }}
                     >
                         {snackbarMessage}

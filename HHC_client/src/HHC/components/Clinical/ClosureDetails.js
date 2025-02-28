@@ -8,7 +8,6 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid } from '@mui/x-data-grid';
 import ClosureEvents from './ClosureEvents';
-import TopHeader from './TopHeader';
 
 const customStyles = {
     "& .Mui-focused": {
@@ -190,8 +189,7 @@ const ClosureDetails = () => {
 
     return (
         <>
-        <TopHeader />
-            <Box sx={{ flexGrow: 1, mt: 14.6, ml: 1, mr: 1, mb: 2 }} >
+            <Box sx={{ flexGrow: 1, mt:-1.8, ml: 1, mr: 1, mb: 2 }} >
                 <Stack spacing={1} direction={'row'} sx={{ pt: 1 }}>
                     <Typography style={{ fontSize: 16, fontWeight: 600, marginTop: "10px", marginLeft: "10px" }} color="text.secondary" gutterBottom>CLOSURE DETAILS</Typography>
                     <Box

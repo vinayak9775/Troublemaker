@@ -3,7 +3,6 @@ import { Card, Box, InputBase, Stack, CardContent, Tooltip, IconButton, Circular
 import Navbar from '../../../Navbar';
 import Footer from '../../../Footer';
 import Header from '../../../Header';
-import EnqDetails from './EnqDetails';
 import { styled } from '@mui/system';
 import CloseIcon from '@mui/icons-material/Close';
 import Followup from './ActionComponent/Followup';
@@ -16,6 +15,8 @@ import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
 import DoneAllOutlinedIcon from '@mui/icons-material/DoneAllOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import DirectionsWalkOutlinedIcon from '@mui/icons-material/DirectionsWalkOutlined';
+import EnqDetails from './EnqDetails';
+
 
 const style = {
     position: 'absolute',
@@ -135,8 +136,8 @@ const Enquiries = () => {
     }, [accessHospitalID]);
 
     function findPreFollowupRecords(eveId) {
-        console.log(eveId,'.................');
-        
+        console.log(eveId, '.................');
+
         const matchingRecords = enq.find((record) => record.eve_id === eveId);
         if (matchingRecords) {
             console.log("Previos Followup ID", matchingRecords.eve_id);
@@ -165,22 +166,6 @@ const Enquiries = () => {
         };
         getPreFollowup();
     }, [enqID]);
-
-
-    // ####Enquiry single record
-    const [openDetails, setOpenDeatils] = useState(false);
-    const [evntId, setEvntId] = useState('');
-
-    const handleOpenDetails = () => {
-        setOpenDeatils(true);
-    };
-    const handleCloseDetails = () => {
-        setOpenDeatils(false);
-    };
-
-    const eventIDRequest = (evt_id) =>{
-        setEvntId(evt_id)
-    } 
 
     // const filteredData = enq.filter((item) => {
     //     if (
@@ -211,6 +196,21 @@ const Enquiries = () => {
         const year = date.getFullYear();
 
         return `${day}/${month}/${year}`;
+    }
+
+    // ####Enquiry single record
+    const [openDetails, setOpenDeatils] = useState(false);
+    const [evntId, setEvntId] = useState('');
+
+    const handleOpenDetails = () => {
+        setOpenDeatils(true);
+    };
+    const handleCloseDetails = () => {
+        setOpenDeatils(false);
+    };
+
+    const eventIDRequest = (evt_id) => {
+        setEvntId(evt_id)
     }
 
     const getEnquiryStatusTooltip = (enquiryStatus) => {
@@ -424,7 +424,8 @@ const Enquiries = () => {
                                                             {row.event_code}
                                                         </Typography>
                                                     </CardContent> */}
-                                                    <CardContent style={{ flex: 1 }}>
+
+                                                    <CardContent style={{ flex: 2 }}>
                                                         <button
                                                             onClick={() => {
                                                                 eventIDRequest(row.eve_id);
@@ -445,7 +446,7 @@ const Enquiries = () => {
                                                             onClose={handleCloseDetails}
                                                             aria-labelledby="parent-modal-title"
                                                             aria-describedby="parent-modal-description"
-                                                            sx={{height:'500px',marginTop:"50px"}}
+                                                            sx={{ height: '500px', marginTop: "50px" }}
                                                         >
                                                             <EnqDetails eveID={evntId} open={openDetails}
                                                                 onClose={handleCloseDetails} />

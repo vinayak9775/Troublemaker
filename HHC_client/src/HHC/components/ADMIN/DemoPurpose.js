@@ -1,14 +1,13 @@
 import React from 'react';
 import HRNavbar from '../HR/HRNavbar'
-import ManageAttendance from '../Attendance/ManageAttendance';
 
 const DemoPurpose = () => {
     return (
         <div>
             <HRNavbar />
-            {/* <ManageAttendance/> */}
+            Comming soon...!!
         </div>
     )
 }
 
-export default DemoPurpose;
+export default DemoPurpose

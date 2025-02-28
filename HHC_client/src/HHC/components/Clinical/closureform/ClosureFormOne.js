@@ -103,6 +103,7 @@ const ClosureFormOne = ({ handleEvent, eid, baseline, airway, breathing, circ, s
 
         const requestData = {
             form_number: formNo,
+            Baseline: baselineState,
             Airway: airwayState,
             Breathing: breathingState,
             Circulation: circState,

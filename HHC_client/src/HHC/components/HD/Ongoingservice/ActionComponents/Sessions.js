@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { CircularProgress, Box, Button, Modal, Card, CardContent, Typography, Table, TableHead, TableRow, TableBody, TableContainer, TablePagination } from '@mui/material';
+import { Box, Button, Modal, Card, CardContent, Typography, Table, TableHead, TableRow, TableBody, TableContainer, TablePagination } from '@mui/material';
 import { border, styled } from '@mui/system';
 import CloseIcon from '@mui/icons-material/Close';
-import Closuresix from '../ClosureForms/Closuresix';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import CircularProgress from '@mui/material/CircularProgress';
 import Closureone from '../ClosureForms/Closureone';
 import Closuretwo from '../ClosureForms/Closuretwo';
-import Closureten from '../ClosureForms/Closureten';
+import Closurethree from '../ClosureForms/Closurethree';
 import Closurefour from '../ClosureForms/Closurefour';
 import Closurefive from '../ClosureForms/Closurefive';
-import Closurenine from '../ClosureForms/Closurenine';
-import Closurethree from '../ClosureForms/Closurethree';
+import Closuresix from '../ClosureForms/Closuresix';
 import Closureseven from '../ClosureForms/Closureseven';
 import Closureeight from '../ClosureForms/Closureeight';
+import Closurenine from '../ClosureForms/Closurenine';
+import Closureten from '../ClosureForms/Closureten';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 
 const style = {
     position: 'absolute',
@@ -52,18 +53,17 @@ const Sessions = ({ eveID, subSrvID }) => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [openClosure, setOpenClosure] = useState(false);
-    const [formNo, setFormNo] = useState(null);
     const [sessions, setSessions] = useState([]);
+    const [formNo, setFormNo] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [srvProfID, setSrvProfID] = useState('');
     const [eventPlanID, setEventPlanID] = useState('');
-    const [sesEndDate, setSesEndDate] = useState(null);
-    const [sesEndTime, setSesEndTime] = useState(null);
+    const [srvProfID, setSrvProfID] = useState('');
     const [sesStartDate, setSesStartDate] = useState(null);
     const [sesStartTime, setSesStartTime] = useState(null);
+    const [sesEndDate, setSesEndDate] = useState(null);
+    const [sesEndTime, setSesEndTime] = useState(null);
 
     console.log("Fom No,,,", formNo)
-    console.log("srvProfID,,", srvProfID)
     console.log("Session Data from Sessions Component,,,", sessions)
 
     const handleChangePage = (event, newPage) => {
@@ -82,38 +82,38 @@ const Sessions = ({ eveID, subSrvID }) => {
         setOpenClosure(false);
     };
 
-    useEffect(() => {
-        const getSessionDetils = async () => {
-            if (eveID) {
-                console.log("eventID...", eveID)
-                try {
-                    const res = await fetch(`${port}/web/all_dtl_evnts/?eve=${eveID}`, {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                        },
-                    });
-                    const data = await res.json();
-                    console.log("Sessions Data....", data);
-                    if (data['not found'] === "Record not found") {
-                        setSessions([]);
-                        setLoading(false);
-                    } else {
-                        setSessions(data);
-                        setLoading(false);
-                    }
-                } catch (error) {
-                    console.error("Error fetching Sessions data:", error);
+    // useEffect(() => {
+    const getSessionDetils = async () => {
+        if (eveID) {
+            console.log("eventID...", eveID)
+            try {
+                const res = await fetch(`${port}/web/all_dtl_evnts/?eve=${eveID}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await res.json();
+                console.log("Sessions Data....", data);
+                if (data['not found'] === "Record not found") {
+                    setSessions([]);
+                    setLoading(false);
+                } else {
+                    setSessions(data);
                     setLoading(false);
                 }
+            } catch (error) {
+                console.error("Error fetching Sessions data:", error);
+                setLoading(false);
             }
-        };
+        }
+    };
+    // getSessionDetils();
+    // }, [eveID]);
+
+    useEffect(() => {
         getSessionDetils();
     }, [eveID]);
-
-    // useEffect(() => {
-    //     getSessionDetils();
-    // }, [eveID]);
 
     const eventDetailPlanIDRequest = (evePlanId) => {
         const selectedID = sessions.find(item => item.agg_sp_dt_eve_poc_id === evePlanId);
@@ -293,6 +293,7 @@ const Sessions = ({ eveID, subSrvID }) => {
                                     ))}
                         </TableBody>
                     )}
+
                 </Table>
             </TableContainer>
             <TablePagination

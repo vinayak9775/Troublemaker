@@ -449,7 +449,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
         const selectedSubService = subService.find(item => item.sub_srv_id === subServiceId);
         if (selectedSubService) {
             setSelectedSubService(subServiceId);
-            if (srvID === 12) {
+            if (srvID === 10) {
                 setGetCost(medTransAmt);
             } else {
                 setGetCost(selectedSubService.cost);
@@ -491,13 +491,13 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
     }, [paymentData]);
 
     useEffect(() => {
-        if (srvID === 12) {
+        if (srvID === 10) {
             setGetCost(medTransAmt);
         }
     }, [medTransAmt, srvID]);
 
     useEffect(() => {
-        if (srvID === 12 && medTransAmt && dateCount > 0) {
+        if (srvID === 10 && medTransAmt && dateCount > 0) {
             setCalculatedAmount(parseInt(medTransAmt, 10) * dateCount);
         } else {
             setCalculatedAmount("");
@@ -599,7 +599,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
     }, [totalDiscount]);
 
     useEffect(() => {
-        if (srvID === 12 && medTransAmt && dateCount > 0) {
+        if (srvID === 10 && medTransAmt && dateCount > 0) {
             setCalculatedAmount(parseInt(medTransAmt, 10) * dateCount);
         } else {
             setCalculatedAmount("");
@@ -647,7 +647,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
     }, [paymentData]);
 
     useEffect(() => {
-        if (srvID === 12) {
+        if (srvID === 10) {
             setGetCost(medTransAmt);
         }
     }, [medTransAmt, srvID]);
@@ -667,7 +667,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
 
         const requestData = {
             sub_srv_id: selectedSubService,
-            Total_cost: srvID === 12 ? medTransAmt * dateCount : calculatedAmount,
+            Total_cost: srvID === 10 ? medTransAmt*dateCount : calculatedAmount,
             discount_type: selectedDiscountId,
             discount: disValue || 0,
             // discount: paymentData?.discount_value || 0,
@@ -872,7 +872,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
                             </Grid>
 
                             <Grid item lg={12} sm={12} xs={12}>
-                                {srvID === 12 && (
+                                {srvID === 10 && (
                                     <TextField
                                         required
                                         id="med_Trans_amount"
@@ -923,7 +923,7 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
                                             onChange={(e) => {
                                                 // setSelectedDiscountId(e.target.value);
                                                 // setPaymentData((prev) => ({ ...prev, discount_type: e.target.value }));
-                                                if (srvID === 12 && !medTransAmt) {
+                                                if (srvID === 10 && !medTransAmt) {
                                                     setErrorMsg("Please enter Amount then only discount type will be changed")
                                                 } else {
                                                     setErrorMsg(" ");
@@ -1051,18 +1051,6 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
                                     //                 totalDiscount !== null && totalDiscount !== undefined ? totalDiscount :
                                     //                     calculatedAmount)}`
                                     // )}
-<<<<<<< HEAD
-                                    value={
-                                        selectedDiscountId === 3
-                                            ? "₹0"
-                                            : selectedDiscountId === 4
-                                                ? `₹${parseFloat(calculatedAmount).toFixed(2)}`
-                                                : discountValue === "" || discountValue === null
-                                                    ? `₹${calculatedAmount}`
-                                                    : totalDiscount !== null && totalDiscount !== undefined
-                                                        ? `₹${totalDiscount}`
-                                                        : `₹${paymentData.Total_Amount || calculatedAmount}`
-=======
                                     // value={
                                     //     selectedDiscountId === 3
                                     //         ? "₹0"
@@ -1077,7 +1065,6 @@ const ServiceInfo = ({ eveID, srvData, srvID, payData }) => {
                                     value={paymentData?.Total_Amount !== undefined && paymentData?.Total_Amount !== null
                                         ? `₹${paymentData.Total_Amount}`
                                         : `₹${calculatedAmount}`
->>>>>>> b3ed265a4155efdd564838e66b4119a97567ab2b
                                     }
                                     disabled
                                     sx={{

@@ -6,11 +6,9 @@ import Header from '../../../Header';
 const Membership = () => {
   return (
     <div>
-      <Navbar />
+      <Navbar/>
       {/* <Header /> */}
-      <div style={{ height: "80vh" }}>
-        <h4>Spero Membership</h4>
-      </div>
+      <h4>Spero Membership</h4>
       <Footer />
     </div>
   )

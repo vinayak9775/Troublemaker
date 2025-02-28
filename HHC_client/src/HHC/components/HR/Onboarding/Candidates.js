@@ -626,27 +626,13 @@ const Candidates = () => {
 
         await fetchDocumentsIDWise();
 
-        // if (foundDocumentIds.includes(1)) {
-        //     aadharUploaded = true;
-        // }
-        // if (foundDocumentIds.includes(2)) {
-        //     panUploaded = true;
-        // }
-
-        const aadharDocument = foundDocumentIds.includes(1)
-            ? foundDocumentImages[foundDocumentIds.indexOf(1)]
-            : null;
-        const panDocument = foundDocumentIds.includes(2)
-            ? foundDocumentImages[foundDocumentIds.indexOf(2)]
-            : null;
-
-        if (aadharDocument && aadharDocument !== null) {
+        if (foundDocumentIds.includes(1)) {
             aadharUploaded = true;
         }
-        if (panDocument && panDocument !== null) {
+        if (foundDocumentIds.includes(2)) {
             panUploaded = true;
         }
-        
+
         selectedFiles.forEach(({ doc_id, file }, index) => {
             if (doc_id) {
                 if (doc_id === 1) {
@@ -1209,7 +1195,7 @@ const Candidates = () => {
 
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                                     <>
-                                                        {/* {!item.approved && !approvedItems[index] && (
+                                                        {!item.approved && !approvedItems[index] && (
                                                             <>
                                                                 {
                                                                     !foundDocumentIds.includes(item.doc_li_id) && (
@@ -1230,47 +1216,6 @@ const Candidates = () => {
                                                                     )
                                                                 }
                                                             </>
-                                                        )} */}
-
-                                                        {!item.approved && !approvedItems[index] && (
-                                                            <>
-                                                                {/* Check if the item does not exist in foundDocumentIds */}
-                                                                {!foundDocumentIds.includes(item.doc_li_id) && (
-                                                                    <div
-                                                                        style={{
-                                                                            backgroundColor: '#00E08F',
-                                                                            color: 'white',
-                                                                            borderRadius: '4px',
-                                                                            padding: '4px 4px',
-                                                                            fontSize: '14px',
-                                                                            fontFamily: 'Roboto',
-                                                                            cursor: 'pointer',
-                                                                        }}
-                                                                        onClick={() => handleApprove(index)}
-                                                                    >
-                                                                        <CheckIcon />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Check if the professional_document is null for the given doc_li_id */}
-                                                                {foundDocumentIds.includes(item.doc_li_id) &&
-                                                                    foundDocumentImages[foundDocumentIds.indexOf(item.doc_li_id)] === null && (
-                                                                        <div
-                                                                            style={{
-                                                                                backgroundColor: '#00E08F',
-                                                                                color: 'white',
-                                                                                borderRadius: '4px',
-                                                                                padding: '4px 4px',
-                                                                                fontSize: '14px',
-                                                                                fontFamily: 'Roboto',
-                                                                                cursor: 'pointer',
-                                                                            }}
-                                                                            onClick={() => handleApprove(index)}
-                                                                        >
-                                                                            <CheckIcon />
-                                                                        </div>
-                                                                    )}
-                                                            </>
                                                         )}
 
                                                         <div
@@ -1289,31 +1234,6 @@ const Candidates = () => {
                                                         </div>
 
                                                         {foundDocumentIds.includes(item.doc_li_id) && (
-                                                            foundDocumentImages[foundDocumentIds.indexOf(item.doc_li_id)] !== null && (
-                                                                <div
-                                                                    style={{
-                                                                        backgroundColor: 'skyblue',
-                                                                        color: 'white',
-                                                                        borderRadius: '4px',
-                                                                        padding: '5px 5px',
-                                                                        fontSize: '14px',
-                                                                        fontFamily: 'Roboto',
-                                                                        cursor: 'pointer',
-                                                                    }}
-                                                                    onClick={() => {
-                                                                        const index = foundDocumentIds.indexOf(item.doc_li_id);
-                                                                        const documentImage = foundDocumentImages[index];
-                                                                        console.log('Document ID:', item.doc_li_id);
-                                                                        console.log('Professional Document Image:', documentImage);
-                                                                        handleOpenImageModal(item.doc_li_id, documentImage);
-                                                                    }}
-                                                                >
-                                                                    <VisibilityIcon />
-                                                                </div>
-                                                            )
-                                                        )}
-
-                                                        {/* {foundDocumentIds.includes(item.doc_li_id) && (
                                                             <div
                                                                 style={{
                                                                     backgroundColor: 'skyblue',
@@ -1334,7 +1254,7 @@ const Candidates = () => {
                                                             >
                                                                 <VisibilityIcon />
                                                             </div>
-                                                        )} */}
+                                                        )}
 
                                                         <Modal
                                                             open={openImageModal}

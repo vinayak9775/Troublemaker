@@ -1,0 +1,36 @@
+.leaflet-control-layers-base{
+  width: 170px;  /* Adjust width to make the container smaller */
+  height: 300px;  /* Ensure the height adjusts based on content */
+  font-size: 12px;  /* Decrease font size to fit content better */
+  padding: 5px;  /* Add some padding for better spacing */
+  /* margin-left: -15px; */
+  /* margin-right: -20px; */
+  /* margin-top: -2px; */
+  margin-bottom: -8px;
+}
+
+/* .leaflet-control-layers-selector {
+  margin-right: 1000px;
+
+} */
+
+/* Adjust space between the radio button and the label */
+.leaflet-control-layers-selector {
+  margin-right: -130px;  /* Reduced margin between radio button and label */
+}
+
+.leaflet-control-layers label {
+  display: flex;
+  justify-content: start !important;
+  align-items: start !important;
+  padding: 2px 0px;
+  white-space: nowrap;
+  transform: translate(-145px) !important;
+  width: 30% !important;
+  height: 10%;
+ /* color:white !important; */
+ 
+}
+
+
+

@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useMediaQuery, CircularProgress, Grid, Box, Card, CardContent, Stack, Typography, Button, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination, IconButton, InputBase } from '@mui/material';
+import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import CardContent from '@mui/material/CardContent';
+import Typography from "@mui/material/Typography";
+import { Button } from '@mui/material';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import dayjs from 'dayjs';
+import IconButton from '@mui/material/IconButton';
 import ProfessionalList from './ProfessionalList';
+import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
 import { styled } from '@mui/system';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import CalendarComponent from './calendar/CalendarComponent';
 import Navbar from '../../../Navbar';
 import Footer from '../../../Footer';
 import Header from '../../../Header';
 import { TabContext, TabPanel } from '@mui/lab';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const ScheduleCard = styled(Card)({
     display: 'flex',
@@ -185,13 +201,57 @@ const Schedule = () => {
         }
         return false;
     });
+    // let filteredData;
+    // if (selectedProfName || selectedService) {
+    //     filteredData = professionalList.filter((item) => {
+    //         if (
+    //             (selectedProfName === '' || item.prof_fullname.toLowerCase().includes(selectedProfName.toLowerCase())) &&
+    //             (selectedService === '' || item.srv_id.toLowerCase().includes(selectedService.toLowerCase()))
+    //         ) {
+    //             return true;
+    //         }
+    //         return false;
+    //     });
+    // } else {
+    //     filteredData = viewProfList.filter((item) => {
+    //         if (
+    //             (selectedProfName === '' || item.prof_fullname.toLowerCase().includes(selectedProfName.toLowerCase())) &&
+    //             (selectedService === '' || item.srv_id.toLowerCase().includes(selectedService.toLowerCase()))
+    //         ) {
+    //             return true;
+    //         }
+    //         return false;
+    //     });
+    // }
+
+
     return (
         <>
             <Navbar />
+            {/* <TabContext> */}
+            {/* <TabPanel> */}
             <Box sx={{ flexGrow: 1, mt: 14.6, mb: 2, ml: 1, mr: 1, }}>
                 <Stack direction={isSmallScreen ? 'column' : 'row'}
                     spacing={1}
-                    alignItems={isSmallScreen ? 'center' : 'flex-start'} sx={{ pt: 1 }}>
+                    alignItems={isSmallScreen ? 'center' : 'flex-start'} sx={{pt:1}}>
+                    {/* <div>
+                    {
+                        tabIndex === 1 && (
+                            <div>
+                                <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>PROFESSIONAL SCHEDULE</Typography>
+                            </div>
+                        )
+                    }
+                </div>
+                <div>
+                    {
+                        tabIndex === 2 && (
+                            <div>
+                                <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>PROFESSIONAL LIST</Typography>
+                            </div>
+                        )
+                    }
+                </div> */}
                     <Typography style={{ fontSize: 16, fontWeight: 600, marginTop: "10px", marginLeft: "10px" }} color="text.secondary" gutterBottom>PROFESSIONAL SCHEDULE</Typography>
                     <Box
                         component="form"
@@ -339,7 +399,7 @@ const Schedule = () => {
                             </div>
                         )
                     }
-                </div>
+                </div >
 
                 <div>
                     {
@@ -351,6 +411,8 @@ const Schedule = () => {
                     }
                 </div>
             </Box >
+            {/* </TabPanel> */}
+            {/* </TabContext> */}
             <Footer />
         </>
     )

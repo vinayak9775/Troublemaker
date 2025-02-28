@@ -16,8 +16,8 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LocalPhoneOutlinedIcon from '@mui/icons-material/LocalPhoneOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
+
 import Stack from '@mui/material/Stack';
-import Header from "./Header";
 
 export default function TopHeader() {
     const navigate = useNavigate();
@@ -103,13 +103,13 @@ export default function TopHeader() {
     return (
         <>
             <Box sx={{ flexGrow: 1 }}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    width: '100%',
-                    zIndex: 1000,
-                    backgroundColor: "#F2F2F2",
-                }}>
+             style={{
+                position: 'fixed',
+                top: 0,
+                width: '100%',
+                zIndex: 1000,
+                backgroundColor: "#F2F2F2",
+              }}>
                 <AppBar position="static" style={{
                     background: 'linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)',
                     height: '3rem'
@@ -208,9 +208,6 @@ export default function TopHeader() {
                         )}
                     </Toolbar>
                 </AppBar>
-                <div style={{ marginTop: 10, }}>
-                    <Header />
-                </div>
             </Box>
         </>
     );

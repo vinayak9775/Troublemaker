@@ -208,6 +208,7 @@ const ManageAttendance = () => {
     absent: '',
     present: '',
     woff: ''
+
   });
   const [thisMonthCount, setThisMonthCount] = useState({
     absent: '',
@@ -352,7 +353,6 @@ const ManageAttendance = () => {
       }
     };
     getEnquires();
-    // filteredProfessionals();
   }, []);
 
   const filteredProfessionals = enq.filter((professional) => {
@@ -361,7 +361,6 @@ const ManageAttendance = () => {
 
     // Check if professional.srv_name is not null before accessing its properties
     const matchesService = selectedService === '' || (professional.srv_name && professional.srv_name === selectedService);
-    // setPage(0);
     return matchesName && matchesService;
   });
 
@@ -615,7 +614,7 @@ const ManageAttendance = () => {
     <>
       {/* <Navbar /> */}
       <HRNavbar />
-      <Grid container spacing={4} style={{ paddingLeft: '35px', paddingRight: '35px', marginTop: '-40px'}}>
+      <Grid container spacing={4} style={{ paddingLeft: '35px', paddingRight: '35px', marginTop: '-40px' }}>
 
         <Grid item md={4}>
           <Box sx={{ typography: 'body1', mt: 2 }} >
@@ -1302,7 +1301,7 @@ const ManageAttendance = () => {
                       <Button onClick={handleCloseCaller} sx={{ marginLeft: "50rem", color: "#FFFFFF", marginTop: "2px", }}><CloseIcon /></Button>
                     </div>
                   </AppBar>
-                  <ProfViewAtte events={events} handleCloseCaller={handleCloseCaller}/>
+                  <ProfViewAtte events={events} />
                   {/* <CallerView caller={caller} clrID={callerID} onClose={handleCloseCaller} /> */}
                 </Box>
               </Modal>
