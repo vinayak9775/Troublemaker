@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import Grid from '@mui/material/Grid';
-import { TextField, Checkbox, FormControlLabel } from '@mui/material';
-import Typography from "@mui/material/Typography";
-import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import { CardContent } from '@mui/material';
-import Navbar from '../../../Navbar';
+import { useNavigate, useLocation } from "react-router-dom";
+import { Snackbar, Alert, TextField, Typography, Checkbox, FormControlLabel, Box, Card, CardContent, Grid, Button, MenuItem } from '@mui/material';
 import Footer from '../../../Footer';
 import HRNavbar from '../HRNavbar';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import { useNavigate } from "react-router-dom";
+import MuiAlert from "@mui/material/Alert";
+import DownloadIcon from '@mui/icons-material/Download';
 
 const role = [
   {
@@ -38,69 +30,59 @@ const title = [
     title_id: 3,
     label: 'Mrs',
   },
+  {
+    title_id: 4,
+    label: 'Ms',
+  },
 ];
 
 const jobType = [
   {
-    jobType_id: 1,
+    jobType_id: 2,
     label: 'Full Time',
   },
   {
-    jobType_id: 2,
+    jobType_id: 1,
     label: 'On Call',
-  },
-];
-
-const serviceMode = [
-  {
-    srvMode_id: 1,
-    label: 'Consultant',
-  },
-  {
-    srvMode_id: 2,
-    label: 'Employment',
-  },
-];
-
-const intMode = [
-  {
-    intMode_id: 1,
-    label: 'Offline',
-  },
-  {
-    intMode_id: 2,
-    label: 'Online',
-  },
-];
-
-const intRound = [
-  {
-    intRound_id: 1,
-    label: 'Select 1',
-  },
-  {
-    intRound_id: 2,
-    label: 'Select 2',
-  },
-  {
-    intRound_id: 3,
-    label: 'Select 3',
-  },
-  {
-    intRound_id: 4,
-    label: 'Select 4',
-  },
+  }
 ];
 
 function AddProfessional() {
+
+  const [refId, setRefId] = useState(null);
+  useEffect(() => {
+    const id = localStorage.getItem('clg_id');
+    const ref_id = localStorage.getItem('clgrefId');
+    setClgId(id);
+    setRefId(ref_id);
+  }, []);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [clgId, setClgId] = useState(null);
   const port = process.env.REACT_APP_API_KEY;
   const accessToken = localStorage.getItem('token');
+  const { professionalId } = location.state || {}
+  console.log(professionalId, 'professional ID is fetching from Table');
+  const srv_prof_id = location.state?.srv_prof_id || professionalId;
+  console.log(srv_prof_id, 'gggggggg');
+
+  useEffect(() => {
+    if (srv_prof_id) {
+      console.log("Fetched srv_prof_id:", srv_prof_id);
+    } else {
+      console.warn("srv_prof_id is missing in state.");
+    }
+  }, [srv_prof_id]);
+
+  useEffect(() => {
+    const id = localStorage.getItem('clg_id');
+    setClgId(id);
+  }, []);
 
   // PROFESSIONAL DETAILS
+  const [selectedTitle, setSelectedTitle] = useState('')
   const [fstName, setFstName] = useState('');
   const [lstName, setLstName] = useState('');
-  const [selectedTitle, setSelectedTitle] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
   const [gender, setGender] = useState([]);
   const [selectedGender, setSelectedGender] = useState('')
@@ -111,49 +93,69 @@ function AddProfessional() {
   const [selectedQualification, setSelectedQualification] = useState('');
   const [specialization, setSpecialization] = useState([]);
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
+  console.log(selectedSpecialization, 'selectedSpecialization');
+
   const [certificateRegNo, setCertificateRegNo] = useState('');
   const [intAvail, setIntAvail] = useState('');
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setIntAvail(today);
+  }, []);
   const [cv, setCV] = useState('');
+  const [error, setError] = useState('');
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setCV(file);
+  };
 
   //SERVICE DETAILS
   const [service, setService] = useState([]);
   const [selectedService, setSelectedService] = useState('');
   const [subService, setSubService] = useState([]);
   const [selectedSubService, setSelectedSubService] = useState([])
+  console.log(selectedSubService, 'selected Sub Services........');
+  const [selectedJobType, setSelectedJobType] = useState('');
 
   //CONTACT DETAILS
   const [contact, setContact] = useState('');
-  const [contactError, setContactError] = useState('');
-  const [altrContact, setAltrContact] = useState('');
-  const [altrContactError, setAltrContactError] = useState('');
-  const [emeContact, setEmeContact] = useState('');
-  const [emeContactError, setEmeContactError] = useState('');
   const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [emeName, setEmeName] = useState('');
-  const [relation, setRelation] = useState([]);
+  const [altrContact, setAltrContact] = useState('');
+  const [contactError, setContactError] = useState('');
+  const [emeContact, setEmeContact] = useState('');
   const [selectedRelation, setSelectedRelation] = useState('');
-
-  const [selectedJobType, setSelectedJobType] = useState('');
-  const [selectedSrvMode, setSelectedSrvMode] = useState('');
-
+  const [emeName, setEmeName] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [state, setState] = useState([]);
-  const [selectedState, setSelectedState] = useState('');
+  const [selectedState, setSelectedState] = useState('1');
   const [city, setCity] = useState([]);
-  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCity, setSelectedCity] = useState('1');
   const [zone, setZone] = useState([]);
-  const [selectedZone, setSelectedZone] = useState([]);
+  const [selectedZone, setSelectedZone] = useState(null);
+  const [altrContactError, setAltrContactError] = useState('');
+  const [emeContactError, setEmeContactError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [relation, setRelation] = useState([]);
+  const [googleAddress, setGoogleAddress] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
+  const [cvFile, setCvFile] = useState("");
 
   // SCHEDULE INTERVIEW
-  const [selectedIntMode, setSelectedIntMode] = useState('');
-  const [selectedIntRnd, setSelectedIntRnd] = useState('');
-  const [interviewer, setInterviewer] = useState('');
-  const [intDate, setIntDate] = useState('');
-  const [intTime, setIntTime] = useState('');
-
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  // DOB Validation
+  const calculateMinDate = () => {
+    const today = new Date();
+    const minDate = new Date();
+    minDate.setFullYear(today.getFullYear() - 18);
+    return minDate.toISOString().split('T')[0];
+  };
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') {
@@ -162,7 +164,7 @@ function AddProfessional() {
     setOpenSnackbar(false);
   };
 
-  // Usestate for handling empty data
+  // Use State for handling empty data
   const [errors, setErrors] = useState({
     selectedTitle: '',
     selectedRole: '',
@@ -173,6 +175,9 @@ function AddProfessional() {
 
     selectedService: '',
     selectedSubService: '',
+    selectedJobType: '',
+    certificateRegNo: '',
+    selectedQualification: '',
 
     contact: '',
     email: '',
@@ -181,6 +186,10 @@ function AddProfessional() {
     selectedState: '',
     selectedCity: '',
     selectedZone: '',
+    googleAddress: '',
+    manualAddress: '',
+
+    cv: ''
   });
 
   const handleEmptyField = () => {
@@ -231,16 +240,34 @@ function AddProfessional() {
     if (!selectedZone) {
       newErrors.selectedZone = 'Required';
     }
-    // if (!address) {
-    //     newErrors.address = 'Required';
+    if (!selectedQualification) {
+      newErrors.selectedQualification = 'Required';
+    }
+    // if (!cv) {
+    //   newErrors.cv = 'Required';
     // }
+    if (!cv && !cvFile) {
+      newErrors.cv = 'Required';
+    }
+    if (!selectedJobType) {
+      newErrors.selectedJobType = 'Required';
+    }
+    if (!certificateRegNo) {
+      newErrors.certificateRegNo = 'Required';
+    }
+    if (!googleAddress) {
+      newErrors.googleAddress = 'Required';
+    }
+    if (!manualAddress) {
+      newErrors.manualAddress = 'Required';
+    }
 
     setErrors(newErrors);
     return Object.values(newErrors).some((error) => error !== '');
   };
 
   // Validations //
-  const handlePhoneNumberChange = (e) => {
+  const handlePhoneNumberChange = async (e) => {
     const input = e.target.value;
     const numericValue = input.replace(/[^0-9]/g, '');
     setContact(numericValue);
@@ -257,6 +284,38 @@ function AddProfessional() {
     } else {
       setContactError('');
       setErrors({ ...errors, contact: '' });
+    }
+
+    if (numericValue.length === 10) {
+      try {
+        const response = await fetch(
+          `${port}/hr/professional_is_already_exists/?phone_no=${numericValue}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          const data = await response.json();
+          console.log(data);
+          setSnackbarMessage("Professional Validated Successfully");
+          setSnackbarSeverity("success");
+        } else if (response.status === 409) {
+          setSnackbarMessage("Phone Number already exists");
+          setSnackbarSeverity("error");
+        } else {
+          throw new Error("Unexpected response status");
+        }
+      } catch (error) {
+        setSnackbarMessage("Error validating phone number.");
+        setSnackbarSeverity("error");
+      } finally {
+        setSnackbarOpen(true);
+      }
     }
   };
 
@@ -298,18 +357,37 @@ function AddProfessional() {
     }
   };
 
+  // const handleEmailChange = (e) => {
+  //   const input = e.target.value;
+  //   setEmail(e.target.value);
+
+  //   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
+  //   if (!input) {
+  //     setEmailError('Email is required');
+  //     setErrors({ ...errors, email: 'Email is required' });
+  //   } else if (!emailPattern.test(input)) {
+  //     setEmailError('Please enter a valid email');
+  //     setErrors({ ...errors, email: 'Please enter a valid email' });
+  //   } else {
+  //     setEmailError('');
+  //     setErrors({ ...errors, email: '' });
+  //   }
+  // };
+
   const handleEmailChange = (e) => {
     const input = e.target.value;
     setEmail(input);
 
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    // Updated regex pattern for .com and .in only
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
 
     if (!input) {
       setEmailError('Email is required');
       setErrors({ ...errors, email: 'Email is required' });
     } else if (!emailPattern.test(input)) {
-      setEmailError('Please enter a valid email');
-      setErrors({ ...errors, email: 'Please enter a valid email' });
+      setEmailError('Please enter a valid email ending with .com or .in');
+      setErrors({ ...errors, email: 'Please enter a valid email ending with .com or .in' });
     } else {
       setEmailError('');
       setErrors({ ...errors, email: '' });
@@ -339,6 +417,7 @@ function AddProfessional() {
   const handleDropdownQualifictn = (event) => {
     const selectedQualifi = event.target.value;
     setSelectedQualification(selectedQualifi);
+    setSelectedSpecialization('')
   };
 
   const handleDropdownSpeclization = (event) => {
@@ -350,26 +429,12 @@ function AddProfessional() {
     const selectedService = event.target.value;
     console.log("Selected Service...", selectedService)
     setSelectedService(selectedService);
+    setSelectedSubService([]);
   };
 
   const handleDropdownJobType = (event) => {
     const selectedJobType = event.target.value;
     setSelectedJobType(selectedJobType);
-  };
-
-  const handleDropdownSrvMode = (event) => {
-    const selectedSrvMode = event.target.value;
-    setSelectedSrvMode(selectedSrvMode);
-  };
-
-  const handleDropdownIntMode = (event) => {
-    const selectedIntMode = event.target.value;
-    setSelectedIntMode(selectedIntMode);
-  };
-
-  const handleDropdownIntRound = (event) => {
-    const selectedIntRnd = event.target.value;
-    setSelectedIntRnd(selectedIntRnd);
   };
 
   useEffect(() => {
@@ -474,9 +539,9 @@ function AddProfessional() {
 
   useEffect(() => {
     const getSubService = async () => {
-      console.log("selct service Id", selectedService);
+      console.log("Selected service ID", selectedService);
       if (selectedService) {
-        console.log("service Id", selectedService);
+        console.log("Fetching sub-services for service ID", selectedService);
         try {
           const res = await fetch(`${port}/web/agg_hhc_sub_services_api/${selectedService}`, {
             headers: {
@@ -486,27 +551,45 @@ function AddProfessional() {
           });
           const data = await res.json();
           console.log("Sub Service Data", data);
+
           setSubService(data);
-          // const initialSelectedSubServices = data.map((subService) => subService.sub_srv_id);
-          // setSelectedSubService(initialSelectedSubServices);
+
+          // Optional: If no sub-services are returned, ensure selectedSubService is cleared
+          if (data.length === 0) {
+            setSelectedSubService([]);
+          }
         } catch (error) {
           console.error("Error fetching sub service data:", error);
         }
-      } else {
-        // Handle the case when selectedService is undefined
-        setSubService([]);
       }
     };
     getSubService();
   }, [selectedService]);
 
-  // const handleSubServiceSelect = (event) => {
-  //   const subServiceId = event.target.value;
-  //   const selectedSubService = subService.find(item => item.sub_srv_id === subServiceId);
-  //   if (selectedSubService) {
-  //     setSelectedSubService(subServiceId);
-  //   }
-  // };
+  // useEffect(() => {
+  //   const getSubService = async () => {
+  //     console.log("selct service Id", selectedService);
+  //     if (selectedService) {
+  //       console.log("service Id", selectedService);
+  //       try {
+  //         const res = await fetch(`${port}/web/agg_hhc_sub_services_api/${selectedService}`, {
+  //           headers: {
+  //             'Authorization': `Bearer ${accessToken}`,
+  //             'Content-Type': 'application/json',
+  //           },
+  //         });
+  //         const data = await res.json();
+  //         console.log("Sub Service Data", data);
+  //         setSubService(data);
+  //       } catch (error) {
+  //         console.error("Error fetching sub service data:", error);
+  //       }
+  //     } else {
+  //       setSubService([]);
+  //     }
+  //   };
+  //   getSubService();
+  // }, [selectedService]);
 
   const handleCheckboxChange = (event) => {
     const checkedId = parseInt(event.target.name);
@@ -593,18 +676,125 @@ function AddProfessional() {
     getZone();
   }, [selectedCity]);
 
-  const handleCheckboxZoneChange = (event) => {
-    const checkedId = parseInt(event.target.name); // Convert to integer
-    if (event.target.checked) {
-      setSelectedZone(prevChecked => [...prevChecked, checkedId]);
-    } else {
-      setSelectedZone(prevChecked => prevChecked.filter(id => id !== checkedId));
+  useEffect(() => {
+    if (srv_prof_id) {
+      const fetchProfessionalData = async () => {
+        try {
+          const response = await fetch(`${port}/hr/edit_register_professional/${srv_prof_id}/`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            console.error(`Error fetching professional data: ${response.status}`);
+            return;
+          }
+
+          const data = await response.json();
+
+          // Professional Data
+          setSelectedService(data.service_professional?.srv_id);
+          console.log('Service ID:', data.service_professional?.srv_id);
+
+          // Update the state for selected sub-services
+          const subServiceIds = data.sub_services.map(subService => subService.sub_srv_id);
+          setSelectedSubService(subServiceIds);
+          console.log('Sub-Service IDs:', subServiceIds);
+
+          setSelectedJobType(data.service_professional?.Job_type);
+
+          //________________Professional Details
+          setSelectedTitle(data.service_professional?.title);
+          const fullName = data.service_professional?.prof_fullname;
+          const nameParts = fullName.split(' ');
+          const firstName = nameParts.slice(1, nameParts.length - 1).join(' ');
+          console.log(firstName, 'firstName');
+
+          const lastName = nameParts[nameParts.length - 1];
+          setFstName(firstName);
+          setLstName(lastName);
+          setSelectedRole(data.service_professional?.role);
+          setSelectedGender(data.service_professional?.gender);
+          setDOB(data.service_professional?.dob);
+
+          // Emergency Contact Details
+          setContact(data.service_professional?.phone_no);
+          setEmail(data.service_professional?.email_id);
+          setAltrContact(data.service_professional?.alt_phone_no);
+          setEmeContact(data.service_professional?.eme_contact_no);
+          setSelectedRelation(data.service_professional?.eme_contact_relation);
+          setEmeName(data.service_professional?.eme_conact_person_name);
+          setGoogleAddress(data.service_professional?.google_home_location);
+          setManualAddress(data.service_professional?.prof_address);
+
+          // Address and Location Data
+          setSelectedState(data.service_professional?.state_name);
+          setSelectedCity(data.service_professional?.city);
+          setPinCode(data.service_professional?.pin_code_id);
+          if (data.service_professional && data.service_professional.cv_file) {
+            setCvFile(data.service_professional.cv_file);
+          }
+
+          // Zones
+          setZone(data.Zone || []);
+
+          if (data.Zone && data.Zone.length > 0) {
+            const selectedLocation = data.Zone[0].prof_zone_id;
+            setSelectedZone(selectedLocation);
+          }
+          const cvFilePath = data.service_professional?.cv_file;
+          if (cvFilePath) {
+            const cvFileName = cvFilePath.split('/').pop();
+            console.log('CV File Name:', cvFileName);
+          }
+
+          // Qualification Details
+          if (data.int_services_data && data.int_services_data.length > 0) {
+            const qualificationData = data.int_services_data[0];
+            setSelectedQualification(qualificationData.qualification);
+            setSelectedSpecialization(qualificationData.specialization);
+            const interviewDate = qualificationData.availability_for_interview.split('T')[0];
+            setIntAvail(interviewDate);
+          }
+          setCertificateRegNo(data.service_professional?.certificate_registration_no);
+
+        } catch (error) {
+          console.error('Error fetching professional data:', error);
+        }
+      };
+
+      fetchProfessionalData();
     }
-  };
+  }, [srv_prof_id]);
 
   async function handleAddProf(event) {
     event.preventDefault();
     const hasEmptyFields = handleEmptyField();
+
+    if (!/^\d{10}$/.test(contact)) {
+      setContactError('Please enter a valid 10-digit contact number.');
+      setOpenSnackbar(true);
+      setSnackbarMessage('Please enter a valid 10-digit contact number.');
+      setSnackbarSeverity('error');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(altrContact)) {
+      setContactError('Please enter a valid 10-digit number.');
+      setOpenSnackbar(true);
+      setSnackbarMessage('Please enter a valid 10-digit number.');
+      setSnackbarSeverity('error');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(emeContact)) {
+      setContactError('Please enter a valid 10-digit number.');
+      setOpenSnackbar(true);
+      setSnackbarMessage('Please enter a valid 10-digit number.');
+      setSnackbarSeverity('error');
+      return;
+    }
     if (hasEmptyFields) {
       setOpenSnackbar(true);
       setSnackbarMessage('Please fill all required details.');
@@ -612,148 +802,173 @@ function AddProfessional() {
       return;
     }
 
-    const selectedServiceTitle = service.find((option) => option.srv_id === selectedService)?.service_title;
-
-    // Create a FormData object
     const formData = new FormData();
+    //professional details
     formData.append('title', selectedTitle);
+    formData.append('clg_first_name', fstName);
+    formData.append('clg_last_name', lstName);
     formData.append('role', selectedRole);
-    formData.append('first_name', fstName);
-    formData.append('last_name', lstName);
     formData.append('gender', selectedGender);
     formData.append('dob', dob);
+
+    //educations
     formData.append('qualification', selectedQualification);
     formData.append('certificate_registration_no', certificateRegNo);
-    formData.append('specialization', selectedSpecialization);
+    formData.append('clg_specialization', selectedSpecialization);
     formData.append('availability_for_interview', intAvail);
-
-    // Append the file
+    // formData.append('cv_file', cv);
     if (cv) {
-      formData.append('prof_CV', cv);
+      formData.append('cv_file', cv);
     }
+    //  else if (cvFile) {
+    //   formData.append('cv_file', cvFile);
+    // }
 
-    formData.append('service_title', selectedServiceTitle);
-    formData.append('sub_services', selectedSubService);
+    //service details
+    formData.append('srv_id', selectedService);
+    // formData.append('service_title', selectedServiceTitle);
+    formData.append('sub_services', JSON.stringify(selectedSubService) || '[]');
     formData.append('Job_type', selectedJobType);
-    formData.append('phone_no', contact);
-    formData.append('alt_phone_no', altrContact);
-    formData.append('eme_contact_no', emeContact);
-    formData.append('email_id', email);
-    formData.append('eme_conact_person_name', emeName);
-    formData.append('eme_contact_relation', selectedRelation);
-    formData.append('state_name', selectedState);
-    formData.append('city', selectedCity);
-    formData.append('prof_zones', selectedZone);
-    formData.append('int_round', selectedIntRnd);
-    formData.append('int_mode', selectedIntMode);
-    formData.append('int_schedule_with', interviewer);
-    formData.append('int_schedule_date', intDate);
-    formData.append('int_schedule_time', intTime);
 
+    //contact details
+    formData.append('contact_number', contact);
+    formData.append('email', email);
+    formData.append('alternate_number', altrContact);
+    formData.append('emergency_contact_number', emeContact);
+    formData.append('emergency_relation', selectedRelation);
+    formData.append('emergency_name', emeName);
+
+    // Address
+    formData.append('state', selectedState);
+    formData.append('city', selectedCity);
+    formData.append('prof_zone', selectedZone ? [selectedZone] : []);
+    formData.append('pincode', pinCode);
+    formData.append('google_home_location', googleAddress);
+    formData.append('address', manualAddress);
+    formData.append('added_by', refId);
+    formData.append('last_modified_by', refId);
     console.log("POST API Hitting......", formData);
 
     try {
-      const response = await fetch(`${port}/hr/Register_professioanl_for_HR/`, {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        console.error(`HTTP error! Status: ${response.status}`);
-        return;
+      let response;
+      if (srv_prof_id) {
+        response = await fetch(`${port}/hr/edit_register_professional/${srv_prof_id}/`, {
+          method: "PUT",
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+      } else {
+        response = await fetch(`${port}/hr/Register_professioanl_for_HR/`, {
+          method: "POST",
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
       }
-
-      const result = await response.json();
-      console.log("Successfully submitted Professional data", result);
-      setOpenSnackbar(true);
-      setSnackbarMessage('Professional data submitted successfully!');
-      setSnackbarSeverity('success');
-      navigate('/hr/manage profiles');  
+      if (response.status === 201) {
+        const result = await response.json();
+        console.log("Successfully submitted Professional data", result);
+        setSnackbarMessage('Professional data submitted successfully!');
+        setSnackbarSeverity('success');
+        setOpenSnackbar(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        navigate('/hr/manage profiles');
+      }
+      else if (response.status === 200) {
+        const result = await response.json();
+        console.log("Successfully Updated Professional data", result);
+        setSnackbarMessage('Professional data updated successfully!');
+        setSnackbarSeverity('success');
+        setOpenSnackbar(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // navigate('/hr/manage profiles');
+        if (professionalId) {
+          navigate('/hr/manage profiles');
+        } else if (srv_prof_id) {
+          navigate('/hr/our employees');
+        }
+      }
+      else if (response.status === 400) {
+        const errorResult = await response.json();
+        setOpenSnackbar(true);
+        setSnackbarMessage(errorResult.error);
+        setSnackbarSeverity('error');
+      }
+      else if (response.status === 409) {
+        const errorResult = await response.json();
+        setOpenSnackbar(true);
+        setSnackbarMessage(errorResult.error);
+        setSnackbarSeverity('error');
+      } else if (response.status === 500) {
+        setOpenSnackbar(true);
+        setSnackbarMessage('Something went wrong. Please try again later.');
+        setSnackbarSeverity('error');
+      } else {
+        console.error(`Unhandled status code: ${response.status}`);
+      }
     } catch (error) {
       console.error("Error fetching professional data:", error);
+      setOpenSnackbar(true);
+      setSnackbarMessage('Failed to submit professional data. Please try again.');
+      setSnackbarSeverity('error');
     }
   }
 
-  // async function handleAddProf(event) {
-  //   event.preventDefault();
-  //   const hasEmptyFields = handleEmptyField();
-  //   if (hasEmptyFields) {
-  //     setOpenSnackbar(true);
-  //     setSnackbarMessage('Please fill all required details.');
-  //     setSnackbarSeverity('error');
-  //     return;
-  //   }
+  // Function to fetch data from API
+  const fetchData = async (certificateRegNo) => {
+    if (certificateRegNo.trim() === "") return;
 
-  //   const selectedServiceTitle = service.find((option) => option.srv_id === selectedService)?.service_title;
+    try {
+      const response = await fetch(
+        `${port}/hr/professional_is_already_exists/?certificate_registration_no=${certificateRegNo}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
-  //   const requestData = {
-  //     title: selectedTitle,
-  //     role: selectedRole,
-  //     first_name: fstName,
-  //     last_name: lstName,
-  //     gender: selectedGender,
-  //     dob: dob,
+      if (response.status === 200) {
+        const data = await response.json();
+        console.log(data);
+        setSnackbarMessage("Registration Number Validated Successfully");
+        setSnackbarSeverity("success");
+      } else if (response.status === 409) {
+        setSnackbarMessage("Registration Number already exists");
+        setSnackbarSeverity("error");
+      } else {
+        setSnackbarMessage("Unexpected response status");
+        setSnackbarSeverity("error");
+      }
+    } catch (error) {
+      console.error("Error validating phone number:", error);
+      setSnackbarMessage("Error validating phone number.");
+      setSnackbarSeverity("error");
+    } finally {
+      setSnackbarOpen(true);
+    }
+  };
 
-  //     qualification: selectedQualification,
-  //     certificate_registration_no: certificateRegNo,
-  //     specialization: selectedSpecialization,
-  //     availability_for_interview: intAvail,
-  //     prof_CV: cv,
+  // useEffect(() => {
+  //   fetchData(certificateRegNo);
+  // }, [certificateRegNo]);
 
-  //     // srv_id: selectedService,
-  //     service_title: selectedServiceTitle, // Pass the service title instead of the ID
-  //     sub_services: selectedSubService,
-  //     Job_type: selectedJobType,
-  //     // mode_of_service: selectedSrvMode,
+  const downloadCV = (cvFile, event) => {
+    event.preventDefault();
+    const newTab = window.open(`${port}${cvFile}`, '_blank');
 
-  //     phone_no: contact,
-  //     alt_phone_no: altrContact,
-  //     eme_contact_no: emeContact,
-  //     email_id: email,
-  //     eme_conact_person_name: emeName,
-  //     eme_contact_relation: selectedRelation,
+    if (newTab) {
+      newTab.focus();
+    } else {
+      window.location.href = `${port}${cvFile}`;
+    }
+  };
 
-  //     state_name: selectedState,
-  //     city: selectedCity,
-  //     prof_zones: selectedZone,
-  //     // address: toDate,
-
-  //     int_round: selectedIntRnd,
-  //     int_mode: selectedIntMode,
-  //     int_schedule_with: interviewer,
-  //     int_schedule_date: intDate,
-  //     int_schedule_time: intTime,
-  //   };
-  //   console.log("POST API Hitting......", requestData)
-  //   try {
-  //     const response = await fetch(`${port}/hr/Register_professioanl_for_HR/`, {
-  //       method: "POST",
-  //       headers: {
-  //         'Authorization': `Bearer ${accessToken}`,
-  //         "Content-Type": "application/json",
-  //         Accept: "application/json",
-  //       },
-  //       body: JSON.stringify(requestData),
-  //     });
-  //     if (!response.ok) {
-  //       console.error(`HTTP error! Status: ${response.status}`);
-  //       return;
-  //     }
-  //     const result = await response.json();
-  //     console.log("Successfully submitted Professional data", result);
-  //     setOpenSnackbar(true);
-  //     setSnackbarMessage('Professional data submitted successfully!');
-  //     setSnackbarSeverity('success');
-  //     // navigate('/manage-profile',)
-  //     // onClose();
-  //     // window.location.reload();
-  //   } catch (error) {
-  //     console.error("Error fetching professional data:", error);
-  //   }
-  // }
 
   return (
     <>
@@ -800,17 +1015,23 @@ function AddProfessional() {
                   <Grid item lg={5} sm={6} xs={12}>
                     <TextField
                       required
-                      id="first_name"
-                      name="first_name"
+                      id="clg_first_name"
+                      name="clg_first_name"
                       label="First Name"
                       value={fstName}
-                      onChange={(e) => setFstName(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^[a-zA-Z]*$/.test(value)) {
+                          setFstName(value);
+                        }
+                      }}
                       size="small"
                       fullWidth
                       error={!!errors.fstName}
                       helperText={errors.fstName}
                       sx={{
-                        textAlign: "left", '& input': {
+                        textAlign: "left",
+                        '& input': {
                           fontSize: '14px',
                         },
                       }}
@@ -820,14 +1041,18 @@ function AddProfessional() {
                   <Grid item lg={5} md={6} sm={6} xs={12}>
                     <TextField
                       required
-                      id="last_name"
-                      name="last_name"
+                      id="clg_last_name"
+                      name="clg_last_name"
                       label="Last Name"
                       size="small"
                       fullWidth
                       value={lstName}
-                      onChange={(e) => setLstName(e.target.value)}
-                      error={!!errors.lstName}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^[a-zA-Z]*$/.test(value)) {
+                          setLstName(value);
+                        }
+                      }} error={!!errors.lstName}
                       helperText={errors.lstName}
                       sx={{
                         textAlign: "left", '& input': {
@@ -912,6 +1137,9 @@ function AddProfessional() {
                       InputLabelProps={{
                         shrink: true,
                       }}
+                      inputProps={{
+                        max: calculateMinDate(),
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -939,7 +1167,7 @@ function AddProfessional() {
                       select
                       id="qualification"
                       name="qualification"
-                      label="Qualification"
+                      label="Qualification*"
                       size="small"
                       fullWidth
                       value={selectedQualification}
@@ -949,6 +1177,8 @@ function AddProfessional() {
                           fontSize: '14px',
                         },
                       }}
+                      error={!!errors.selectedQualification}
+                      helperText={errors.selectedQualification}
                     >
                       {qualification.map((option) => (
                         <MenuItem key={option.quali_id} value={option.quali_id}
@@ -963,17 +1193,23 @@ function AddProfessional() {
                     <TextField
                       id="certificate_registration_no"
                       name="certificate_registration_no"
-                      label="Certificate Registration No"
+                      label="Certificate Registration No*"
                       size="small"
                       fullWidth
                       value={certificateRegNo}
-                      onChange={(e) => setCertificateRegNo(e.target.value)}
+                      // onChange={(e) => setCertificateRegNo(e.target.value)}
+                      onChange={(e) => {
+                        setCertificateRegNo(e.target.value);
+                        fetchData(e.target.value);
+                      }}
                       sx={{
                         textAlign: "left",
                         '& input': {
                           fontSize: '14px',
                         },
                       }}
+                      error={!!errors.certificateRegNo}
+                      helperText={errors.certificateRegNo}
                     />
                   </Grid>
 
@@ -982,12 +1218,12 @@ function AddProfessional() {
                       <Grid item lg={4} sm={4} xs={12}>
                         <TextField
                           select
-                          id="specialization"
-                          name="specialization"
+                          id="clg_specialization"
+                          name="clg_specialization"
                           label="Specialization"
                           size="small"
                           fullWidth
-                          value={selectedSpecialization}
+                          value={selectedSpecialization || ""}
                           onChange={handleDropdownSpeclization}
                           sx={{
                             textAlign: "left",
@@ -1004,6 +1240,7 @@ function AddProfessional() {
                           ))}
                         </TextField>
                       </Grid>
+
                       <Grid item lg={4} sm={4} xs={12}>
                         <TextField
                           label="Interview Availability"
@@ -1022,18 +1259,20 @@ function AddProfessional() {
                           InputLabelProps={{
                             shrink: true,
                           }}
+                          disabled
                         />
                       </Grid>
 
-                      <Grid item lg={4} sm={4} xs={12}>
+                      <Grid item lg={3} sm={3} xs={12}>
                         <TextField
+                          required
                           label="View CV"
-                          id="prof_CV"
-                          name="prof_CV"
+                          id="cv_file"
+                          name="cv_file"
                           type="file"
                           size="small"
                           fullWidth
-                          onChange={(e) => setCV(e.target.files[0])}
+                          onChange={handleFileChange}
                           sx={{
                             '& input': {
                               fontSize: '14px',
@@ -1042,7 +1281,29 @@ function AddProfessional() {
                           InputLabelProps={{
                             shrink: true,
                           }}
+                          inputProps={{
+                            accept: ".doc,.docx,.pdf,.csv"
+                          }}
+                          error={!!errors.cv}
+                          helperText={errors.cv}
                         />
+                        {error && (
+                          <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                            {error}
+                          </Typography>
+                        )}
+                      </Grid>
+
+                      <Grid item lg={1} sm={1} xs={12}>
+                        {cvFile && (
+                          <Button
+                            variant="outlined"
+                            sx={{ width: "9%", marginRight: "-10px" }}
+                            onClick={(event) => downloadCV(cvFile, event)}
+                          >
+                            <DownloadIcon />
+                          </Button>
+                        )}
                       </Grid>
                     </Grid>
                   </Grid>
@@ -1052,7 +1313,6 @@ function AddProfessional() {
           </Grid>
 
           <Grid item xs={12} container spacing={1}>
-
             <Grid item lg={3} md={3} xs={12}>
               <Card
                 sx={{
@@ -1065,7 +1325,7 @@ function AddProfessional() {
               >
                 <CardContent>
                   <Grid container>
-                    <Typography align="left" style={{ fontSize: "16px", fontWeight: 600 }}>SERVICE DETAILS  </Typography>
+                    <Typography align="left" style={{ fontSize: "16px", fontWeight: 600 }}>SERVICE DETAILS</Typography>
                   </Grid>
 
                   <Grid container spacing={2} sx={{ marginTop: "1px" }} >
@@ -1099,8 +1359,7 @@ function AddProfessional() {
                         }}
                       >
                         {service.map((option) => (
-                          <MenuItem key={option.srv_id} value={option.srv_id}
-                            sx={{ fontSize: "14px", }}>
+                          <MenuItem key={option.srv_id} value={option.srv_id} sx={{ fontSize: "14px" }}>
                             {option.service_title}
                           </MenuItem>
                         ))}
@@ -1108,48 +1367,6 @@ function AddProfessional() {
                     </Grid>
 
                     <Grid item xs={12}>
-                      {/* <TextField
-                        required
-                        id="sub_services"
-                        name="sub_services"
-                        select
-                        label="Select Sub Service"
-                        size="small"
-                        fullWidth
-                        error={!!errors.selectedSubService}
-                        helperText={errors.selectedSubService}
-                        SelectProps={{
-                          MenuProps: {
-                            PaperProps: {
-                              style: {
-                                maxHeight: '200px',
-                                maxWidth: '200px',
-                              },
-                            },
-                          },
-                        }}
-                      >
-                        {subService.map(option => (
-                          <FormControlLabel
-                            key={option.sub_srv_id}
-                            sx={{
-                              textAlign: "left", '& .MuiFormControlLabel-label': {
-                                fontSize: '14px',
-                              }
-                            }}
-                            control={
-                              <Checkbox
-                                checked={selectedSubService.includes(option.sub_srv_id)}
-                                onChange={handleCheckboxChange}
-                                name={option.sub_srv_id.toString()}
-                                // size="medium"
-                                sx={{ ml: "15px" }}
-                              />
-                            }
-                            label={option.recommomded_service}
-                          />
-                        ))}
-                      </TextField> */}
                       <TextField
                         required
                         id="sub_services"
@@ -1158,19 +1375,15 @@ function AddProfessional() {
                         label="Select Sub Service"
                         size="small"
                         fullWidth
-                        value={selectedSubService.map(id => {
-                          const service = subService.find(option => option.sub_srv_id === id);
-                          return service ? service.recommomded_service : '';
-                        }).join(', ')} // Display selected sub-service names
                         error={!!errors.selectedSubService}
                         helperText={errors.selectedSubService}
                         SelectProps={{
-                          multiple: true, // Allow multiple selections
-                          value: selectedSubService, // Keep selected values
+                          multiple: true,
+                          value: selectedSubService,
                           renderValue: (selected) => selected.map(id => {
                             const service = subService.find(option => option.sub_srv_id === id);
                             return service ? service.recommomded_service : '';
-                          }).join(', '), // Format how selected names appear
+                          }).join(', '),
                           MenuProps: {
                             PaperProps: {
                               style: {
@@ -1219,6 +1432,8 @@ function AddProfessional() {
                             fontSize: '14px',
                           },
                         }}
+                        error={!!errors.selectedJobType}
+                        helperText={errors.selectedJobType}
                       >
                         {jobType.map((option) => (
                           <MenuItem key={option.jobType_id} value={option.jobType_id}
@@ -1228,31 +1443,6 @@ function AddProfessional() {
                         ))}
                       </TextField>
                     </Grid>
-
-                    {/* <Grid item xs={12}>
-                      <TextField
-                        select
-                        id="mode_of_service"
-                        name="mode_of_service"
-                        label="Mode of Service"
-                        size="small"
-                        fullWidth
-                        value={selectedSrvMode}
-                        onChange={handleDropdownSrvMode}
-                        sx={{
-                          textAlign: "left", '& input': {
-                            fontSize: '14px',
-                          },
-                        }}
-                      >
-                        {serviceMode.map((option) => (
-                          <MenuItem key={option.srvMode_id} value={option.srvMode_id}
-                            sx={{ fontSize: "14px", }}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Grid> */}
                   </Grid>
                 </CardContent>
               </Card>
@@ -1275,9 +1465,9 @@ function AddProfessional() {
                   <Grid container spacing={2} sx={{ marginTop: "1px" }} >
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="phone_no"
-                        name="phone_no"
-                        label="Contact No"
+                        id="contact_number"
+                        name="contact_number"
+                        label="Contact No*"
                         size="small"
                         fullWidth
                         value={contact}
@@ -1298,9 +1488,9 @@ function AddProfessional() {
 
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="email_id"
-                        name="email_id"
-                        label="Email"
+                        id="email"
+                        name="email"
+                        label="Email*"
                         placeholder='example@gmail.com'
                         size="small"
                         fullWidth
@@ -1319,9 +1509,9 @@ function AddProfessional() {
 
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="alt_phone_no"
-                        name="alt_phone_no"
-                        label="Alternate Contact"
+                        id="alternate_number"
+                        name="alternate_number"
+                        label="Alternate Contact*"
                         size="small"
                         fullWidth
                         value={altrContact}
@@ -1343,9 +1533,9 @@ function AddProfessional() {
 
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="eme_contact_no"
-                        name="eme_contact_no"
-                        label="Emergency Contact"
+                        id="emergency_contact_number"
+                        name="emergency_contact_number"
+                        label="Emergency Contact*"
                         size="small"
                         fullWidth
                         value={emeContact}
@@ -1367,8 +1557,8 @@ function AddProfessional() {
 
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="eme_contact_relation"
-                        name="eme_contact_relation"
+                        id="emergency_relation"
+                        name="emergency_relation"
                         select
                         label="Emergency Contact Relation"
                         value={selectedRelation}
@@ -1402,9 +1592,9 @@ function AddProfessional() {
 
                     <Grid item lg={6} sm={6} xs={12}>
                       <TextField
-                        id="eme_conact_person_name"
-                        name="eme_conact_person_name"
-                        label="Name"
+                        id="emergency_name"
+                        name="emergency_name"
+                        label="Emergency Name"
                         size="small"
                         fullWidth
                         value={emeName}
@@ -1417,157 +1607,7 @@ function AddProfessional() {
                         }}
                       />
                     </Grid>
-
-                    <Grid item lg={12} sm={12} xs={12}>
-                      <Grid container spacing={1}>
-                        <Grid item xs={3}>
-                          <TextField
-                            required
-                            label="State"
-                            id="state_id"
-                            name="state_id"
-                            select
-                            placeholder='State'
-                            value={selectedState}
-                            onChange={(e) => setSelectedState(e.target.value)}
-                            size="small"
-                            fullWidth
-                            error={!!errors.selectedState}
-                            helperText={errors.selectedState}
-                            sx={{
-                              textAlign: "left", '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                            SelectProps={{
-                              MenuProps: {
-                                PaperProps: {
-                                  style: {
-                                    maxHeight: '120px',
-                                    maxWidth: '200px',
-                                  },
-                                },
-                              },
-                            }}
-                          >
-                            {state.map((option) => (
-                              <MenuItem key={option.state_id} value={option.state_id}
-                                sx={{ fontSize: "14px" }}>
-                                {option.state_name}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField
-                            required
-                            label="City"
-                            id="city"
-                            name="city"
-                            select
-                            value={selectedCity}
-                            onChange={(e) => setSelectedCity(e.target.value)}
-                            size="small"
-                            fullWidth
-                            error={!!errors.selectedCity}
-                            helperText={errors.selectedCity}
-                            sx={{
-                              textAlign: "left", '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                            SelectProps={{
-                              MenuProps: {
-                                PaperProps: {
-                                  style: {
-                                    maxHeight: '120px',
-                                    maxWidth: '200px',
-                                  },
-                                },
-                              },
-                            }}
-                          >
-                            {city.map((option) => (
-                              <MenuItem key={option.city_id} value={option.city_id}
-                                sx={{ fontSize: "14px" }}>
-                                {option.city_name}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField
-                            required
-                            // label="Preferred Location"
-                            label="Zone"
-                            id="prof_zones"
-                            name="prof_zones"
-                            select
-                            size="small"
-                            fullWidth
-                            error={!!errors.selectedZone}
-                            helperText={errors.selectedZone}
-                            sx={{
-                              textAlign: "left", '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                            SelectProps={{
-                              MenuProps: {
-                                PaperProps: {
-                                  style: {
-                                    maxHeight: '120px',
-                                    maxWidth: '120px',
-                                  },
-                                },
-                              },
-                            }}
-                          >
-                            {/* {zone.map((option) => (
-                          <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}
-                            sx={{ fontSize: "14px" }}>
-                            {option.Name}
-                          </MenuItem>
-                        ))} */}
-                            {zone.map(option => (
-                              <FormControlLabel
-                                key={option.prof_zone_id}
-                                sx={{
-                                  textAlign: "left", '& .MuiFormControlLabel-label': {
-                                    fontSize: '14px',
-                                  }
-                                }}
-                                control={
-                                  <Checkbox
-                                    checked={selectedZone.includes(option.prof_zone_id)}
-                                    onChange={handleCheckboxZoneChange}
-                                    name={option.prof_zone_id.toString()}
-                                    sx={{ ml: "15px" }}
-                                  />
-                                }
-                                label={option.Name}
-                              />
-                            ))}
-                          </TextField>
-                        </Grid>
-                        <Grid item xs={3}>
-                          <TextField
-                            label="Pincode"
-                            id="outlined-size-small"
-                            placeholder='Pincode'
-                            size="small"
-                            fullWidth
-                            sx={{
-                              '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                          />
-                        </Grid>
-                      </Grid>
-                    </Grid>
                   </Grid>
-
                 </CardContent>
               </Card>
             </Grid>
@@ -1576,6 +1616,7 @@ function AddProfessional() {
               <Card
                 sx={{
                   width: "100%",
+                  height: "100%",
                   borderRadius: "10px",
                   bgColor: "white",
                   boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)',
@@ -1583,72 +1624,143 @@ function AddProfessional() {
               >
                 <CardContent>
                   <Grid container>
-                    <Typography align="left" style={{ fontSize: "16px", fontWeight: 600 }}>SCHEDULE INTERVIEW</Typography>
+                    <Typography align="left" style={{ fontSize: "16px", fontWeight: 600 }}>Address</Typography>
                   </Grid>
 
                   <Grid container spacing={2} sx={{ marginTop: "1px" }} >
-                    <Grid item xs={12}>
+                    <Grid item xs={6}>
                       <TextField
+                        required
+                        label="State"
+                        id="state_id"
+                        name="state_id"
                         select
-                        id="int_round"
-                        name="int_round"
-                        label="Interview Round"
+                        placeholder='State'
+                        value={selectedState}
+                        onChange={(e) => setSelectedState(e.target.value)}
                         size="small"
                         fullWidth
-                        defaultValue={selectedIntRnd}
-                        onchange={handleDropdownIntRound}
+                        error={!!errors.selectedState}
+                        helperText={errors.selectedState}
                         sx={{
                           textAlign: "left", '& input': {
                             fontSize: '14px',
                           },
                         }}
-                      >
-                        {intRound.map((option) => (
-                          <MenuItem key={option.intRound_id} value={option.intRound_id}
-                            sx={{ fontSize: "14px", }}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <TextField
-                        select
-                        id="int_mode"
-                        name="int_mode"
-                        label="Mode of Interview"
-                        size="small"
-                        fullWidth
-                        value={selectedIntMode}
-                        onChange={handleDropdownIntMode}
-                        sx={{
-                          textAlign: "left",
-                          '& input': {
-                            fontSize: '14px',
+                        SelectProps={{
+                          MenuProps: {
+                            PaperProps: {
+                              style: {
+                                maxHeight: '120px',
+                                maxWidth: '200px',
+                              },
+                            },
                           },
                         }}
                       >
-                        {intMode.map((option) => (
-                          <MenuItem key={option.intMode_id} value={option.intMode_id}
-                            sx={{ fontSize: "14px", }}>
-                            {option.label}
+                        {state.map((option) => (
+                          <MenuItem key={option.state_id} value={option.state_id}
+                            sx={{ fontSize: "14px" }}>
+                            {option.state_name}
                           </MenuItem>
                         ))}
                       </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid item xs={6}>
                       <TextField
-                        id="int_schedule_with"
-                        name="int_schedule_with"
-                        label="Interview Schedule with"
+                        required
+                        label="City"
+                        id="city"
+                        name="city"
+                        select
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
                         size="small"
                         fullWidth
-                        value={interviewer}
-                        onChange={(e) => setInterviewer(e.target.value)}
+                        error={!!errors.selectedCity}
+                        helperText={errors.selectedCity}
                         sx={{
-                          textAlign: "left",
+                          textAlign: "left", '& input': {
+                            fontSize: '14px',
+                          },
+                        }}
+                        SelectProps={{
+                          MenuProps: {
+                            PaperProps: {
+                              style: {
+                                maxHeight: '120px',
+                                maxWidth: '200px',
+                              },
+                            },
+                          },
+                        }}
+                      >
+                        {city.map((option) => (
+                          <MenuItem key={option.city_id} value={option.city_id}
+                            sx={{ fontSize: "14px" }}>
+                            {option.city_name}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <TextField
+                        required
+                        label="Home Zone"
+                        id="zone"
+                        name="zone"
+                        select
+                        size="small"
+                        fullWidth
+                        error={!!errors.selectedZone}
+                        helperText={errors.selectedZone}
+                        sx={{
+                          textAlign: "left", '& input': {
+                            fontSize: '14px',
+                          },
+                        }}
+                        SelectProps={{
+                          MenuProps: {
+                            PaperProps: {
+                              style: {
+                                maxHeight: '120px',
+                                maxWidth: '120px',
+                              },
+                            },
+                          },
+                        }}
+                        // value={selectedZone}
+                        value={selectedZone || ""}
+                        onChange={(e) => setSelectedZone(e.target.value)}
+                      >
+                        {zone
+                          .filter(option => option.Name !== "All")
+                          .map(option => (
+                            <MenuItem key={option.prof_zone_id} value={option.prof_zone_id}>
+                              {option.Name}
+                            </MenuItem>
+                          ))}
+                      </TextField>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Pincode"
+                        id="outlined-size-small"
+                        name='pincode'
+                        placeholder='Pincode'
+                        size="small"
+                        fullWidth
+                        value={pinCode}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d{0,6}$/.test(value)) {
+                            setPinCode(value);
+                          }
+                        }}
+                        sx={{
                           '& input': {
                             fontSize: '14px',
                           },
@@ -1656,50 +1768,44 @@ function AddProfessional() {
                       />
                     </Grid>
 
-                    <Grid item lg={12} sm={12} xs={12}>
-                      <Grid container spacing={1}>
-                        <Grid item xs={6}>
-                          <TextField
-                            id="int_schedule_date"
-                            name="int_schedule_date"
-                            type="date"
-                            label="Date"
-                            size="small"
-                            fullWidth
-                            value={intDate}
-                            onChange={(e) => setIntDate(e.target.value)}
-                            sx={{
-                              textAlign: "left",
-                              '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                            InputLabelProps={{
-                              shrink: true,
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={6}>
-                          <TextField
-                            label="Time"
-                            id="oint_schedule_time"
-                            name="int_schedule_time"
-                            type="time"
-                            size="small"
-                            fullWidth
-                            value={intTime}
-                            onChange={(e) => setIntTime(e.target.value)}
-                            sx={{
-                              '& input': {
-                                fontSize: '14px',
-                              },
-                            }}
-                            InputLabelProps={{
-                              shrink: true,
-                            }}
-                          />
-                        </Grid>
-                      </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Google Address"
+                        id="outlined-size-small"
+                        name='google_home_location'
+                        placeholder='Google Address*'
+                        size="small"
+                        fullWidth
+                        sx={{
+                          '& input': {
+                            fontSize: '14px',
+                          },
+                        }}
+                        value={googleAddress}
+                        onChange={(e) => setGoogleAddress(e.target.value)}
+                        error={!!errors.googleAddress}
+                        helperText={errors.googleAddress}
+                      />
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Manual Address"
+                        id="outlined-size-small"
+                        name='address'
+                        placeholder='Manual Address*'
+                        size="small"
+                        fullWidth
+                        sx={{
+                          '& input': {
+                            fontSize: '14px',
+                          },
+                        }}
+                        value={manualAddress}
+                        onChange={(e) => setManualAddress(e.target.value)}
+                        error={!!errors.manualAddress}
+                        helperText={errors.manualAddress}
+                      />
                     </Grid>
                   </Grid>
                 </CardContent>
@@ -1722,7 +1828,6 @@ function AddProfessional() {
           >
             <Alert variant="filled"
               onClose={handleSnackbarClose}
-              // severity="success"
               severity={snackbarSeverity}
               sx={{ width: '100%', ml: 64, mb: 20 }}
             >
@@ -1730,8 +1835,39 @@ function AddProfessional() {
             </Alert>
 
           </Snackbar>
+
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'center',
+            }}
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999,
+              marginTop: '20%'
+            }}
+          >
+            <MuiAlert
+              onClose={handleCloseSnackbar}
+              severity={snackbarSeverity}
+              sx={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                textAlign: 'center',
+              }}
+            >
+              {snackbarMessage}
+            </MuiAlert>
+          </Snackbar>
         </Grid>
-      </Box>
+      </Box >
       <Footer />
     </>
 

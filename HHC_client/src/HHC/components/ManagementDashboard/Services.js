@@ -36,7 +36,7 @@ const style = {
     pb: 3,
 };
 
-const Services = ({allServices,servicesname, enquiry, converted, followup, cancelled, services, value, cancelledEnq ,totalServiceCount, pendinginq}) => {
+const Services = ({abc, allServices,servicesname, enquiry, converted, followup, cancelled, services, value, cancelledEnq ,totalServiceCount, pendinginq}) => {
     console.log(allServices.services,'allServices');
     const [cat, setCat] = useState([]);
 
@@ -174,8 +174,10 @@ const Services = ({allServices,servicesname, enquiry, converted, followup, cance
             style: { fontFamily: 'Roboto, sans-serif', fontSize: '16px', fontWeight: 'bold', color: '#000000' }
         },
         xaxis: {
-            categories:  ['Healthcare attendants', 'Physician service (MBBS)', 'Physician service (MD)', 'Respiratory care', 'Nurse', 'Physician assistant', 'Physiotherapy', 'Conveyance', 'Medical transportation', 'Medical Equipment', 'Laboratory services'],
-            // categories: cat,
+            // categories:  ['Healthcare attendants', 'Physician service (MBBS)', 'Physician service (MD)', 'Respiratory care', 'Nurse', 'Physician assistant', 'Physiotherapy', 'Conveyance', 'Medical transportation', 'Medical Equipment', 'Laboratory services'],
+            // categories:['Healthcare attendants', 'Physician service (MBBS)', 'Physician service (MD)', 'nurseone', 'Medical Equipment', 'Respiratory care', 'Nurse', 'Physician assistant', 'Physiotherapy', 'Conveyance', 'Medical transportation', 'demo Medical Equipment', 'Laboratory services'],
+           
+            categories: abc,
             labels: { show: false },
             axisBorder: { show: false },
             axisTicks: { show: false }

@@ -4,6 +4,9 @@ from rest_framework import status, permissions
 from rest_framework.parsers import JSONParser
 from django.core.exceptions import ObjectDoesNotExist
 from . import serializer
+
+from hhc_account.serializer import *
+
 from hhcweb.models import*
 from hhcspero.settings import AUTH_KEY, SERVER_KEY
 import random
@@ -13,7 +16,7 @@ from hhc_professional_app.renders import UserRenderer
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import date, timedelta,datetime
+from datetime import date, timedelta, datetime
 from django.http import JsonResponse
 from django.conf import settings
 import jwt
@@ -22,15 +25,15 @@ import math
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 # from .models import OutstandingToken, BlacklistToken
-import time
-from hhc_account.serializer import *
+
+
 
 
 
 # ------------------------- Pending Payment from Patients  ----------------------------------
 class pend_pay_frm_ptn(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def get(self, request, start_date_str, end_date_str):
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()        
@@ -53,9 +56,38 @@ class pend_pay_frm_ptn(APIView):
 
 
 
-
 # ------------------------- Pending Payment from Professional  ----------------------------------
-    
+# class pend_pay_frm_prof(APIView):
+#     # renderer_classes = [UserRenderer]
+#     # permission_classes = [IsAuthenticated]
+#     def get(self, request, start_date_str, end_date_str):
+#         # start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+#         # end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+#         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+#         end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+
+#         end_date += timedelta(days=1)
+#         pend_prof_payment = agg_hhc_payment_details.objects.filter(overall_status="SUCCESS",payment_status = 1,mode = 1, status = 1)
+#         # pend_prof_payment_with_srv_prof_id = pend_prof_payment.exclude(srv_prof_id__isNone=True)
+        
+#         existing_eve_ids = pend_prof_payment.values_list('eve_id', flat=True)
+#         print(existing_eve_ids,'existing_eve_ids')
+#         get_eve_with_payment = agg_hhc_events.objects.filter(
+#             (Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2)),
+#             eve_id__in=existing_eve_ids,
+#             added_date__range=(start_date, end_date),
+#             status=1
+#         )
+#         print(get_eve_with_payment,'get_eve_with_payment')
+#         get_valid_pay = agg_hhc_payment_details.objects.filter(eve_id__in=get_eve_with_payment.values_list('eve_id', flat=True),overall_status= "SUCCESS", )
+#         serilaizers = serializer.pend_pay_frm_prof_serializer(get_valid_pay, many=True)
+
+       
+#         return Response(serilaizers.data)
+
+
+
 class pend_pay_frm_prof(APIView):
     # renderer_classes = [UserRenderer]
     # permission_classes = [IsAuthenticated]
@@ -84,10 +116,6 @@ class pend_pay_frm_prof(APIView):
         get_valid_pay = agg_hhc_payment_details.objects.filter(eve_id__in=get_eve_with_payment.values_list('eve_id', flat=True),overall_status= "SUCCESS")
         serilaizers = serializer.pend_pay_frm_prof_serializer(get_valid_pay, many=True)
         return Response(serilaizers.data)
-
-
-
-
 
 
 
@@ -166,6 +194,7 @@ class Acutal_salary_professionals(APIView):
                 detaile_event_plan_of_care=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1)
                 try:
                     per_prof_amount=int(i.eve_id.Total_cost)//detaile_event_plan_of_care.filter().count()
+                    # per_prof_amount= int(detaile_event_plan_of_care.last().eve_poc_id.sub_srv_id.cost)
                 except:
                     per_prof_amount=0
                 for j in detaile_event_plan_of_care:
@@ -191,6 +220,8 @@ class Acutal_salary_professionals(APIView):
                             data.append(final_dict)
         return Response({"data":data})
     
+
+
 
 
 class Accout_invoice_api(APIView):
@@ -302,9 +333,6 @@ class Accout_invoice_api(APIView):
                         professional_list.append(str(j.srv_prof_id.prof_fullname))
                 sessions+=1
         return Response({"data":professional})
-
-
-
 #---------------------------------------------------excel api started--------------------------------------------------
 
 
@@ -360,10 +388,10 @@ class Accout_invoice_excel_api(APIView):
 #----------------------------all dates is appended to the list end -------------------------------------
                         if len(professional_name_date)==1:
                                 per_prof_amount_is=(per_prof_amount*1)#+(conv_first*1) 
-                                final_dict1={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':1,'Rate':per_prof_amount,'Amount':per_prof_amount_is,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                final_dict1={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':1,'Rate':per_prof_amount,'Amount':per_prof_amount_is,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                 data.append(final_dict1)
                                 if j.is_convinance is True:
-                                    final_dict11={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':1,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*1,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                    final_dict11={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':1,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*1,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                     data.append(final_dict11)
                         else:
                             len_count=1#len(professional_name_date)
@@ -373,19 +401,19 @@ class Accout_invoice_excel_api(APIView):
                                 start_date_name=str(datetime.datetime.strptime(l, '%Y-%m-%d').date()+timedelta(days=1))
                                 if(len_count==len(professional_name_date)):
                                     per_prof_amount_is2=(per_prof_amount*session_count)#+(conv_first*session_count)
-                                    final_dict2={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':per_prof_amount,'Amount':per_prof_amount_is2,'From_Date':new_start_date,'To_Date':professional_name_date[-1],'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                    final_dict2={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':per_prof_amount,'Amount':per_prof_amount_is2,'From_Date':new_start_date,'To_Date':professional_name_date[-1],'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                     data.append(final_dict2)
                                     if j.is_convinance is True:
-                                        final_dict22={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*session_count,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                        final_dict22={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*session_count,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                         data.append(final_dict22)
                                 elif(start_date_name==professional_name_date[len_count]):
                                     session_count+=1
                                 else:
                                     per_prof_amount_is3=(per_prof_amount*session_count)#+(conv_first*session_count)
-                                    final_dict3={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':per_prof_amount,'Amount':per_prof_amount_is3,'From_Date':new_start_date,'To_Date':l,'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                    final_dict3={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':per_prof_amount,'Amount':per_prof_amount_is3,'From_Date':new_start_date,'To_Date':l,'Name_OF_Professional':j.srv_prof_id.prof_fullname,'Narration':'narration id','UOM':'Service','Category':i.srv_id.service_title}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                     data.append(final_dict3)
                                     if j.is_convinance is True:
-                                        final_dict33={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*session_count,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
+                                        final_dict33={'Branch':hospital_code,'voucher_number':voucher_number,'Voucher_Type':str("Sales -"+hospital_code_sale),'Voucher_Date':str(i.start_date),'Voucher_Ref':f'{j.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{j.eve_id.event_code}','Party_Name':i.eve_id.agg_sp_pt_id.name,'Address_1':i.eve_id.agg_sp_pt_id.address,'Address_2':i.eve_id.agg_sp_pt_id.address,'Address3/Phone_No.':str(i.eve_id.agg_sp_pt_id.google_address)+"/"+str(i.eve_id.agg_sp_pt_id.phone_no),'Stock_Item':i.sub_srv_id.recommomded_service,'Qty':session_count,'Rate':j.convinance_charges,'Amount':int(j.convinance_charges)*session_count,'From_Date':professional_name_date[0],'To_Date':professional_name_date[0],'Name_OF_Professional':'Conveyance_Cost','Narration':'narration id','UOM':'Service','Category':'Conveyance'}#'service':i.srv_id.service_title,'recive_session_amount':recive_session_amount,'pending_session_amount':pending_session_amount,'convience_amount':convience_amount},'event_id':i.eve_id_id,
                                         data.append(final_dict33)
                                     new_start_date=professional_name_date[len_count]
                                     session_count=1
@@ -400,7 +428,7 @@ class Accout_invoice_excel_api(APIView):
         # return Response(day_print.data) 
 
     def serialize_to_csv(self, data):
-        header = ['Branch', 'voucher_number','Voucher_Type','Voucher_Date','Party_Name','Address_1','Address_2','Address3/Phone_No.','Stock_Item','Qty','Rate','Amount','From_Date','To_Date','Name_OF_Professional','Narration','UOM','Category']  # Add other fields here #  CSV file header name of table fields names 
+        header = ['Branch', 'voucher_number','Voucher_Type','Voucher_Date','Voucher_Ref','Party_Name','Address_1','Address_2','Address3/Phone_No.','Stock_Item','Qty','Rate','Amount','From_Date','To_Date','Name_OF_Professional','Narration','UOM','Category']  # Add other fields here #  CSV file header name of table fields names 
         # Initialize the CSV writer
         csv_stream = (self.generate_csv_row(header, data_row) for data_row in data)
         # Yield header
@@ -423,74 +451,336 @@ class Accout_invoice_excel_api(APIView):
         return ','.join(row)
     # return Response({"data":data})
 #------------------------------Account_invoice_excel_api in excel-------------------------ends----------------------------------------------------
+# class Manage_Receipt(APIView):
+#     def get(self, request):
+#         record_list=[]
+#         hosp_id=request.query_params.get('hosp_id')
+#         start_date = datetime.datetime.strptime(request.query_params.get('start_date'), '%Y-%m-%d').date()
+#         # end_date = datetime.datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()+timedelta(days=1)
+#         end_date = datetime.datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()
+#         # if hosp_id:
+#         #     event_plan_of_care = list(agg_hhc_event_plan_of_care.objects.filter(status=1, hosp_id=hosp_id, eve_id__srv_cancelled=2).values_list('eve_id', flat=True))
+#         #     payment_entries = agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),added_date__range=(start_date, end_date), eve_id__in=event_plan_of_care, status=1,overall_status= "SUCCESS")
+#         # else:
+#         #     payment_entries=agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),added_date__range=(start_date, end_date),status=1,overall_status= "SUCCESS")
 
-     
+#         if hosp_id:
+#             event_plan_of_care = list(agg_hhc_event_plan_of_care.objects.filter(status=1, hosp_id=hosp_id, eve_id__srv_cancelled=2).values_list('eve_id', flat=True))
+#             # payment_entries = agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),added_date__range=(start_date, end_date), eve_id__in=event_plan_of_care, status=1,overall_status= "SUCCESS")
+#             payment_entries = agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),payment_to_desk_date__range=(start_date, end_date), eve_id__in=event_plan_of_care, status=1,overall_status= "SUCCESS")
+#         else:
+#             payment_entries=agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),payment_to_desk_date__range=(start_date, end_date),status=1,overall_status= "SUCCESS")
+#         for i in payment_entries:
+#             event_plan=agg_hhc_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last()
+#             detail=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first()
+#             try:
+#                 hospital_code=event_plan.hosp_id.hospital_short_code if event_plan.hosp_id.hospital_short_code else None 
+#                 next_year = str(serializer.financial_year(i.added_date.date()))
+#                 invoice = i.eve_id.Invoice_ID
+#                 Branch= f'{hospital_code}/{next_year}/{invoice}'
+#                 recept_no= f'{hospital_code}/{next_year}/{i.receipt_no}'
+#             except:
+#                 Branch= None
+#                 recept_no=None
+#             try:
+#                 # Payment_Receipt_Date = str(datetime.datetime.strptime(str(i.added_date), '%Y-%m-%d %H:%M:%S.%f').strftime('%d-%m-%Y'))
+#                 Payment_Receipt_Date = str(datetime.datetime.strptime(str(i.payment_to_desk_date), '%Y-%m-%d').strftime('%d-%m-%Y'))
+#             except:
+#                 Payment_Receipt_Date= None
+#             if i.eve_id.discount_type==1:
+#                 if not i.eve_id.discount_value:
+#                     discount_value=1
+#                 else:discount_value=i.eve_id.discount_value
+#                 disc_amt=round((float(i.eve_id.Total_cost)/100)*discount_value)
+#             elif i.eve_id.discount_type==2:
+#                 disc_amt=i.eve_id.discount_value
+#             else: 
+#                 disc_amt=0
+#             try:
+#                 professional_name=agg_hhc_service_professionals.objects.filter(srv_prof_id=detail.srv_prof_id.srv_prof_id).last()
+#                 professional_name=professional_name.prof_fullname
+#             except :
+#                 professional_name=""
+#             # try:
+#             #     pay_done_date=i.transaction_status
+#             #     pay_done_date=pay_done_date['data']['payment']['payment_time']
+#             #     pay_done_date = datetime.datetime.strptime(pay_done_date, '%Y-%m-%dT%H:%M:%S%z')
+#             #     pay_done_date = pay_done_date.strftime('%d-%m-%Y')
+#             #     order_id=str(i.order_id)[9:]
+#             # except:
+#             if not disc_amt:
+#                 disc_amt=0
+#             pay_done_date=Payment_Receipt_Date
+#             if i.mode==1:
+#                 order_id="Cash"
+#                 Bank_or_cash="Cash - Services -"+hospital_code 
+#             else:   
+#                 order_id=i.utr
+#                 Bank_or_cash="HDFC BANK C.C A/C - 50200010027418"
+#             prof_record={'pay_dt_id':i.pay_dt_id, 'Branch':hospital_code,'Payment_Receipt_No':recept_no,'Payment_Receipt_Date':Payment_Receipt_Date,'Bill_No':Branch, 'Customer_Name':i.eve_id.agg_sp_pt_id.name, 'Email_ID':i.eve_id.agg_sp_pt_id.patient_email_id, 'Amount':i.amount_paid, 'Professional':professional_name, 'Bank_or_cash':Bank_or_cash, 'Check_No':order_id, 'Cheque_Date':pay_done_date, 'Payment_Bank_Name':'', 'Narration':f'{i.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{i.eve_id.event_code} -- Service Actual Cost - {float(i.eve_id.Total_cost)+float(disc_amt)} - Discount Amount - {disc_amt} -- Service Final Cost -- {i.eve_id.final_amount}'}
+#             record_list.append(prof_record)
+#         return Response(record_list)#{'data':record_list}
+
+
+# from collections import defaultdict
+
+# class Manage_Receipt(APIView):
+#     def get(self, request):
+#         record_list = []
+#         total_convenience = []
+#         eve_convenience_totals = defaultdict(float)
+
+#         hosp_id = request.query_params.get('hosp_id')
+#         start_date = datetime.datetime.strptime(request.query_params.get('start_date'), '%Y-%m-%d').date()
+#         end_date = datetime.datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()
+
+#         if hosp_id:
+#             event_plan_of_care = list(agg_hhc_event_plan_of_care.objects.filter(
+#                 status=1, hosp_id=hosp_id, eve_id__srv_cancelled=2).values_list('eve_id', flat=True))
+#             payment_entries = agg_hhc_payment_details.objects.filter(
+#                 Q(payment_status=2) | Q(payment_status=3),
+#                 payment_to_desk_date__range=(start_date, end_date),
+#                 eve_id__in=event_plan_of_care,
+#                 status=1, overall_status="SUCCESS"
+#             )
+#         else:
+#             payment_entries = agg_hhc_payment_details.objects.filter(
+#                 Q(payment_status=2) | Q(payment_status=3),
+#                 payment_to_desk_date__range=(start_date, end_date),
+#                 status=1, overall_status="SUCCESS"
+#             )
+
+#         for i in payment_entries:
+#             event_plan = agg_hhc_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1).last()
+#             detail = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1).first()
+
+#             convinance_charges = detail.convinance_charges if detail else 0
+#             is_convinance = detail.is_convinance if detail else False
+
+#             try:
+#                 hospital_code = event_plan.hosp_id.hospital_short_code if event_plan.hosp_id.hospital_short_code else None
+#                 next_year = str(serializer.financial_year(i.added_date.date()))
+#                 invoice = i.eve_id.Invoice_ID
+#                 Branch = f'{hospital_code}/{next_year}/{invoice}'
+#                 recept_no = f'{hospital_code}/{next_year}/{i.receipt_no}'
+#             except:
+#                 Branch = None
+#                 recept_no = None
+
+#             try:
+#                 Payment_Receipt_Date = str(datetime.datetime.strptime(
+#                     str(i.payment_to_desk_date), '%Y-%m-%d').strftime('%d-%m-%Y'))
+#             except:
+#                 Payment_Receipt_Date = None
+
+#             if i.eve_id.discount_type == 1:
+#                 if not i.eve_id.discount_value:
+#                     discount_value = 1
+#                 else:
+#                     discount_value = i.eve_id.discount_value
+#                 disc_amt = round((float(i.eve_id.Total_cost) / 100) * discount_value)
+#             elif i.eve_id.discount_type == 2:
+#                 disc_amt = i.eve_id.discount_value
+#             else:
+#                 disc_amt = 0
+
+#             try:
+#                 professional_name = agg_hhc_service_professionals.objects.filter(
+#                     srv_prof_id=detail.srv_prof_id.srv_prof_id).last()
+#                 professional_name = professional_name.prof_fullname
+#             except:
+#                 professional_name = ""
+
+#             if not disc_amt:
+#                 disc_amt = 0
+
+#             pay_done_date = Payment_Receipt_Date
+#             if i.mode == 1:
+#                 order_id = "Cash"
+#                 Bank_or_cash = "Cash - Services -" + hospital_code
+#             else:
+#                 order_id = i.utr
+#                 Bank_or_cash = "HDFC BANK C.C A/C - 50200010027418"
+
+#             prof_record = {
+#                 'pay_dt_id': i.pay_dt_id,
+#                 'Branch': hospital_code,
+#                 'Payment_Receipt_No': recept_no,
+#                 'Payment_Receipt_Date': Payment_Receipt_Date,
+#                 'Bill_No': Branch,
+#                 'Customer_Name': i.eve_id.agg_sp_pt_id.name,
+#                 'Email_ID': i.eve_id.agg_sp_pt_id.patient_email_id,
+#                 'Amount': i.amount_paid,
+#                 'Professional': professional_name,
+#                 'Bank_or_cash': Bank_or_cash,
+#                 'Check_No': order_id,
+#                 'Cheque_Date': pay_done_date,
+#                 'Payment_Bank_Name': '',
+#                 'Narration': f'{i.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{i.eve_id.event_code} -- Service Actual Cost - {float(i.eve_id.Total_cost) + float(disc_amt)} - Discount Amount - {disc_amt} -- Service Final Cost -- {i.eve_id.final_amount}',
+#                 'Convinance_Charges': convinance_charges, 
+#                 'Is_Convinance': is_convinance, 
+#                 'Eve_id': i.eve_id.eve_id  
+#             }
+#             record_list.append(prof_record)
+
+
+#             if is_convinance:
+#                 convenience_record = prof_record.copy()
+#                 convenience_record['total_conv_amt'] = eve_convenience_totals[i.eve_id.eve_id] + convinance_charges
+#                 total_convenience.append(convenience_record)
+
+#             eve_convenience_totals[i.eve_id.eve_id] += convinance_charges
+
+#         return Response({"data": record_list, "total_convenience": total_convenience})
+
+
 class Manage_Receipt(APIView):
     def get(self, request):
-        record_list=[]
-        hosp_id=request.query_params.get('hosp_id')
+        record_list = []
+        hosp_id = request.query_params.get('hosp_id')
         start_date = datetime.datetime.strptime(request.query_params.get('start_date'), '%Y-%m-%d').date()
-        end_date = datetime.datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()+timedelta(days=1)
+        end_date = datetime.datetime.strptime(request.query_params.get('end_date'), '%Y-%m-%d').date()
+
         if hosp_id:
-            event_plan_of_care = list(agg_hhc_event_plan_of_care.objects.filter(status=1, hosp_id=hosp_id, eve_id__srv_cancelled=2).values_list('eve_id', flat=True))
-            payment_entries = agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),added_date__range=(start_date, end_date), eve_id__in=event_plan_of_care, status=1,overall_status= "SUCCESS")
+            event_plan_of_care = list(agg_hhc_event_plan_of_care.objects.filter(
+                status=1, hosp_id=hosp_id, eve_id__srv_cancelled=2).values_list('eve_id', flat=True))
+            payment_entries = agg_hhc_payment_details.objects.filter(
+                Q(payment_status=2) | Q(payment_status=3),
+                payment_to_desk_date__range=(start_date, end_date),
+                eve_id__in=event_plan_of_care,
+                status=1, overall_status="SUCCESS"
+            )
         else:
-            payment_entries=agg_hhc_payment_details.objects.filter(Q(payment_status=2) | Q(payment_status=3),added_date__range=(start_date, end_date),status=1,overall_status= "SUCCESS")
+            payment_entries = agg_hhc_payment_details.objects.filter(
+                Q(payment_status=2) | Q(payment_status=3),
+                payment_to_desk_date__range=(start_date, end_date),
+                status=1, overall_status="SUCCESS"
+            )
+
         for i in payment_entries:
-            event_plan=agg_hhc_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last()
-            detail=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first()
+            event_plan = agg_hhc_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1).last()
+            detail = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1).first()
+
+            convinance_charges = detail.convinance_charges if detail else 0
+            is_convinance = detail.is_convinance if detail else False
+
             try:
-                hospital_code=event_plan.hosp_id.hospital_short_code if event_plan.hosp_id.hospital_short_code else None 
+                hospital_code = event_plan.hosp_id.hospital_short_code if event_plan.hosp_id.hospital_short_code else None
                 next_year = str(serializer.financial_year(i.added_date.date()))
                 invoice = i.eve_id.Invoice_ID
-                Branch= f'{hospital_code}/{next_year}/{invoice}'
-                recept_no= f'{hospital_code}/{next_year}/{i.receipt_no}'
+                Branch = f'{hospital_code}/{next_year}/{invoice}'
+                recept_no = f'{hospital_code}/{next_year}/{i.receipt_no}'
             except:
-                Branch= None
-                recept_no=None
+                Branch = None
+                recept_no = None
+
             try:
-                Payment_Receipt_Date = str(datetime.datetime.strptime(str(i.added_date), '%Y-%m-%d %H:%M:%S.%f').strftime('%d-%m-%Y'))
+                Payment_Receipt_Date = str(datetime.datetime.strptime(
+                    str(i.payment_to_desk_date), '%Y-%m-%d').strftime('%d-%m-%Y'))
             except:
-                Payment_Receipt_Date= None
-            if i.eve_id.discount_type==1:
+                Payment_Receipt_Date = None
+
+            if i.eve_id.discount_type == 1:
                 if not i.eve_id.discount_value:
-                    discount_value=1
-                else:discount_value=i.eve_id.discount_value
-                disc_amt=round((float(i.eve_id.Total_cost)/100)*discount_value)
-            elif i.eve_id.discount_type==2:
-                disc_amt=i.eve_id.discount_value
-            else: 
-                disc_amt=0
+                    discount_value = 1
+                else:
+                    discount_value = i.eve_id.discount_value
+                disc_amt = round((float(i.eve_id.Total_cost) / 100) * discount_value)
+            elif i.eve_id.discount_type == 2:
+                disc_amt = i.eve_id.discount_value
+            else:
+                disc_amt = 0
+
             try:
-                professional_name=agg_hhc_service_professionals.objects.filter(srv_prof_id=detail.srv_prof_id.srv_prof_id).last()
-                professional_name=professional_name.prof_fullname
-            except :
-                professional_name=""
-            # try:
-            #     pay_done_date=i.transaction_status
-            #     pay_done_date=pay_done_date['data']['payment']['payment_time']
-            #     pay_done_date = datetime.datetime.strptime(pay_done_date, '%Y-%m-%dT%H:%M:%S%z')
-            #     pay_done_date = pay_done_date.strftime('%d-%m-%Y')
-            #     order_id=str(i.order_id)[9:]
-            # except:
+                professional_name = agg_hhc_service_professionals.objects.filter(
+                    srv_prof_id=detail.srv_prof_id.srv_prof_id).last()
+                professional_name = professional_name.prof_fullname
+            except:
+                professional_name = ""
+
             if not disc_amt:
-                disc_amt=0
-            pay_done_date=Payment_Receipt_Date
-            if i.mode==1:
-                order_id="Cash"
-                Bank_or_cash="Cash - Services -"+hospital_code 
-            else:   
-                order_id=i.utr
-                Bank_or_cash="HDFC BANK C.C A/C - 50200010027418"
-            prof_record={'pay_dt_id':i.pay_dt_id, 'Branch':hospital_code,'Payment_Receipt_No':recept_no,'Payment_Receipt_Date':Payment_Receipt_Date,'Bill_No':Branch, 'Customer_Name':i.eve_id.agg_sp_pt_id.name, 'Email_ID':i.eve_id.agg_sp_pt_id.patient_email_id, 'Amount':i.amount_paid, 'Professional':professional_name, 'Bank_or_cash':Bank_or_cash, 'Check_No':order_id, 'Cheque_Date':pay_done_date, 'Payment_Bank_Name':'', 'Narration':f'{i.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{i.eve_id.event_code} -- Service Actual Cost - {float(i.eve_id.Total_cost)+float(disc_amt)} - Discount Amount - {disc_amt} -- Service Final Cost -- {i.eve_id.final_amount}'}
+                disc_amt = 0
+
+            pay_done_date = Payment_Receipt_Date
+            if i.mode == 1:
+                order_id = "Cash"
+                Bank_or_cash = "Cash - Services -" + hospital_code
+            else:
+                order_id = i.utr
+                Bank_or_cash = "HDFC BANK C.C A/C - 50200010027418"
+            
+
+            nn=0
+                                
+            ddllj=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1)
+            if ddllj:
+                for j in ddllj:
+                    if j.convinance_charges is not None:
+                        nn+=int(j.convinance_charges)
+                            
+            prof_record = {
+                'pay_dt_id': i.pay_dt_id,
+                'Branch': hospital_code,
+                'Payment_Receipt_No': recept_no,
+                'Payment_Receipt_Date': Payment_Receipt_Date,
+                'Bill_No': Branch,
+                'Customer_Name': i.eve_id.agg_sp_pt_id.name,
+                'Email_ID': i.eve_id.agg_sp_pt_id.patient_email_id,
+                # 'Amount': i.amount_paid,
+                'Amount': i.amount_paid - nn,
+                'Professional': professional_name,
+                'Bank_or_cash': Bank_or_cash,
+                'Check_No': order_id,
+                'Cheque_Date': pay_done_date,
+                'Payment_Bank_Name': '',
+                'Narration': f'{i.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{i.eve_id.event_code} -- Service Actual Cost - {float(i.eve_id.Total_cost) + float(disc_amt)} - Discount Amount - {disc_amt} -- Service Final Cost -- {i.eve_id.final_amount}',
+                'Convinance_Charges': convinance_charges, 
+                'Is_Convinance': is_convinance, 
+                'Eve_id': i.eve_id.eve_id  
+            }
             record_list.append(prof_record)
-        return Response(record_list)#{'data':record_list}
-    
-    
+
+            if convinance_charges is not None and convinance_charges != 0:
+                # nn=0
+                                
+                # ddllj=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id, status=1)
+                # if ddllj:
+                #     for j in ddllj:
+                #         if j.convinance_charges is not None:
+                #             nn+=int(j.convinance_charges)
+                        
+                    adjusted_amount = i.amount_paid - nn
+                            
+                    profffff_record = {
+                    'pay_dt_id': i.pay_dt_id,
+                    'Branch': hospital_code,
+                    'Payment_Receipt_No': recept_no,
+                    'Payment_Receipt_Date': Payment_Receipt_Date,
+                    'Bill_No': Branch,
+                    'Customer_Name': i.eve_id.agg_sp_pt_id.name,
+                    'Email_ID': i.eve_id.agg_sp_pt_id.patient_email_id,
+                    'Amount': nn,
+                    'Professional': "Conveyance_Cost",
+                    'Bank_or_cash': Bank_or_cash,
+                    'Check_No': order_id,
+                    'Cheque_Date': pay_done_date,
+                    'Payment_Bank_Name': '',
+                    'Narration': f'{i.eve_id.agg_sp_pt_id.agg_sp_pt_id}/{i.eve_id.event_code} -- Service Actual Cost - {float(i.eve_id.Total_cost) + float(disc_amt)} - Discount Amount - {disc_amt} -- Service Final Cost -- {i.eve_id.final_amount}',
+                    'Convinance_Charges': convinance_charges, 
+                    'Is_Convinance': is_convinance, 
+                    'Eve_id': i.eve_id.eve_id  
+                        }
+                    record_list.append(profffff_record)
+            
+
+        return Response(record_list)
 
 
 
 
+
+
+   
 
 class job_closure_report_ptn_wise(APIView):
     renderer_classes = [UserRenderer]
@@ -535,17 +825,13 @@ class job_closure_report_ptn_wise(APIView):
 
 
 
-
-
-
-
 class job_closure_report_prof_wise(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def get(self, request, start_date_str, end_date_str):
 
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()+timedelta(days=1)
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
         
         get_all_session = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__range=(start_date,end_date), status = 1)
         prof_list = get_all_session.values_list('srv_prof_id', flat=True)
@@ -576,19 +862,25 @@ class job_closure_report_prof_wise(APIView):
     
 
 class job_closure_report_prof_id(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, prof_id, start_date_str, end_date_str):
+        
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()+timedelta(days=1)
+        # end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()+timedelta(days=1)
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
         if (start_date_str==end_date_str):
             get_all_session = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id = prof_id, actual_StartDate_Time=start_date,status = 1)
         else:
             get_all_session = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id = prof_id, actual_StartDate_Time__range=(start_date,end_date), status = 1)
         evnt = list(set(get_all_session.values_list('eve_id', flat=True)))
         prof_events = []
-    
+        cunt = 0
+        for i in get_all_session:
+            print(i.eve_id)
+            cunt+=1
+        print(cunt,'cunt')
         for eve_id in evnt:
             get_prof_dtl_event = get_all_session.filter(eve_id=eve_id)
             last_dtl_eve = get_prof_dtl_event.last()
@@ -607,14 +899,6 @@ class job_closure_report_prof_id(APIView):
                 prof_events.append(prof_event)
         
         return Response(prof_events)
-
-
-
-
-
-
-
-
 
 
 
@@ -646,13 +930,9 @@ class job_closure_report_event_wise(APIView):
         professional=[]
         professional_list=[]
         try:
-            detaile_event_plan_of_care = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
-            print("detaile_event_plan_of_caree---", detaile_event_plan_of_care)
-
-
+            detaile_event_plan_of_care=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id,status=1)
 
             epoc = agg_hhc_event_plan_of_care.objects.filter(eve_id = eve_id, status = 1).last()
-            # print("epoc---", epoc)
 
             sessions=0
 
@@ -688,6 +968,7 @@ class job_closure_report_event_wise(APIView):
                             len_count=1
                             new_start_date=professional_name_date[0]
                             session_count=1
+
                             for l in professional_name_date:
                                 start_date_name=str(datetime.datetime.strptime(l, '%Y-%m-%d').date()+datetime.timedelta(days=1))
 
@@ -708,8 +989,10 @@ class job_closure_report_event_wise(APIView):
                                         'closed_sessions': jc_count
                                         }
                                     professional.append(professiona_proper_info)
+
                                 elif(start_date_name==professional_name_date[len_count]):
                                     session_count+=1
+
                                 else:
                                     jc_count = self.get_closure_count(new_start_date,l,eve_id)
                                     print("jc_count = ", jc_count)
@@ -728,6 +1011,7 @@ class job_closure_report_event_wise(APIView):
                                     professional.append(professiona_proper_info)
                                     new_start_date=professional_name_date[len_count]
                                     session_count=1
+
                                 len_count+=1
                         professional_list.append(str(j.srv_prof_id.prof_fullname))
                 sessions+=1
@@ -742,29 +1026,120 @@ class job_closure_report_event_wise(APIView):
          
 class Manage_professional_unit_report(APIView):
     def get(self, request):
-        end_date_str = request.query_params.get('end_date')
-        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d')
-        # end_date += timedelta(days=1)
-        end_date_str = end_date.strftime('%Y-%m-%d')
+        print('asdflkj')
         dt_profs=[
-            i for i in agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),actual_StartDate_Time__range=(request.query_params.get('start_date'), end_date_str),eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),status=1)]))), status=1) 
+            i for i in agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),actual_StartDate_Time__range=(request.query_params.get('start_date'), request.query_params.get('end_date')),eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),status=1)]))), status=1) 
             ]
-        # profs =[[i.srv_prof_id.prof_fullname,i.srv_prof_id.email_id, i.eve_poc_id.srv_id.service_title,i.srv_prof_id.phone_no,i.srv_prof_id.srv_prof_id ] if i.srv_prof_id.srv_prof_id else None for i in dt_profs]
+        profs =[[i.srv_prof_id.prof_fullname,i.srv_prof_id.email_id, i.eve_poc_id.srv_id.service_title,i.srv_prof_id.phone_no,i.srv_prof_id.srv_prof_id ] if i.srv_prof_id.srv_prof_id else None for i in dt_profs]
+        # for k in dt_profs:
+        #     if k.srv_prof_id.srv_prof_id==5:
+        #         print(k.srv_prof_id.srv_prof_id, 'srv_prof_id...............')
         srv_ids=[i.srv_prof_id.srv_prof_id for i in dt_profs]
-        # print(srv_ids, 'srv_ids...............')
         profs =[[i.srv_prof_id.prof_fullname,i.srv_prof_id.email_id, i.eve_poc_id.srv_id.service_title,i.srv_prof_id.phone_no,srv_ids.count(i.srv_prof_id.srv_prof_id),i.srv_prof_id.srv_prof_id ] if i.srv_prof_id.srv_prof_id else None for i in dt_profs]
-        # print(len(profs))
+        # for p in profs:
+        #     if p[0]=='Chaitali Sameer Gandhe':
+        #         print(p, 'profs...............')
         prof=set(map(tuple, profs))
         keys = ["Prof_name", "email", "Service", "mobile", "unit", "prof_id"]
         p=[dict(zip(keys, tpl)) for tpl in prof]
-        # print(len(p))
-        # [print(i) for i in p]
         return Response(p)
     
 
 class View_professional_unit_report(APIView):
-  
 
+    # def get(self, request, srv_prof_id,start_date, end_date):
+    #     # end_date_str = request.query_params.get('end_date')
+    #     end_date1 = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    #     end_date1 += timedelta(days=1)
+    #     end_date_str = end_date1.strftime('%Y-%m-%d')
+
+
+    #     srv_prof_data = agg_hhc_service_professionals.objects.get( srv_prof_id= srv_prof_id, status = 1)
+    #     dt_events = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),
+    #                                                                    added_date__range=(start_date, end_date_str),
+    #                                                                 #    eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
+    #                                                                    srv_prof_id=srv_prof_id, status=1)
+    #     unique_eve_ids = dt_events.values_list('eve_id', flat=True).distinct()
+    #     get_dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),eve_id__in=unique_eve_ids,
+    #                                                                  added_date__range=(start_date, end_date_str), 
+    #                                                                 #  eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
+    #                                                                  srv_prof_id=srv_prof_id, status=1)
+    #     details_prof = []
+    #     total_rate = 0
+    #     total_prof_cost = 0 
+    #     total_spero_rate = 0
+     
+    #     seen_eve_ids = set()
+
+    #     for i in get_dtl:
+    #         if i.eve_id.eve_id not in seen_eve_ids:  # Check if eve_id is already seen
+    #             seen_eve_ids.add(i.eve_id.eve_id)
+                
+    #             print(i.eve_id)
+    #             epoc = agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id, status=1)
+    #             total_sess = get_dtl.filter(eve_id=i.eve_id).count()
+    #             rate = i.eve_id.final_amount / total_sess
+    #             total_rate += math.ceil(rate)
+    #             total_spero_rate += math.ceil(rate)*total_sess
+    #             print(epoc.sub_srv_id.sub_srv_id,"epoc.sub_srv_id")
+    #             prof_sub_srv_data = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=srv_prof_id, sub_srv_id=epoc.sub_srv_id).last()
+    #             print(prof_sub_srv_data, "prof_sub_srv_data")
+               
+    #             prof_cost = prof_sub_srv_data.prof_cost if hasattr(prof_sub_srv_data, 'prof_cost') else 0
+    #             if prof_cost is not None: 
+    #                 # total_prof_cost += prof_cost  
+
+    #                 Prof_Total_Cost = prof_cost  * total_sess
+    #                 total_prof_cost += Prof_Total_Cost
+                
+                
+    #             data = {
+    #                 "eve_id": i.eve_id.eve_id,
+    #                 "Voucher_Date": i.eve_id.added_date.strftime('%Y-%m-%d %H:%M'),
+    #                 "Party_Name": i.eve_id.agg_sp_pt_id.name,
+    #                 "Stock_Item": epoc.sub_srv_id.recommomded_service,
+    #                 "QTY": total_sess,
+    #                 "Rate": math.ceil(rate),
+    #                 # "Amount": i.eve_id.final_amount,
+    #                 "Amount": math.ceil(rate)*total_sess,
+    #                 "Prof_Cost": prof_cost,
+    #                 "Prof_Total_Cost": Prof_Total_Cost ,
+    #                 "Start_Date": epoc.start_date,
+    #                 "End Date": epoc.end_date,
+    #                 "UOM": "Service"
+    #             }
+    #             details_prof.append(data)
+    #     print(total_rate, "total_rate")
+    #     tds_main = total_prof_cost * 0.9
+    #     TDS_10per = total_prof_cost - tds_main
+    #     Gross_Total = total_prof_cost - TDS_10per
+    #     print(get_dtl.count(),"get_dtl.count()")
+    #     total_convinance_sum = get_dtl.aggregate(
+    #         total_convinance_charges=Coalesce(Sum('convinance_charges'), Value(0))
+    #     )['total_convinance_charges']
+    #     today = datetime.datetime.now().date()
+    #     first_day_of_month = today.replace(day=1)
+    #     if srv_prof_data.added_date and first_day_of_month <= srv_prof_data.added_date.date() <= today:
+    #         Approne = srv_prof_data.apron_charges if srv_prof_data.apron_charges is not None else 0
+    #         Police_Varify = srv_prof_data.police_varification_charges if srv_prof_data.police_varification_charges is not None else 0
+    #     else:
+    #         Approne = 0
+    #         Police_Varify = 0
+     
+    #     Net_Amount = int(int((Gross_Total+total_convinance_sum)-Approne) - Police_Varify)
+    #     prof_cost_dtl = {
+    #         "Total_Spero_Cost": total_spero_rate,
+    #         "Total_Prof_Cost": total_prof_cost, 
+    #         "TDS_10_%":TDS_10per,
+    #         "Gross_Total": Gross_Total,
+    #         "Conveyance": total_convinance_sum,
+    #         "Approne": Approne,
+    #         "Police_Varification": Police_Varify,
+    #         "Net_Amount": Net_Amount
+    #     }
+
+    #     return Response({"details_prof": details_prof, "prof_cost_dtl": prof_cost_dtl})
+    
     def get(self, request, srv_prof_id,start_date, end_date):
        
         end_date1 = datetime.datetime.strptime(end_date, '%Y-%m-%d')
@@ -773,31 +1148,16 @@ class View_professional_unit_report(APIView):
 
 
         srv_prof_data = agg_hhc_service_professionals.objects.get( srv_prof_id= srv_prof_id, status = 1)
-        # dt_events = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),
-        #                                                                added_date__range=(start_date, end_date_str),
-        #                                                             #    eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
-        #                                                                srv_prof_id=srv_prof_id, status=1)
-        # unique_eve_ids = dt_events.values_list('eve_id', flat=True).distinct()
-        # get_dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id__in=unique_eve_ids,
-        #                                                              added_date__range=(start_date, end_date_str), 
-        #                                                             #  eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
-        #                                                              srv_prof_id=srv_prof_id, status=1)
-
         dt_events = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),
-                                                                       actual_StartDate_Time__range=(start_date, end_date_str), 
-                                                                    #    eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(request.query_params.get('start_date'), end_date_str),status=1)]))), 
+                                                                       actual_StartDate_Time__range=(start_date, end_date_str),
+                                                                    #    eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
                                                                        srv_prof_id=srv_prof_id, status=1)
-        get_eve_enq = dt_events.filter(Q(eve_id__enq_spero_srv_status=1) | Q(eve_id__enq_spero_srv_status=2))
-        # unique_eve_ids = dt_events.values_list('eve_id', flat=True).distinct()
-        unique_eve_ids = get_eve_enq.values_list('eve_id', flat=True).distinct()
-        print(unique_eve_ids)
-        get_dtl1 = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id__in=unique_eve_ids,
-                                                                     added_date__range=(start_date, end_date_str),  
-                                                                    #  eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(request.query_params.get('start_date'), end_date_str),status=1)]))), 
+        unique_eve_ids = dt_events.values_list('eve_id', flat=True).distinct()
+        get_dtl = agg_hhc_detailed_event_plan_of_care.objects.filter(Q(Session_status=2) | Q(Session_status=9),eve_id__in=unique_eve_ids,
+                                                                     actual_StartDate_Time__range=(start_date, end_date_str), 
+                                                                    #  eve_id__in = sorted(list(set([prof.eve_id for prof in agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1) | Q(enq_spero_srv_status=2),added_date__range=(start_date, end_date_str),status=1)]))), 
                                                                      srv_prof_id=srv_prof_id, status=1)
-        get_dtl = get_dtl1.filter(Q(eve_id__enq_spero_srv_status=1) | Q(eve_id__enq_spero_srv_status=2))
-        print(get_dtl.count(), 'get_dtl.................')
-
+        # print(get_dtl.count(),'fghjghjhjhj')
         details_prof = []
         total_rate = 0
         total_prof_cost = 0 
@@ -809,15 +1169,16 @@ class View_professional_unit_report(APIView):
             if i.eve_id.eve_id not in seen_eve_ids:  # Check if eve_id is already seen
                 seen_eve_ids.add(i.eve_id.eve_id)
                 
-                print(i.eve_id)
+                # print(i.eve_id)
                 epoc = agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id, status=1)
                 total_sess = get_dtl.filter(eve_id=i.eve_id).count()
                 rate = i.eve_id.final_amount / total_sess
                 total_rate += math.ceil(rate)
                 total_spero_rate += math.ceil(rate)*total_sess
-                print(epoc.sub_srv_id.sub_srv_id,"epoc.sub_srv_id")
+                # print(epoc.sub_srv_id.sub_srv_id,"epoc.sub_srv_id")
+                print(srv_prof_id)
                 prof_sub_srv_data = agg_hhc_professional_sub_services.objects.filter(srv_prof_id=srv_prof_id, sub_srv_id=epoc.sub_srv_id).last()
-                print(prof_sub_srv_data, "prof_sub_srv_data")
+                # print(prof_sub_srv_data, "prof_sub_srv_data")
                
                 prof_cost = prof_sub_srv_data.prof_cost if hasattr(prof_sub_srv_data, 'prof_cost') else 0
                 if prof_cost is not None: 
@@ -825,6 +1186,10 @@ class View_professional_unit_report(APIView):
 
                     Prof_Total_Cost = prof_cost  * total_sess
                     total_prof_cost += Prof_Total_Cost
+                else:
+                    prof_cost = 0
+                    Prof_Total_Cost = 0
+                    total_prof_cost = 0
                 
                 
                 data = {
@@ -843,11 +1208,11 @@ class View_professional_unit_report(APIView):
                     "UOM": "Service"
                 }
                 details_prof.append(data)
-        print(total_rate, "total_rate")
+        # print(total_rate, "total_rate")
         tds_main = total_prof_cost * 0.9
         TDS_10per = total_prof_cost - tds_main
         Gross_Total = total_prof_cost - TDS_10per
-        print(get_dtl.count(),"get_dtl.count()")
+        # print(get_dtl.count(),"get_dtl.count()")
         total_convinance_sum = get_dtl.aggregate(
             total_convinance_charges=Coalesce(Sum('convinance_charges'), Value(0))
         )['total_convinance_charges']
@@ -875,9 +1240,6 @@ class View_professional_unit_report(APIView):
         return Response({"details_prof": details_prof, "prof_cost_dtl": prof_cost_dtl})
 
     
-
-
-
 
 
 from django.http import HttpResponse
@@ -1020,14 +1382,6 @@ class View_professional_unit_report22(APIView):
 
         return response
 
-    
-
-
-
-    
-
-    
-
 
 class check_approval_account(APIView):
     renderer_classes = [UserRenderer]
@@ -1069,69 +1423,19 @@ class check_approval_account(APIView):
 
 
 
-
-
-
-
-
-
-
-
-
 # from hhc_account.serializer import pending_UTR_Payment_Details_serializer
 # ________________________________ Amit Rasale ________________________________________
 # __________ UTR pending_UTR_Payment_Details_serializer ______________________________
 
 class Pending_UTR_Number_in_Payment_Details_Views(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]    
-    # def get(self, request, format=None):
-    #     from_date_str = request.query_params.get('from_date')
-    #     to_date_str = request.query_params.get('to_date')
-    #     utr_id = request.query_params.get('UTRid')
-    #     patient_name = request.query_params.get('patient_name')
-
-    #     from_date = datetime.datetime.strptime(from_date_str, '%Y-%m-%d') if from_date_str else None
-    #     to_date = datetime.datetime.strptime(to_date_str, '%Y-%m-%d') if to_date_str else None    
-
-    #     Payment_d = agg_hhc_payment_details.objects.all().order_by('-added_date')
-    #     if from_date and to_date:
-    #         Payment_d = Payment_d.filter(added_date__range=(from_date, to_date))
-    #     elif from_date:
-    #         Payment_d = Payment_d.filter(added_date__gte=from_date)
-    #     elif to_date:
-    #         Payment_d = Payment_d.filter(added_date__lte=to_date)
-
-    #     if utr_id == '1':
-    #         Payment_d = Payment_d.exclude(utr__isnull=True).exclude(utr__exact='')
-    #     elif utr_id == '2':
-    #         Payment_d = Payment_d.filter(Q(utr__isnull=True) | Q(utr__exact=''))
-
-    #     if patient_name:
-    #         Payment_d = Payment_d.filter(eve_id__agg_sp_pt_id__name__icontains=patient_name)
-    #     Payment_d = Payment_d.filter(status='1', eve_id__status='1', eve_id__caller_id__status='1', eve_id__agg_sp_pt_id__status='1')
-    #     serializer = pending_UTR_Payment_Details_serializer(
-    #         Payment_d, 
-    #         many=True,
-    #         context={'from_date': from_date_str, 'to_date': to_date_str}
-    #     )
-
-    #     if not serializer.data:
-    #         return Response({"detail": "No data found"}, status=status.HTTP_404_NOT_FOUND)
-    #     return Response(serializer.data)
-
-
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]    
-
     def get(self, request, format=None):
         from_date_str = request.query_params.get('from_date')
         to_date_str = request.query_params.get('to_date')
         utr_id = request.query_params.get('UTRid')
         patient_name = request.query_params.get('patient_name')
 
-        from_date = datetime.datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else None
-        to_date = datetime.datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else None    
+        from_date = datetime.datetime.strptime(from_date_str, '%Y-%m-%d') if from_date_str else None
+        to_date = datetime.datetime.strptime(to_date_str, '%Y-%m-%d') if to_date_str else None    
 
         Payment_d = agg_hhc_payment_details.objects.all().order_by('-added_date')
         if from_date and to_date:
@@ -1148,13 +1452,7 @@ class Pending_UTR_Number_in_Payment_Details_Views(APIView):
 
         if patient_name:
             Payment_d = Payment_d.filter(eve_id__agg_sp_pt_id__name__icontains=patient_name)
-        Payment_d = Payment_d.filter(
-            status='1', 
-            eve_id__status='1', 
-            eve_id__caller_id__status='1', 
-            eve_id__agg_sp_pt_id__status='1'
-        ).exclude(mode='1')
-
+        Payment_d = Payment_d.filter(status='1', eve_id__status='1', eve_id__caller_id__status='1', eve_id__agg_sp_pt_id__status='1').exclude(mode='1')
         serializer = pending_UTR_Payment_Details_serializer(
             Payment_d, 
             many=True,
@@ -1163,15 +1461,11 @@ class Pending_UTR_Number_in_Payment_Details_Views(APIView):
 
         if not serializer.data:
             return Response({"detail": "No data found"}, status=status.HTTP_404_NOT_FOUND)
-
         return Response(serializer.data)
 
 
 class Pending_UTR_Number_in_Payment_Details_POST_Views(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]    
-    def get(self, request, pay_dt_id, eve_id, format=None):
-        # Retrieve existing payment detail records based on the eve_id
+    def get(self, request, pay_dt_id, eve_id,  format=None):
         payment_details = agg_hhc_payment_details.objects.filter(pay_dt_id=pay_dt_id, eve_id=eve_id).exclude(mode='1')
         serializer = pending_UTR_Payment_Details_POST_serializer(payment_details, many=True)
         return Response(serializer.data)
@@ -1182,7 +1476,6 @@ class Pending_UTR_Number_in_Payment_Details_POST_Views(APIView):
         except agg_hhc_payment_details.DoesNotExist:
             return Response({"detail": "Payment detail does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Ensure pay_dt_id is not changed
         request.data.pop('pay_dt_id', None)
         request.data.pop('eve_id', None)
 
@@ -1201,4 +1494,4 @@ class Pending_UTR_Number_in_Payment_Details_POST_Views(APIView):
 
 
 
-# ________________________________ Amit Rasale ________________________________________        
+# ________________________________ Amit Rasale ________________________________________

@@ -6,7 +6,6 @@ import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import ManageProfile from './Profile/ManageProfile';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { Routes, Route, useLocation } from "react-router-dom";
 import HRDashboard from './Dashboard/HRDashboard';
 import Interview from './Interview/Interview';
@@ -56,13 +55,38 @@ import AllocatedList from '../ADMIN/HCM/ProfessionalAllocation/AllocatedList';
 import PaymentUTR from '../ADMIN/ACCOUNT/PaymentUTR';
 import ProfessionalDetails from '../ADMIN/HCM/ProfessionalDetails';
 import SystemUser from './SystemUser/SystemUser';
+import ManageAttendance from '../Attendance/ManageAttendance';
+import AtteDashboard from '../Attendance/AtteDashboard';
+import ManageReports from '../Attendance/ManageReports';
+import ManagementDashboard from '../ManagementDashboard/MDashboard';
+import HrDashboard from '../HrPartner/Dashboard/HrDashboard';
+import ManageProfessionals from '../HrPartner/Professionals/ManageProfessionals';
+import AddProfPartner from '../HrPartner/Professionals/AddProfPartner';
+import ExternalProf from './ExternalProfessional/ExternalProf';
+import Servicedetails from '../HrPartner/ServiceDetails/Servicedetails';
+import { useNavigate } from 'react-router-dom';
+import ClosureRevalidation from '../ADMIN/HCM/ClosureRevalidation/ClosureRevalidation';
+import Home from '../HHC_Analytics/Home';
 
 const HRHeader = () => {
-
+    const accessToken = localStorage.getItem('token');
     const port = process.env.REACT_APP_API_KEY;
     const location = useLocation();
-    const permissions = JSON.parse(localStorage.getItem('permissions'));
+    const permissionsString = localStorage.getItem('permissions');
+    const permissions = permissionsString ? JSON.parse(permissionsString) : [];
     console.log(permissions, 'permissionspermissions');
+
+    const userGroupLogin = localStorage.getItem('user_group');
+    console.log(userGroupLogin);
+
+    const moduleNames = permissions && Array.isArray(permissions)
+        ? permissions.flatMap(permission =>
+            permission.modules_submodule.flatMap(submodule =>
+                submodule.modules.map(module => module.module_name)
+            )
+        )
+        : [];
+    console.log(moduleNames, 'module_names');
 
     const userGroup = localStorage.getItem('user_group');
     console.log(userGroup, 'userGroupuserGroupuserGroup');
@@ -72,6 +96,7 @@ const HRHeader = () => {
 
     //////////////////////// Admin Module Fetch permission
     const [moduleName, setModuleName] = useState([]);
+    console.log(moduleName, 'Feteching Module Name');
 
     const moduleIcons = {
         Dashboard: <SpaceDashboardIcon style={{ fontSize: "18px" }} />,
@@ -92,7 +117,12 @@ const HRHeader = () => {
     useEffect(() => {
         const fetchModuleName = async () => {
             try {
-                const response = await fetch(`${port}/web/combined/`);
+                const response = await fetch(`${port}/web/combined/`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                });
                 const data = await response.json();
                 console.log(data, 'module List');
                 setModuleName(data)
@@ -106,17 +136,36 @@ const HRHeader = () => {
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedGroupName, setSelectedGroupName] = useState('');
+    console.log(selectedGroupName, 'group Name');
 
     const handleChange = (event, newValue) => {
         setAnchorEl(anchorEl ? null : event.currentTarget);
         setSelectedGroupName(newValue);
-
         if (userGroup === 'ADMIN') {
             setSelectedTab(newValue);
-        } else {
-            const selectedModule = moduleName.find(module => module.name === newValue);
-            if (selectedModule && selectedModule.module_id) {
-                setSelectedTab(selectedModule.module_id);
+        }
+        else {
+            const selectedGroup = moduleName.find(module => module.r_m_name === newValue);
+
+            // if (selectedGroup) {
+            //     if (selectedGroup.modules && selectedGroup.modules.length > 0) {
+            //         selectedGroup.modules.forEach(module => {
+            //             console.log(module.name);
+            //         });
+            //     }
+            //     if (selectedGroup.modules.length > 0) {
+            //         setSelectedTab(selectedGroup.modules[0].module_id);
+            //     }
+            // }
+            if (selectedGroup) {
+                if (selectedGroup.modules && selectedGroup.modules.length > 0) {
+                    selectedGroup.modules.forEach(module => {
+                        console.log(module.name);
+                    });
+                }
+                if (selectedGroup.modules.length > 0) {
+                    setSelectedTab(selectedGroup.modules[0].module_id);
+                }
             }
         }
     };
@@ -127,6 +176,7 @@ const HRHeader = () => {
     };
 
     const [selectedTab, setSelectedTab] = useState(null);
+    const navigate = useNavigate(); // hook for navigation
 
     console.log(selectedTab, 'Header Section selected ID');
 
@@ -135,26 +185,30 @@ const HRHeader = () => {
             setSelectedTab(null);
         } else {
             setSelectedTab(groupName);
+
+            if (typeof groupName === 'string') {
+                setSelectedTab(groupName);
+                const formattedGroupName = groupName.toLowerCase().replace(' ', ' ');
+                // navigate(`/hrpartner/${formattedGroupName}`);
+                if (userGroupLogin) {
+                    navigate(`/${userGroupLogin.toLowerCase()}/${formattedGroupName}`);
+                }
+                else if (userGroupLogin) {
+                    navigate(`/hhc/${userGroupLogin.toLowerCase()}/${formattedGroupName}`);
+                }
+                else {
+                    console.error('User group not found in localStorage.');
+                }
+            } else {
+                console.error('Invalid groupName:', groupName);
+            }
         }
     };
 
-    // ////// by default set the background colour 
-    // useEffect(() => {
-    //     // Check if Dashboard is available in permissions and set it as selectedTab
-    //     const dashboardModule = permissions.find(group => group.modules_submodule.some(module => module.name === 'Dashboard'));
-    //     if (dashboardModule) {
-    //         setSelectedTab('Dashboard');
-    //     }
-    // }, [permissions]);
-
-    //     useEffect(() => {
-    //     // Check if Dashboard is available in permissions and set it as selectedTab only for Admin group
-    //     const adminGroup = permissions.find(group => group.name === 'Admin' && group.modules_submodule.some(module => module.name === 'Dashboard'));
-    //     if (adminGroup) {
-    //         setSelectedTab('Dashboard');
-    //     }
-    // }, [permissions]);
-
+    const handlePopoverOpen = (event, groupName) => {
+        setAnchorEl(event.currentTarget);
+        setSelectedGroupName(groupName);
+    };
 
     return (
         <div style={{ marginTop: '7.5em' }}>
@@ -175,246 +229,260 @@ const HRHeader = () => {
                                 marginRight: '8px',
                                 marginBottom: '8px',
                             }}>
-                            {userGroup === 'ADMIN' ?
-                                (
-                                    <TabList
-                                        className="tab-root"
-                                        onChange={handleChange}
-                                        textColor="#51DDD4"
-                                        TabIndicatorProps={{
-                                            style: {
-                                                background: 'linear-gradient(90deg, rgba(31, 208, 196, 0.35) 0%, rgba(50, 142, 222, 0.35) 100%)',
-                                                height: '40px',
-                                                marginBottom: '10px',
-                                                borderRadius: "5px"
-                                            }
-                                        }}
-                                        variant="scrollable"
-                                        scrollButtons="auto"
-                                        aria-label="scrollable auto tabs example"
-                                    >
-                                        {moduleName.map((group) => (
-                                            <Tab
-                                                style={{
-                                                    backgroundColor: selectedTab === group.group_name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
-                                                    marginTop: '4px',
-                                                    borderRadius: '9px',
-                                                    height: '15px',
-                                                    textTransform: 'capitalize'
-                                                }}
-                                                key={group.group}
-                                                label={
-                                                    group.modules && group.modules[0].name === "NULL" ? (
-                                                        <Link to={`/hhc/${group.group_name.toLowerCase().replace(/\s/g, ' ')}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {
+                                userGroup === 'ADMIN' ?
+                                    (
+                                        <TabList
+                                            className="tab-root"
+                                            onChange={handleChange}
+                                            textColor="#51DDD4"
+                                            TabIndicatorProps={{
+                                                style: {
+                                                    background: 'linear-gradient(90deg, rgba(31, 208, 196, 0.35) 0%, rgba(50, 142, 222, 0.35) 100%)',
+                                                    height: '40px',
+                                                    marginBottom: '10px',
+                                                    borderRadius: "5px"
+                                                }
+                                            }}
+                                            variant="scrollable"
+                                            scrollButtons="auto"
+                                            aria-label="scrollable auto tabs example"
+                                        >
+                                            {moduleName.map((group) => (
+                                                <Tab
+                                                    style={{
+                                                        backgroundColor: selectedTab === group.r_m_name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
+                                                        marginTop: '4px',
+                                                        borderRadius: '9px',
+                                                        height: '15px',
+                                                        textTransform: 'capitalize'
+                                                    }}
+                                                    key={group.r_m_id}
+                                                    label={
+                                                        group.modules && group.modules[0].name === "NULL" ? (
+                                                            <Link to={`/hhc/${group.r_m_name.toLowerCase().replace(/\s/g, ' ')}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                                <Grid container spacing={1.5} alignItems="center">
+                                                                    <Grid item>
+                                                                        {moduleIcons[group.r_m_name]}
+                                                                    </Grid>
+                                                                    <Grid item>
+                                                                        <span style={{ fontSize: '1rem', textTransform: "capitalize" }}>{group.r_m_name.toLowerCase().replace(/\s/g, ' ')}</span>
+                                                                    </Grid>
+                                                                </Grid>
+                                                            </Link>
+                                                        ) : (
                                                             <Grid container spacing={1.5} alignItems="center">
                                                                 <Grid item>
-                                                                    {moduleIcons[group.group_name]}
+                                                                    {moduleIcons[group.r_m_name.toLowerCase().replace(/\s/g, ' ')]}
                                                                 </Grid>
                                                                 <Grid item>
-                                                                    <span style={{ fontSize: '1rem', textTransform: "capitalize" }}>{group.group_name.toLowerCase().replace(/\s/g, ' ')}</span>
+                                                                    <span style={{ fontSize: '1rem', textTransform: "capitalize" }}>{group.r_m_name.toLowerCase().replace(/\s/g, ' ')}</span>
                                                                 </Grid>
+                                                                {group.modules && group.modules[0].name !== "NULL" && (
+                                                                    <Grid item>
+                                                                        <ArrowDropDownIcon />
+                                                                    </Grid>
+                                                                )}
                                                             </Grid>
-                                                        </Link>
-                                                    ) : (
-                                                        <Grid container spacing={1.5} alignItems="center">
-                                                            <Grid item>
-                                                                {moduleIcons[group.group_name.toLowerCase().replace(/\s/g, ' ')]}
-                                                            </Grid>
-                                                            <Grid item>
-                                                                <span style={{ fontSize: '1rem', textTransform: "capitalize" }}>{group.group_name.toLowerCase().replace(/\s/g, ' ')}</span>
-                                                            </Grid>
-                                                            {group.modules && group.modules[0].name !== "NULL" && (
-                                                                <Grid item>
-                                                                    <ArrowDropDownIcon />
-                                                                </Grid>
-                                                            )}
-                                                        </Grid>
-                                                    )
-                                                }
-                                                value={group.group_name}
-                                            />
-                                        ))}
-                                    </TabList>
-                                ) :
-                                userGroup === 'HR' ? (
-                                    <div style={{ overflowX: 'auto' }}>
-                                        {permissions && permissions.length > 0 ? (
+                                                        )
+                                                    }
+                                                    value={group.r_m_name}
+                                                />
+                                            ))}
+                                        </TabList>
+                                    )
+                                    :
+                                    userGroup === userGroupLogin && (
+                                        <TabContext value={selectedTab}>
                                             <TabList
-                                                className="tab-root"
+                                                onChange={handleTabClick}
                                                 textColor="#51DDD4"
                                                 TabIndicatorProps={{
                                                     style: {
-                                                        backgroundColor: selectedTab === module.name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
+                                                        background: 'linear-gradient(90deg, rgba(31, 208, 196, 0.35) 0%, rgba(50, 142, 222, 0.35) 100%)',
                                                         height: '40px',
                                                         marginBottom: '10px',
-                                                        borderRadius: "5px"
-                                                    }
+                                                        borderRadius: '5px',
+                                                    },
                                                 }}
                                                 variant="scrollable"
                                                 scrollButtons="auto"
-                                                aria-label="scrollable auto tabs example"
-                                                style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center', overflowX: 'auto' }}
                                             >
-                                                {permissions.map((group) => (
-                                                    group.modules_submodule && group.modules_submodule.map((module) => (
-                                                        <Link
-                                                            key={module.module_id}
-                                                            to={`/hr/${module.name.toLowerCase().replace(/\s/g, ' ')}`}
-                                                            style={{ textDecoration: 'none' }}
+                                                {
+                                                    permissions.length > 0 ? (
+                                                        permissions[0].modules_submodule.length > 1 ?
+                                                            (
+                                                                permissions[0].modules_submodule.map((group) => (
+                                                                    <Tab
+                                                                        style={{
+                                                                            backgroundColor: selectedTab === group.r_m_name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
+                                                                            marginTop: '4px',
+                                                                            borderRadius: '9px',
+                                                                            height: '15px',
+                                                                            textTransform: 'capitalize',
+                                                                        }}
+                                                                        key={group.r_m_id}
+                                                                        label={
+                                                                            group.modules?.[0]?.module_name === 'NULL' ? (
+                                                                                <Link
+                                                                                    to={`/hhc/${group.r_m_name.toLowerCase().replace(/\s/g, ' ')}`}
+                                                                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                                                                >
+                                                                                    <Grid container spacing={1.5} alignItems="center">
+                                                                                        <Grid item>{moduleIcons[group.r_m_name]}</Grid>
+                                                                                        <Grid item>
+                                                                                            <span style={{ fontSize: '1rem', textTransform: 'capitalize' }}>
+                                                                                                {group.r_m_name.toLowerCase().replace(/\s/g, ' ')}
+                                                                                            </span>
+                                                                                        </Grid>
+                                                                                    </Grid>
+                                                                                </Link>
+                                                                            ) : (
+                                                                                <div
+                                                                                    onClick={(e) => {
+                                                                                        e.preventDefault();
+                                                                                        handlePopoverOpen(e, group.r_m_name);
+                                                                                    }}
+                                                                                    style={{ cursor: 'pointer' }}
+                                                                                >
+                                                                                    <Grid container spacing={1.5} alignItems="center">
+                                                                                        <Grid item>{moduleIcons[group.r_m_name]}</Grid>
+                                                                                        <Grid item>
+                                                                                            <span style={{ fontSize: '1rem', textTransform: 'capitalize' }}>
+                                                                                                {group.r_m_name.toLowerCase().replace(/\s/g, ' ')}
+                                                                                            </span>
+                                                                                        </Grid>
+                                                                                        {group.modules?.length > 0 && (
+                                                                                            <Grid item>
+                                                                                                <ArrowDropDownIcon />
+                                                                                            </Grid>
+                                                                                        )}
+                                                                                    </Grid>
+                                                                                </div>
+                                                                            )
+                                                                        }
+                                                                        value={group.r_m_name}
+                                                                    />
+                                                                ))
+                                                            )
+                                                            :
+                                                            (
+                                                                permissions[0].modules_submodule.map((submodule, index) => (
+                                                                    submodule.modules.map((module, index) => (
+                                                                        <Tab
+                                                                            key={index}
+                                                                            label={module.module_name}
+                                                                            value={module.module_id.toString()}
+                                                                            onClick={() => handleTabClick(module.module_name)}
+                                                                        />
+                                                                    ))
+                                                                ))
+                                                            )
+                                                    ) : (
+                                                        <div>No permissions found</div>
+                                                    )
+                                                }
+
+                                                {
+                                                    selectedGroupName && permissions[0]?.modules_submodule?.some(
+                                                        (group) => group.r_m_name === selectedGroupName && group.modules?.length > 0
+                                                    ) && (
+                                                        <Popover
+                                                            open={Boolean(anchorEl)}
+                                                            anchorEl={anchorEl}
+                                                            onClose={handlePopoverClose}
+                                                            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                                            transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                                                         >
-                                                            <Tab
-                                                                style={{
-                                                                    backgroundColor: selectedTab === module.name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
-                                                                    marginTop: '4px',
-                                                                    borderRadius: '9px',
-                                                                    height: '15px',
-                                                                    textTransform: 'capitalize',
-                                                                    fontSize: '1rem',
-                                                                    whiteSpace: 'nowrap',
-                                                                    overflow: 'hidden',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '5px',
-                                                                    color: '#000000',
-                                                                }}
-                                                                label={
-                                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                                        <span style={{ marginTop: '4px', marginRight: '3px' }}>{moduleIcons[module.name.toLowerCase().replace(/\s/g, ' ')]}</span>
-                                                                        <span style={{ textTransform: "capitalize" }}>{module.name.toLowerCase().replace(/\s/g, ' ')}</span>
-                                                                    </div>
-                                                                }
-                                                                value={module.module_id}
-                                                                onClick={() => setSelectedTab(module.name)}
-                                                            />
-                                                        </Link>
-                                                    ))
-                                                ))}
+                                                            <div style={{ padding: '10px' }}>
+                                                                {permissions[0].modules_submodule
+                                                                    .filter(
+                                                                        (group) => group.r_m_name === selectedGroupName && group.modules?.length > 0
+                                                                    )
+                                                                    .flatMap((group) =>
+                                                                        group.modules.map((module) => (
+                                                                            <Link
+                                                                                key={module.module_id}
+                                                                                to={`/hhc/${group.r_m_name
+                                                                                    .toLowerCase()
+                                                                                    .replace(/\s/g, ' ')}/${module.module_name
+                                                                                        .toLowerCase()
+                                                                                        .replace(/\s/g, ' ')}`}
+                                                                                style={{ textDecoration: 'none', color: 'black' }}
+                                                                            >
+                                                                                <Typography style={{ padding: '4px', color: 'black' }}>
+                                                                                    {module.module_name}
+                                                                                </Typography>
+                                                                            </Link>
+                                                                        ))
+                                                                    )}
+                                                            </div>
+                                                        </Popover>
+                                                    )
+                                                }
                                             </TabList>
-                                        ) : (
-                                            <div>No tabs found</div>
-                                        )}
-                                    </div>
-                                )
-                                    :
-                                    userGroup === 'HOSPITAL' && (
-                                        <div style={{ overflowX: 'auto' }}>
-                                            {permissions && permissions.length > 0 ? (
-                                                <TabList
-                                                    className="tab-root"
-                                                    textColor="#51DDD4"
-                                                    TabIndicatorProps={{
-                                                        style: {
-                                                            backgroundColor: selectedTab === module.name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
-                                                            height: '40px',
-                                                            marginBottom: '10px',
-                                                            borderRadius: "5px",
-                                                            alignItems: 'left',
-                                                            justifyContent: 'flex-start',
-                                                        }
-                                                    }}
-                                                    variant="scrollable"
-                                                    scrollButtons="auto"
-                                                    aria-label="scrollable auto tabs example"
-                                                    style={{
-                                                        display: 'flex',
-                                                        flexDirection: 'row',
-                                                        gap: '10px',
-                                                        alignItems: 'left',
-                                                        justifyContent: 'flex-start',
-                                                        overflowX: 'auto'
-                                                    }}
-                                                >
-                                                    {permissions.map((group) => (
-                                                        group.modules_submodule && group.modules_submodule.map((module) => (
-                                                            <Link
-                                                                key={module.module_id}
-                                                                to={`/hospital/${module.name.toLowerCase().replace(/\s/g, ' ')}`}
-                                                                style={{ textDecoration: 'none' }}
-                                                            >
-                                                                <Tab
-                                                                    style={{
-                                                                        backgroundColor: selectedTab === module.name ? 'rgba(31, 208, 196, 0.40)' : 'transparent',
-                                                                        marginTop: '4px',
-                                                                        borderRadius: '9px',
-                                                                        height: '15px',
-                                                                        textTransform: 'capitalize',
-                                                                        fontSize: '1rem',
-                                                                        whiteSpace: 'nowrap',
-                                                                        overflow: 'hidden',
-                                                                        display: 'flex',
-                                                                        alignItems: 'left',
-                                                                        justifyContent: 'flex-start',
-                                                                        textAlign: 'left',
-                                                                        color: '#000000'
-                                                                    }}
-                                                                    label={
-                                                                        <div style={{ display: 'flex', alignItems: 'left' }}>
-                                                                            <span
-                                                                                style={{
-                                                                                    marginTop: '4px', marginRight: '3px', textAlign: 'left',
-                                                                                }}
-                                                                            >{moduleIcons[module.name.toLowerCase().replace(/\s/g, ' ')]}</span>
-                                                                            <span style={{ textTransform: "capitalize", justifyContent: 'flex-start' }}>{module.name.toLowerCase().replace(/\s/g, ' ')}</span>
-                                                                        </div>
-                                                                    }
-                                                                    value={module.module_id}
-                                                                    onClick={() => setSelectedTab(module.name)}
-                                                                />
-                                                            </Link>
-                                                        ))
-                                                    ))}
-                                                </TabList>
-                                            ) : (
-                                                <div>No tabs found</div>
-                                            )}
-                                        </div>
+                                        </TabContext>
                                     )
                             }
                         </Box>
 
-                        {moduleName && moduleName.length > 0 && moduleName.some(group => group.group_name === selectedGroupName && group.modules && group.modules.length > 0 && group.modules[0].name !== "NULL") && (
-                            <Popover
-                                open={Boolean(anchorEl) && selectedGroupName !== ''}
-                                anchorEl={anchorEl}
-                                onClose={handlePopoverClose}
-                                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                                onMouseEnter={() => setAnchorEl(anchorEl)}
-                                onMouseLeave={handlePopoverClose}
-                            >
-                                <Typography style={{ padding: '10px' }}>
-                                    {moduleName.map(group => {
-                                        if (group.group_name === selectedGroupName && group.modules && group.modules[0].name !== "NULL") {
-                                            return (
-                                                <div key={group.group_name}>
-                                                    <Typography style={{ padding: '10px', color: 'black' }}>
-                                                        {group.modules.map(module => (
-                                                            <Link key={module.module_id} to={`/hhc/${group.group_name.toLowerCase().replace(/\s/g, ' ')}/${module.name.toLowerCase().replace(/\s/g, ' ')}`} style={{ textDecoration: 'none', color: 'black' }}>
-                                                                <option value={module.module_id}>{module.name}</option>
-                                                            </Link>
-                                                        ))}
-                                                    </Typography>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })}
-                                </Typography>
+                        {userGroup === 'ADMIN' &&
+                            moduleName && moduleName.length > 0 && moduleName.some(group => group.r_m_name === selectedGroupName && group.modules && group.modules.length > 0 && group.modules[0].name !== "NULL") && (
+                                <Popover
+                                    open={Boolean(anchorEl) && selectedGroupName !== ''}
+                                    anchorEl={anchorEl}
+                                    onClose={handlePopoverClose}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                    transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                    onMouseEnter={() => setAnchorEl(anchorEl)}
+                                    onMouseLeave={handlePopoverClose}
+                                >
+                                    <Typography style={{ padding: '10px' }}>
+                                        {moduleName.map(group => {
+                                            if (group.r_m_name === selectedGroupName && group.modules && group.modules.length > 0 && group.modules[0].name !== "NULL") {
+                                                return (
+                                                    <div key={group.r_m_id}>
+                                                        <Typography style={{ padding: '10px', color: 'black' }}>
+                                                            {group.modules.map(module => (
+                                                                <Link key={module.module_id}
+                                                                    to={`/hhc/${group.r_m_name.toLowerCase().replace(/\s/g, ' ')}/${module.name.toLowerCase().replace(/\s/g, ' ')}`}
+                                                                    style={{ textDecoration: 'none', color: 'black' }}>
+                                                                    <option value={module.module_id}>{module.name}</option>
+                                                                </Link>
+                                                            ))}
+                                                        </Typography>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })}
+                                    </Typography>
 
-                            </Popover>
-                        )}
+                                </Popover>
+                            )
+                        }
                     </TabContext>
                 </div>
 
                 <Box sx={{ width: '100%', typography: 'body1', m: 1, zIndex: 1 }}>
                     <Routes>
                         <Route path="/hr/dashboard" element={<HRDashboard />} />
-                        <Route path="/hr/manage profiles" element={<ManageProfile />} />
+                        <Route path="/hr/manage profiles/add-prof" element={<ManageProfile />} />
                         <Route path="/hr/interview scheduled" element={<Interview />} />
                         <Route path="/hr/onboarding" element={<Candidates />} />
                         <Route path="/hr/our employees" element={<Employee />} />
                         <Route path="/hr/attendance" element={<Attendence />} />
                         <Route path="/hr/system user" element={<SystemUser />} />
+                        <Route path="/hr/external professionals" element={<ExternalProf />} />
+
+                        <Route path="hhc/hr/dashboard" element={<HRDashboard />} />
+                        <Route path="hhc/hr/manage profiles/add-prof" element={<ManageProfile />} />
+                        <Route path="hhc/hr/interview scheduled" element={<Interview />} />
+                        <Route path="hhc/hr/onboarding" element={<Candidates />} />
+                        <Route path="hhc/hr/our employees" element={<Employee />} />
+                        <Route path="hhc/hr/attendance" element={<Attendence />} />
+                        <Route path="hhc/hr/system user" element={<SystemUser />} />
+                        <Route path="hhc/gis analytics" element={<Home />} />
 
                         {/* ADMIN Routing */}
                         <Route path='/hhc/permission' element={<Permission />} />
@@ -440,6 +508,27 @@ const HRHeader = () => {
                         <Route path='/hhc/HCM/professional allocation' element={<AllocatedList />} />
                         <Route path='/hhc/HCM/professional details' element={<ProfessionalDetails />} />
 
+                        {/* shubham code */}
+                        <Route path='/hhc/HCM/closure revalidation' element={<ClosureRevalidation />} />
+
+                        {/*ADMIN ACCOUNT Routing */}
+                        <Route path='/account/dashboard' element={<AccountDashboard />} />
+                        <Route path='/account/new export receipt' element={<NewExportReceipt />} />
+                        <Route path='/account/export invoice' element={<ExportInvoice />} />
+                        <Route path='/account/payment with professional' element={<PaymentWithProfessional />} />
+                        <Route path='/account/payment with patient' element={<PaymentPatient />} />
+                        <Route path='/account/manage cashfree payment' element={<Cashfree />} />
+                        <Route path='/account/pending payment' element={<PendingPayment />} />
+                        <Route path='/account/day print' element={<DayPrintBHV />} />
+                        <Route path='/account/job closure report' element={<JobClosureAccount />} />
+                        <Route path='/account/professional unit calculation' element={<ProfessionalUnit />} />
+                        <Route path='/account/online transaction' element={<OnlineTransaction />} />
+                        <Route path='/account/payment utr' element={<PaymentUTR />} />
+
+                        {/* ATTENDANCE module */}
+                        <Route path="/hhc/attendance/manageattendance" element={<ManageAttendance />} />
+                        <Route path="/hhc/attendance/attendance-dashboard" element={<AtteDashboard />} />
+                        <Route path="/hhc/attendance/manage report" element={<ManageReports />} />
                         {/*ADMIN ACCOUNT Routing */}
                         <Route path='/hhc/account/dashboard' element={<AccountDashboard />} />
                         <Route path='/hhc/account/new export receipt' element={<NewExportReceipt />} />
@@ -454,8 +543,30 @@ const HRHeader = () => {
                         <Route path='/hhc/account/online transaction' element={<OnlineTransaction />} />
                         <Route path='/hhc/account/payment utr' element={<PaymentUTR />} />
 
+                        {/* ATTENDANCE module */}
+                        <Route path="/hhc/attendance/manage attendance" element={<ManageAttendance />} />
+                        <Route path="/hhc/attendance/attendance-dashboard" element={<AtteDashboard />} />
+                        <Route path="/hhc/attendance/manage report" element={<ManageReports />} />
+
+                        {/* management dashboard */}
+                        <Route path="/hhc/dashboard/management dashboard" element={<ManagementDashboard />} />
+
                         {/* /////hospital routing */}
                         <Route path='/hospital/dashboard' element={<HospitalDashboard />} />
+
+                        {/* HR PARTNER */}
+                        <Route path='/hr partner/dashboard' element={<HrDashboard />} />
+                        <Route path="/hr partner/manage professionals" element={<ManageProfessionals />} />
+                        <Route path="/hr partner/Add professionals" element={<AddProfPartner />} />
+                        <Route path="/hr partner/service details" element={<Servicedetails />} />
+
+                        <Route path='hhc/hr partner/dashboard' element={<HrDashboard />} />
+                        <Route path="hhc/hr partner/manage professionals" element={<ManageProfessionals />} />
+                        <Route path="hhc/hr partner/Add professionals" element={<AddProfPartner />} />
+                        <Route path="hhc/hr partner/service details" element={<Servicedetails />} />
+                        <Route path="hhc/hr/external professionals" element={<ExternalProf />} />
+                        <Route path="hhc/gis analytics" element={<Home />} />
+
                     </Routes>
                 </Box>
             </Box>

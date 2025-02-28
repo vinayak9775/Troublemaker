@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, TextField, Button, MenuItem, CardContent, Snackbar, Alert, Typography } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
+import { Box, Grid, TextField, Button, MenuItem, CardContent, Snackbar, Alert, Typography, Modal, FormControlLabel, FormControl, FormLabel, RadioGroup, Radio } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
 import DatePicker from "react-multi-date-picker";
 import dayjs from "dayjs";
+
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    // border: '2px solid #000',
+    pt: 2,
+    px: 4,
+    pb: 3,
+};
 
 const genders = [
     {
@@ -35,27 +50,35 @@ const calculateDateCount = (start, end) => {
     return Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 };
 
-const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureStatus, onClose }) => {
+const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureStatus, getEventIDRequest, onClose }) => {
+    const navigate = useNavigate();
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
-    console.log('sesCount....:', sesCount);
+    console.log('Session Count....:', sesCount);
+    console.log('Datesss....:', eveStartDate, eveEndDate);
 
-    // const [startDate, setStartDate] = useState(eveStartDate);
-    // const [endDate, setEndDate] = useState(eveEndDate);
     const [selectedOption, setSelectedOption] = useState('')
     const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
-    const [endDate, setEndDate] = useState('');
     const [sessionDate, setSessionDate] = useState(eveStartDate);
     const [rescheduleDate, setRescheduleDate] = useState('');
     const [remark, setRemark] = useState('');
+
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
+    const [openSesRschdl, setOpenSesRschdl] = useState(false);
+
+    const [sessionDetails, setSessionDetails] = useState({});
+
+    const [requestAllocation, setRequestAllocation] = useState({});
+
     const [values, setValues] = useState([]);
     const [chooseDates, setChooseDates] = useState([]);
+    const [selectedValue, setSelectedValue] = useState('');
     const [dateCount, setDateCount] = useState(0);
     const currentDate = new Date();
     const currentDateString = currentDate.toISOString().split('T')[0];
@@ -67,6 +90,27 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
         endTime: '',
         remark
     });
+
+    const handleOpenSesRschdl = () => {
+        setOpenSesRschdl(true);
+    };
+
+    const handleCloseSesRschdl = () => {
+        setOpenSesRschdl(false);
+    };
+
+    const handleRadioChange = (event) => {
+        const value = event.target.value;
+        setSelectedValue(value);
+        if (value === '1') {
+            // getEventIDRequest();
+            getRequestAllocation();
+        }
+        else if (value === '2') {
+            // getEventIDRequest();
+            window.location.reload();
+        }
+    };
 
     const handleDateChange = (newValues) => {
         setValues(newValues || []);
@@ -101,6 +145,7 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
     }, [values]);
 
     console.log('Selected Date range:', chooseDates);
+    console.log('Hiiiiiiii:', sessionDetails);
 
     const handleEmptyField = () => {
         const newErrors = {};
@@ -174,7 +219,19 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
         }
     }, [eveEndDate]);
 
-    const filteredSchedules = schedules.filter(option => !(jobClosureStatus >= 1 && option.value === '1'));
+    // const filteredSchedules = schedules.filter(option => !(jobClosureStatus >= 1 && option.value === '1'));
+    const filteredSchedules = schedules.filter(option => {
+        const isJobClosed = jobClosureStatus >= 1;
+        const isSameDate = eveStartDate === eveEndDate;
+
+        if (isJobClosed && option.value === '1') {
+            return false;
+        }
+        if (isSameDate && option.value === '2') {
+            return false;
+        }
+        return true;
+    });
 
     async function handleRescheduleSubmit(event) {
         event.preventDefault();
@@ -191,6 +248,12 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
             setSnackbarSeverity('error');
             console.log("Selected dates do not match the date count.")
         }
+
+        if (remark.trim().length < 15) {
+            setErrors({ remark: 'Remark must be at least 15 characters long.' });
+            return;
+        }
+
         const requestData = {
             // event_id: eventID,
             // actual_StartDate_Time: startDate,
@@ -238,6 +301,11 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
             setSnackbarSeverity('error');
             return;
         }
+
+        if (remark.trim().length < 15) {
+            setErrors({ remark: 'Remark must be at least 15 characters long.' });
+            return;
+        }
         const requestData = {
             eve_id: eventID,
             session_date: sessionDate,
@@ -265,16 +333,66 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
             }
             const result = await response.json();
             console.log("Successfully submitted Session data", result);
-            setOpenSnackbar(true);
-            setSnackbarMessage('Session updated successfully!');
-            setSnackbarSeverity('success');
+            if (result.msg === "Professional has already a session") {
+                // setOpenSnackbar(true);
+                // setSnackbarMessage('Professional has already another session');
+                // setSnackbarSeverity('warning');
+                setOpenSesRschdl(true);
+                setSessionDetails(result.current_sess_dtl);
+            } else {
+                setOpenSnackbar(true);
+                setSnackbarMessage('Session updated successfully!');
+                setSnackbarSeverity('success');
+                window.location.reload();
+                // onClose();
+            }
             // onClose();
-            window.location.reload();
+            // window.location.reload();
         } catch (error) {
             console.error("Error fetching Session:", error);
         }
         // }
     }
+
+    const getRequestAllocation = async () => {
+        if (eventID) {
+            try {
+                const res = await fetch(`${port}/web/agg_hhc_srv_req_prof_allocate/${eventID}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await res.json();
+                console.log("Request Allocation Data.........", data);
+                setRequestAllocation(data);
+                const eventValue = data.Event_ID;
+                const patientValue = data.patient_details.agg_sp_pt_id;
+                const callerValue = data.caller_details.caller_id;
+                const eventPlanValue = data.POC[0].eve_poc_id;
+
+                console.log("eventID", eventValue);
+                console.log("patientID", patientValue);
+                console.log("callerID", callerValue);
+                console.log("eventPlanID", eventPlanValue);
+                navigate('/viewservice', {
+                    state: {
+                        patientID: patientValue,
+                        callerID: callerValue,
+                        eventPlanID: eventPlanValue,
+                        eventID: eventValue,
+                        flag: 3,
+                        startTime,
+                        endTime,
+                        rescheduleDate,
+                        sessionDate,
+                    },
+                });
+            } catch (error) {
+                console.error("Error fetching Request Allocation:", error);
+            }
+        }
+    };
 
     return (
         <Box>
@@ -300,7 +418,9 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
                             }}
                         >
                             {filteredSchedules.map((option) => (
-                                <MenuItem key={option.value} value={option.value} disabled={eveStartDate === eveEndDate && option.value !== '1'}>
+                                <MenuItem key={option.value} value={option.value}
+                                // disabled={eveStartDate === eveEndDate && option.value !== '1'}
+                                >
                                     {option.label}
                                 </MenuItem>
                             ))}
@@ -597,13 +717,20 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
                                     fontSize: '16px',
                                 },
                             }}
-                            onKeyDown={(e) => {
-                                if (e.key === 's' || e.key === 'i' || e.key === 'm') {
-                                    e.preventDefault();
-                                }
-                            }}
                             error={!!errors.remark}
-                            helperText={errors.remark}
+                            // helperText={errors.remark}
+                            helperText={errors.remark || "Remark must be at least 15 characters"}
+                        // onKeyDown={(e) => {
+                        //     if (e.key === 's' || e.key === 'i' || e.key === 'm') {
+                        //         e.preventDefault();
+                        //     }
+                        // }}
+                        // onKeyDown={(e) => {
+                        //     const allowedKeys = ['s', 'i', 'm'];
+                        //     if (!allowedKeys.includes(e.key.toLowerCase())) {
+                        //         return;
+                        //     }
+                        // }}
                         />
                     </Grid>
                     <Grid item lg={12} sm={12} xs={12}>
@@ -617,6 +744,35 @@ const Reschedule = ({ eventID, eveStartDate, eveEndDate, sesCount, jobClosureSta
                             </Button>
                         )}
                     </Grid>
+
+                    <Modal
+                        open={openSesRschdl}
+                        onClose={handleCloseSesRschdl}
+                        aria-labelledby="modal-modal-title"
+                        aria-describedby="modal-modal-description"
+                    >
+                        <Box sx={{ ...style, width: 300, borderRadius: "10px", border: "none" }}>
+                            {/* <div style={{ display: "flex" }}>
+                                <Typography align="center" style={{ fontSize: "16px", fontWeight: 600, color: "gray", marginTop: "10px", marginLeft: "15px" }}>SESSION RESCHEDULE DETAILS</Typography>
+                                <Button onClick={handleCloseSesRschdl} sx={{ color: "gray", marginTop: "2px", }}><CloseIcon /></Button>
+                            </div> */}
+                            <Typography variant='subtitle2'>Professional has already a session</Typography>
+                            <br />
+                            <FormControl>
+                                <FormLabel id="demo-row-radio-buttons-group-label">Do you want to reschedule this session?</FormLabel>
+                                <RadioGroup
+                                    row
+                                    aria-labelledby="demo-row-radio-buttons-group-label"
+                                    name="row-radio-buttons-group"
+                                    value={selectedValue}
+                                    onChange={handleRadioChange}
+                                >
+                                    <FormControlLabel value="1" control={<Radio />} label="Yes" />
+                                    <FormControlLabel value="2" control={<Radio />} label="No" />
+                                </RadioGroup>
+                            </FormControl>
+                        </Box>
+                    </Modal>
                     <Snackbar
                         open={openSnackbar}
                         autoHideDuration={6000}

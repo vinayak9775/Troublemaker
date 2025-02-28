@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import Box from "@mui/material/Box"
-import Grid from "@mui/material/Grid"
-import TextField from "@mui/material/TextField"
-import Button from '@mui/material/Button';
-import MenuItem from "@mui/material/MenuItem"
+import { Box, Grid, TextField, Button, MenuItem, Snackbar, Alert, Typography } from "@mui/material"
 import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import { useNavigate } from "react-router-dom";
 import { getCurrentDateString } from "../../../Utils/ValidationUtils";
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import { Typography } from '@mui/material';
+import { getCurrentDateTimeString } from "../../../Utils/ValidationUtils";
 
 const followup = [
     {
@@ -29,6 +23,17 @@ const followup = [
     },
 ];
 
+const followup1 = [
+    {
+        value: '1',
+        label: 'Keep in Followup',
+    },
+    {
+        value: '2',
+        label: 'Cancel',
+    },
+];
+
 const cancelby = [
     {
         value: '1',
@@ -40,11 +45,11 @@ const cancelby = [
     },
 ];
 
-const Followup = ({ sendData, enqData, onClose }) => {
+const Followup = ({ sendData, enqData, onClose, flag }) => {
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
     const addedby = localStorage.getItem('clg_id');
-    console.log("addedby", addedby)
+    console.log("hiiiiiiii", flag);
 
     const navigate = useNavigate();
 
@@ -156,12 +161,14 @@ const Followup = ({ sendData, enqData, onClose }) => {
     async function handleFollowupSubmit(event) {
         event.preventDefault();
         const requestData = {
+            flag_id: flag,
             event_id: enqData,
             follow_up: selectedOption,
             follow_up_date_time: followDateTime,
             follow_up_count: followCount,
             previous_follow_up_remark: followRemark,
             added_by: addedby,
+
         };
         console.log("POST API Hitting......", requestData)
         try {
@@ -190,9 +197,38 @@ const Followup = ({ sendData, enqData, onClose }) => {
         }
     }
 
+    const [errors, setErrors] = useState({
+        followRemark: '',
+    });
+
+
+    const handleEmptyFieldService = () => {
+        const newErrors = {};
+
+        if (!followRemark) {
+            newErrors.followRemark = 'Remark is required';
+        }
+        setErrors(newErrors);
+        return Object.values(newErrors).some((error) => error !== '');
+    };
+
     async function handleCancelSubmit(event) {
         event.preventDefault();
+        const hasEmptyFields = handleEmptyFieldService();
+
+        if (hasEmptyFields) {
+            setOpenSnackbar(true);
+            setSnackbarMessage('Please fill all required details.');
+            return;
+        }
+
+        if (followRemark.trim().length < 15) {
+            setErrors({ followRemark: 'Remark must be at least 15 characters long.' });
+            return;
+        }
+
         const requestData = {
+            flag_id: flag,
             event_id: enqData,
             follow_up: selectedOption,
             cancel_by: selectedReasonID,
@@ -217,7 +253,12 @@ const Followup = ({ sendData, enqData, onClose }) => {
             const result = await response.json();
             console.log("Cancel Service data", result);
             setOpenSnackbar(true);
-            setSnackbarMessage('Enquiry cancelled successfully!');
+            if (flag == 2) {
+                setSnackbarMessage('Service cancelled successfully!');
+            }
+            else {
+                setSnackbarMessage('Enquiry cancelled successfully!');
+            }
             // onClose();
             window.location.reload();
             // navigate('/service');
@@ -369,13 +410,14 @@ const Followup = ({ sendData, enqData, onClose }) => {
                                             {option.label}
                                         </MenuItem>
                                     ))} */}
-                                    {followup
-                                        .filter(option => !(followCount === 2 && option.value === '1'))
-                                        .map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
+                                    {
+                                        (flag === 1 ? followup : followup1)
+                                            .filter(option => !(followCount === 2 && option.value === '1'))
+                                            .map((option) => (
+                                                <MenuItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </MenuItem>
+                                            ))}
                                 </TextField>
                             </Grid>
 
@@ -462,8 +504,8 @@ const Followup = ({ sendData, enqData, onClose }) => {
                                             },
                                         }}
                                         inputProps={{
-                                            // min: getCurrentDateTimeString(),
-                                            min: getCurrentDateString(),
+                                            min: getCurrentDateTimeString(),
+                                            // min: getCurrentDateString(),
                                         }}
                                         InputLabelProps={{
                                             shrink: true,
@@ -491,13 +533,15 @@ const Followup = ({ sendData, enqData, onClose }) => {
                                             fontSize: '14px',
                                         },
                                     }}
+                                    error={!!errors.followRemark}
+                                    helperText={errors.followRemark || "Remark must be at least 15 characters"}
                                 />
                             </Grid>
 
                             <Grid item lg={12} sm={12} xs={12}>
                                 {selectedOption === '2' ? (
                                     <Button variant="contained" sx={{ m: 1, width: '30ch', backgroundColor: '#7AB8EE', borderRadius: "12px", textTransform: "capitalize" }} onClick={handleCancelSubmit}>
-                                        Close Enquiry
+                                        {flag !== 2 ? 'Close Enquiry' : 'Close Service'}
                                     </Button>
                                 ) : selectedOption === '3' ? (
                                     <Button variant="contained" sx={{ m: 1, width: '30ch', backgroundColor: '#7AB8EE', borderRadius: "12px", textTransform: "capitalize" }} onClick={handleCreateServiceSubmit}>
@@ -514,7 +558,7 @@ const Followup = ({ sendData, enqData, onClose }) => {
                                 <Grid item lg={12} sm={12} xs={12}>
                                     <div style={{ display: "flex" }}>
                                         <Typography variant='subtitle2'>Note: </Typography>
-                                        <Typography variant='body2' style={{ fontSize: "13px", marginTop: "2px", marginLeft:"2px" }}> This is last follow up(Internal purpose)</Typography>
+                                        <Typography variant='body2' style={{ fontSize: "13px", marginTop: "2px", marginLeft: "2px" }}> This is last follow up(Internal purpose)</Typography>
                                     </div>
                                 </Grid>
                             ) : (null)}
@@ -527,7 +571,7 @@ const Followup = ({ sendData, enqData, onClose }) => {
                                 <Alert variant="filled"
                                     onClose={handleSnackbarClose}
                                     severity="success"
-                                    sx={{ width: "18rem", ml:1, mb: 10 }}
+                                    sx={{ width: "18rem", ml: 1, mb: 10 }}
                                 >
                                     {snackbarMessage}
                                 </Alert>

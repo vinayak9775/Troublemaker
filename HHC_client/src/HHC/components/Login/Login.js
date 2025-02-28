@@ -15,6 +15,7 @@ import key from "../../assets/key.png"
 import { useAuth } from '../Context/ContextAPI';
 
 export default function Login() {
+
     const { handleAuth } = useAuth();
     const port = process.env.REACT_APP_API_KEY;
     const [login, setLogin] = useState({ clg_ref_id: "", password: "" })
@@ -22,6 +23,7 @@ export default function Login() {
     const [passwordError, setPasswordError] = useState(false);
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [showExistErrorAlert, setShowExistErrorAlert] = useState(false);
+    const [showExistErrorAlert1, setShowExistErrorAlert1] = useState(false);
     const [loading, setLoading] = useState(false);
     const isSmallScreen = useMediaQuery('(max-width:600px)');
 
@@ -46,15 +48,22 @@ export default function Login() {
                 },
                 body: JSON.stringify({ clg_ref_id: login.clg_ref_id, password: login.password })
             });
+            if (response.status === 401) {
+                console.log("Resource not found.");
+                setShowExistErrorAlert1(true);
+                setTimeout(() => setShowExistErrorAlert1(false), 3000);
+            }
             if (response.status === 404) {
                 console.log("Resource not found.");
                 setShowErrorAlert(true);
+                setTimeout(() => setShowErrorAlert(false), 3000);
             }
             else {
                 setShowErrorAlert(false);
                 const data = await response.json();
                 if (data.msg === "User Already Logged In. Please check.") {
                     setShowExistErrorAlert(true);
+                    setTimeout(() => setShowExistErrorAlert(false), 3000);
                 } else {
                     console.log("Login Credentials.....", data);
                     localStorage.setItem('token', data.token.access);
@@ -68,28 +77,32 @@ export default function Login() {
                     localStorage.setItem('user-designation', data.token.colleague.designation);
                     localStorage.setItem('clg_id', data.token.colleague.id);
                     localStorage.setItem('hospitalId', data.token.colleague.clg_hosp_id);
+                    localStorage.setItem('clgrefId', data.token.colleague.clg_ref_id);
                     localStorage.setItem('user_group', data.token.user_group);
                     localStorage.setItem('permissions', JSON.stringify(data.token.permissions));
+                    localStorage.setItem('companyID', data.token.colleague.prof_compny);
 
                     if (data.token.user_group === "hd") {
                         navigate("/dashboard");
                         handleAuth();
                         window.location.reload();
-                    } 
+                    }
                     else if (data.token.user_group === "HR") {
-                        // navigate("/hr/dashboard");
-                        navigate('/hr/dashboard');
-                    } 
+                        navigate('/hr/manage profiles');
+                    }
+                    else if (data.token.user_group === "HR Partner") {
+                        navigate('/hr partner/manage professionals');
+                    }
                     else if (data.token.user_group === "ADMIN") {
                         navigate("/hhc/dashboard");
                     }
-                     else if (data.token.user_group === "ACCOUNT") {
+                    else if (data.token.user_group === "ACCOUNT") {
                         navigate("/hhc/account/dashboard");
                     }
-                     else if (data.token.user_group === "REPORTS") {
+                    else if (data.token.user_group === "REPORTS") {
                         navigate("/reports/dashboard");
                     }
-                     else if (data.token.user_group === "HOSPITAL") {
+                    else if (data.token.user_group === "HOSPITAL") {
                         navigate("/hospital/dashboard");
                     }
                     else if (data.token.user_group === "ATTENDANCE") {
@@ -98,7 +111,17 @@ export default function Login() {
                     else if (data.token.user_group === "MANAGEMENT") {
                         navigate("/management/management-dashboard");
                     }
+                    // else if (data.token.user_group === "clincal_gov") {
+                    //     navigate("/hhc/clinical");
+                    // }
+                    else if (data.token.user_group === "clincal_gov") {
+                        // navigate("/hhc/clinical");
+                        navigate("/hhc/clinical/closure");
+                    }
 
+                    else if (data.token.user_group === "HHC_Analytics") {
+                        navigate("/analytics/home");
+                    }
                 }
             }
         } catch (error) {
@@ -128,12 +151,15 @@ export default function Login() {
                     {isSmallScreen ? null : (
                         <img src={logo} alt="" style={{ height: "110px", width: "160px" }} />
                     )}
-                    <Typography variant='h6' sx={{ m: 2 }}>HD LOGIN</Typography>
+                    {/* <Typography variant='h6' sx={{ m: 2 }}>HD LOGIN</Typography> */}
                     {showErrorAlert && (
                         <Alert severity="error" variant="filled">Invalid User ID or Password!</Alert>
                     )}
                     {showExistErrorAlert && (
                         <Alert severity="error" variant="filled">User is already logged in!</Alert>
+                    )}
+                    {showExistErrorAlert1 && (
+                        <Alert severity="error" variant="filled">Login Access Denied!</Alert>
                     )}
                     <Box component="form" sx={{ mt: 3, p: "2px 4px", display: 'flex', alignItems: 'center', height: '2.5rem', boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "6px", border: "1px solid gray" }}>
                         <img src={user} alt="" style={{ height: "18px", marginLeft: "8px" }} />
@@ -147,6 +173,7 @@ export default function Login() {
                             helperText={userIdError && "User ID is required"}
                         />
                     </Box>
+
                     {userIdError && (
                         <Typography variant="body2" color="error" textAlign="left">
                             User ID is required*

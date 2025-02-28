@@ -15,6 +15,9 @@ import CloseIcon from '@mui/icons-material/Close';
 const localizer = momentLocalizer(moment);
 
 const EventModal = ({ isOpen, onClose, isEditingEvent, profEvent, selectedEvent, }) => {
+
+    console.log(profEvent, 'profEvent');
+
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
 
@@ -27,21 +30,9 @@ const EventModal = ({ isOpen, onClose, isEditingEvent, profEvent, selectedEvent,
     console.log("ProfEvent...", profEvent)
 
     useEffect(() => {
-        if (profEvent && profEvent.length > 0) {
-
-            const startDateTime = moment(profEvent.actual_StartDate_Time);
-            const endDateTime = moment(profEvent.actual_EndDate_Time);
-
-            const start12HourFormat = startDateTime.format('DD-MM-YYYY HH:mm');
-            const end12HourFormat = endDateTime.format('DD-MM-YYYY HH:mm');
-
-            setStartDTFormat(start12HourFormat);
-            setEndDTFormat(end12HourFormat)
-
-        } else {
-            setStartDTFormat('');
-            setEndDTFormat('');
-            // onClose();
+        if (profEvent && profEvent?.actual_StartDate_Time) {
+            const fetchedStartDate = moment(profEvent.actual_StartDate_Time).format("DD-MM-YYYY HH:mm");
+            setStartDateTime(fetchedStartDate);
         }
     }, [profEvent]);
 
@@ -106,7 +97,7 @@ const EventModal = ({ isOpen, onClose, isEditingEvent, profEvent, selectedEvent,
                 </AppBar>
 
                 <CardContent>
-                    <Grid container spacing={3} sx={{ marginTop: "1px", pl:2, pr:2 }}>
+                    <Grid container spacing={3} sx={{ marginTop: "1px", pl: 2, pr: 2 }}>
 
                         <Grid item lg={12} sm={12} xs={12}>
                             <TextField

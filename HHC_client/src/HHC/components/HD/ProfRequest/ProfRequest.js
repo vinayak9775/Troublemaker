@@ -64,10 +64,10 @@ const requestby = [
         value: 'default',
         label: 'Request by'
     },
-    {
-        value: '1',
-        label: 'Service',
-    },
+    // {
+    //     value: '1',
+    //     label: 'Service',
+    // },
     {
         value: '2',
         label: 'Session',
@@ -236,6 +236,8 @@ const ProfRequest = () => {
 
     function findPreFollowupRecords(eveId) {
         const matchingRecords = profRequest.find((record) => record.eve_id === eveId);
+        console.log(matchingRecords, 'kkkkkkkkkkkk');
+
         if (matchingRecords) {
             console.log("Prof request ID", matchingRecords.eve_id);
             setProfReqID(matchingRecords.eve_id);
@@ -420,12 +422,20 @@ const ProfRequest = () => {
                                         <Typography variant="subtitle2">Service Name</Typography>
                                     </CardContent>
 
-                                    <CardContent style={{ flex: 0.5, borderRight: "1px solid #FFFFFF" }}>
-                                        <Typography variant="subtitle2">Session ID</Typography>
-                                    </CardContent>
-                                    <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
-                                        <Typography variant="subtitle2">Session Date</Typography>
-                                    </CardContent>
+                                    {
+                                        selectedRequestbyID !== '1' && (
+                                            <>
+
+                                                <CardContent style={{ flex: 0.5, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant="subtitle2">Session ID</Typography>
+                                                </CardContent>
+                                                <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
+                                                    <Typography variant="subtitle2">Session Date</Typography>
+                                                </CardContent>
+                                            </>
+                                        )
+                                    }
+
                                     <CardContent style={{ flex: 1 }}>
                                         <Typography variant="subtitle2">Action</Typography>
                                     </CardContent>
@@ -466,26 +476,59 @@ const ProfRequest = () => {
                                                         </Typography>
                                                     </CardContent>
                                                     <CardContent style={{ flex: 1 }}>
-                                                        <Typography variant="body2" textAlign="left">
+                                                        {/* <Typography variant="body2">
                                                             {row.dtl_eve_id ? row.dtl_eve_id?.srv_prof_id?.prof_fullname : "-"}
-                                                        </Typography>
+                                                        </Typography> */}
+                                                        {
+                                                            selectedRequestbyID === '1' ?
+                                                                (
+                                                                    <Typography variant="body2">
+                                                                        {row.prof_name ? row.prof_name : "-"}
+                                                                    </Typography>
+                                                                ) :
+                                                                (
+                                                                    <Typography variant="body2">
+                                                                        {row.dtl_eve_id ? row.dtl_eve_id?.srv_prof_id?.prof_fullname : "-"}
+                                                                    </Typography>
+                                                                )
+                                                        }
                                                     </CardContent>
                                                     <CardContent style={{ flex: 0.8 }}>
-                                                        <Typography variant="body2" textAlign="left">
+                                                        {/* <Typography variant="body2">
                                                             +91 {row.dtl_eve_id ? row.dtl_eve_id?.srv_prof_id?.phone_no : "-"}
-                                                        </Typography>
+                                                        </Typography> */}
+
+                                                        {
+                                                            selectedRequestbyID === '1' ?
+                                                                (
+                                                                    <Typography variant="body2">
+                                                                        +91 {row.prof_no ? row.prof_no : "-"}
+                                                                    </Typography>
+                                                                ) :
+                                                                (
+                                                                    <Typography variant="body2">
+                                                                        +91 {row.dtl_eve_id ? row.dtl_eve_id?.srv_prof_id?.phone_no : "-"}
+                                                                    </Typography>
+                                                                )
+                                                        }
                                                     </CardContent>
                                                     <CardContent style={{ flex: 1 }}>
-                                                        <Typography variant="body2" textAlign="left">
+                                                        <Typography variant="body2">
                                                             {row.epoc_id ? row.epoc_id.srv_id?.service_title : "-"}
                                                         </Typography>
                                                     </CardContent>
-                                                    <CardContent style={{ flex: 0.5 }}>
-                                                        <Typography variant="body2">{row.dtl_eve_id ? row.dtl_eve_id?.agg_sp_dt_eve_poc_id : '-'}</Typography>
-                                                    </CardContent>
-                                                    <CardContent style={{ flex: 1 }}>
-                                                        <Typography variant="body2">{row.dtl_eve_id ? row.dtl_eve_id?.actual_StartDate_Time : '-'}</Typography>
-                                                    </CardContent>
+                                                    {
+                                                        selectedRequestbyID !== '1' && (
+                                                            <>
+                                                                <CardContent style={{ flex: 0.5 }}>
+                                                                    <Typography variant="body2">{row.dtl_eve_id ? row.dtl_eve_id?.agg_sp_dt_eve_poc_id : '-'}</Typography>
+                                                                </CardContent>
+                                                                <CardContent style={{ flex: 1 }}>
+                                                                    <Typography variant="body2">{row.dtl_eve_id ? row.dtl_eve_id?.actual_StartDate_Time : '-'}</Typography>
+                                                                </CardContent>
+                                                            </>
+                                                        )
+                                                    }
                                                     <CardContent style={{ flex: 1 }}>
                                                         <div style={{ display: "flex", }}>
                                                             <Button variant="contained" style={{ textTransform: "capitalize", borderRadius: "8px", marginTop: "10px", background: "#0CD5B8", marginRight: "8px" }} onClick={() => handleOpen(findPreFollowupRecords(row.eve_id))}>Approve</Button>
@@ -548,7 +591,7 @@ const ProfRequest = () => {
                                                                         }}
                                                                     />
                                                                 </div>
-                                                                <Button variant='contained' sx={{ textTransform: "capitalize", mt: "25px", mb:1, ml: 8.5, width: "20ch", borderRadius: "12px" }} onClick={handleRejectSubmit}>Submit</Button>
+                                                                <Button variant='contained' sx={{ textTransform: "capitalize", mt: "25px", mb: 1, ml: 8.5, width: "20ch", borderRadius: "12px" }} onClick={handleRejectSubmit}>Submit</Button>
                                                             </Box>
                                                         </Modal>
                                                         <Snackbar

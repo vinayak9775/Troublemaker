@@ -48,7 +48,7 @@ const Onboarding = ({ value }) => {
 
                     <Box sx={{ bgcolor: "#E9FBF9", borderRadius: "8px", m: '15px', height: "100px" }}>
                         <div style={{ display: "flex" }}>
-                            <img src={onboard} alt="" style={{marginTop: "20px", marginLeft: "10px", height: "50px" }} />
+                            <img src={onboard} alt="" style={{ marginTop: "20px", marginLeft: "10px", height: "50px" }} />
                             <div style={{ marginLeft: "20px", marginTop: "20px" }}>
                                 <Typography variant="subtitle2" sx={{ fontSize: 16, fontWeight: 600, }}>{onboarding.onboarding}</Typography>
                                 <Typography variant="subtitle1">Onboarding</Typography>

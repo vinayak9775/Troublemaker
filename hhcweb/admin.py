@@ -136,7 +136,7 @@ admin.site.register(agg_hhc_sub_services)#34
 admin.site.register(agg_hhc_jobclosure_detail)#35
 #admin.site.register(agg_hhc_jobclosure_detail_datewise_old)#36
 admin.site.register(agg_hhc_job_closure)#37
-admin.site.register(agg_hhc_job_closure_consumption_mapping)#38
+admin.site.register(agg_hhc_job_closure_consumption_mapping)#38                         
 admin.site.register(agg_hhc_assisted_living_schedule)#44
 admin.site.register(agg_hhc_membership_schedule_detail)#45
 admin.site.register(agg_hhc_professional_scheduled)#46
@@ -159,6 +159,7 @@ admin.site.register(agg_hhc_admin_users)#60
 admin.site.register(agg_hhc_admin_users_modules)#61
 admin.site.register(agg_hhc_admin_user_hospital_mapping)#62
 admin.site.register(agg_hhc_assisted_living_booking)#63
+admin.site.register(agg_hhc_attendance)#64
 admin.site.register(agg_hhc_attendance_details)#64
 admin.site.register(agg_hhc_avaya_extensions)#65
 admin.site.register(agg_hhc_bank_details)#66
@@ -232,18 +233,18 @@ admin.site.register(cancelation_charges)
 admin.site.register(sos_details)
 admin.site.register(agg_hhc_event_plan_of_care_history_tracker)
 admin.site.register(agg_hhc_patient_documents)
+admin.site.register(FeedBack_Questions)
 admin.site.register(permission)
 admin.site.register(Permission_module)
 admin.site.register(agg_save_permissions)
-admin.site.register(FeedBack_Questions)
+admin.site.register(agg_Add_inventory)
 admin.site.register(agg_hhc_job_closure_questions)
-admin.site.register(agg_hhc_events_wise_jc_question)
 admin.site.register(qualifications)
 admin.site.register(qualification_specialization)
-admin.site.register(agg_hhc_feedback_media_note)
 admin.site.register(dash_complaint_feedback_counts)
+# admin.site.register(agg_hhc_feedback_media_note)
 admin.site.register(Android_updates)
-admin.site.register(agg_hhc_cashfree_online_payment)
-admin.site.register(agg_hhc_professional_track_payment_details)
 admin.site.register(ems_colleague_login_logout_info)
 admin.site.register(agg_hhc_service_follow_up)
+admin.site.register(HeplFiles)
+admin.site.register(Multiple_utr)

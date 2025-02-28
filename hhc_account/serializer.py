@@ -2,25 +2,24 @@ from rest_framework import serializers
 from hhcweb.models import *
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import datetime, timedelta
+from django.utils import timezone
+
 
 
 class get_ptn_data_seri(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_patients
-        fields = ['agg_sp_pt_id', 'name', 'phone_no']
-
-
+        fields = ['agg_sp_pt_id','name','phone_no']
 class pend_pay_frm_ptn_serializer(serializers.ModelSerializer):
     agg_sp_pt_id = get_ptn_data_seri()
     pending_amt = serializers.SerializerMethodField()
-
     class Meta:
         model = agg_hhc_events
-        fields = ['eve_id', 'event_code', 'caller_id',
-                  'agg_sp_pt_id', 'final_amount', 'pending_amt']
-
+        fields = ['eve_id','event_code','caller_id','agg_sp_pt_id','final_amount','pending_amt']
+    
     def get_pending_amt(self, obj):
         return obj.final_amount
+    
 
 
 class get_srv_prof_data_pppeve(serializers.ModelSerializer):
@@ -69,39 +68,6 @@ class pend_pay_frm_prof_serializer(serializers.ModelSerializer):
 
 
 
-# class get_srv_prof_data_pppeve(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_service_professionals
-#         fields = ['srv_prof_id', 'professional_code',
-#                   'prof_fullname', 'phone_no']
-
-
-# class pend_pay_frm_prof_serializer(serializers.ModelSerializer):
-#     # eve_id = get_eve_pppeve()
-#     srv_prof_id = get_srv_prof_data_pppeve()
-
-#     class Meta:
-#         model = agg_hhc_payment_details
-#         fields = ['pay_dt_id', 'eve_id', 'srv_prof_id', 'Total_cost', 'amount_paid',
-#                   'amount_remaining', 'pay_recived_by', 'date', 'mode', 'overall_status']
-
-
-# class get_eve_pppeve(serializers.ModelSerializer):
-#     pay_dtl = serializers.SerializerMethodField()
-#     class Meta:
-#         model = agg_hhc_events
-#         fields = ['eve_id', 'event_code','pay_dtl']
-    
-#     def get_pay_dtl(self, obj):
-#         get_frm_pay =  agg_hhc_payment_details.objects.filter(eve_id=obj.eve_id,payment_status = 1,mode = 1, status = 1)
-#         print(get_frm_pay,'get_frm_pay')
-#         return pend_pay_frm_prof_serializer(get_frm_pay, many=True)
-
-
-
-
-
-
 
 
 
@@ -109,11 +75,9 @@ class pend_pay_frm_prof_serializer(serializers.ModelSerializer):
 class Day_wise_payment_list_serializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     srv_prof_id = serializers.SerializerMethodField()
-
     class Meta:
         model = agg_hhc_payment_details
-        fields = ['pay_dt_id', 'eve_id', 'patient_name',
-                  'srv_prof_id', 'amount_paid', 'mode']
+        fields = ['pay_dt_id', 'eve_id','patient_name', 'srv_prof_id', 'amount_paid', 'mode']
 
     def get_patient_name(self, obj):
         # event = agg_hhc_events.objects.get(eve_id=obj.eve_id)
@@ -125,10 +89,9 @@ class Day_wise_payment_list_serializer(serializers.ModelSerializer):
         if obj.srv_prof_id:
             name = obj.srv_prof_id.prof_fullname
         else:
-            name = None
+            name = None 
         return name
-
-
+    
 class Service_Wise_Pending_Payment_Serializer(serializers.ModelSerializer):
     service = serializers.SerializerMethodField()
     sub_service = serializers.SerializerMethodField()
@@ -136,13 +99,10 @@ class Service_Wise_Pending_Payment_Serializer(serializers.ModelSerializer):
     paid_amount = serializers.SerializerMethodField()
     discount_in = serializers.SerializerMethodField()
 
-
     class Meta:
         model = agg_hhc_events
         fields = ['eve_id', 'event_code','discount_type','discount_in','discount_value', 'service', 'sub_service',
                   'agg_sp_pt_id', 'final_amount','Total_cost', 'paid_amount']
-        # fields = ['eve_id','event_code', 'service', 'sub_service',
-        #           'agg_sp_pt_id', 'Total_cost', 'paid_amount']
         
     def get_discount_in(self,obj):
         if obj.discount_type == 1:
@@ -155,7 +115,8 @@ class Service_Wise_Pending_Payment_Serializer(serializers.ModelSerializer):
             return "VIP"
         else:
             return "No_discount"
-    
+        
+
     def get_service(self, obj):
         poc = agg_hhc_event_plan_of_care.objects.get(
             eve_id=obj.eve_id, status=1)
@@ -171,14 +132,10 @@ class Service_Wise_Pending_Payment_Serializer(serializers.ModelSerializer):
 
     def get_paid_amount(self, obj):
         return 0
-
-
 def financial_year(date):
     if date.month < 4:
-        # print('A1')
         return f'{date.year-1}-{date.year}'
     else :
-        # print('B1')
         return f'{date.year}-{date.year+1}'
 class payment_detail_serializer(serializers.ModelSerializer):
     Branch = serializers.SerializerMethodField()
@@ -272,6 +229,7 @@ class payment_detail_serializer(serializers.ModelSerializer):
         except:
             return None
 
+
     def get_Bank_or_cash(self, obj):
         return "HDFC BANK C.C A/C - 50200010027418" #its static as per account 
 
@@ -312,94 +270,47 @@ class payment_detail_serializer(serializers.ModelSerializer):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ________________________________ Amit Rasale ________________________________________
 
 # __________ UTR pending_UTR_Payment_Details_serializer ______________________________
-
-# class callers_info_serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_callers
-#         fields = ['caller_id', 'phone', 'caller_fullname']
-
-# class patients_name_serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_patients
-#         fields = ['agg_sp_pt_id', 'name', 'phone_no']
-
-# class eveId_wise_call_serializer(serializers.ModelSerializer):
-#     event_date = serializers.SerializerMethodField()
-#     caller_id = callers_info_serializer()
-#     agg_sp_pt_id = patients_name_serializer()
-#     class Meta:
-#         model = agg_hhc_events
-#         fields = ['eve_id', 'agg_sp_pt_id', 'event_date', 'caller_id', 'agg_sp_pt_id']
-
-#     def get_event_date(self, obj):
-#         if isinstance(obj, dict):
-#             event_date = obj.get('event_date')
-#         else:
-#             event_date = getattr(obj, 'event_date', None)
-#         if event_date:
-#             return event_date.date()
-#         return None        
-
-# class service_name_serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_services
-#         fields = ['srv_id', 'service_title']
-
-# class sub_service_name(serializers.ModelSerializer):
-#     class Meta:
-#         model = agg_hhc_sub_services
-#         fields = ['sub_srv_id', 'recommomded_service']
-
-# class service_subSer_Ester_serilizer(serializers.ModelSerializer):
-#     srv_id = service_name_serializer()
-#     sub_srv_id = sub_service_name()
-#     class Meta:
-#         model = agg_hhc_event_plan_of_care
-#         fields = ['eve_poc_id', 'eve_id', 'start_date', 'end_date', 'srv_id', 'sub_srv_id']
-# class pending_UTR_Payment_Details_serializer(serializers.ModelSerializer):
-#     Payment_mode = serializers.SerializerMethodField()
-#     added_date = serializers.SerializerMethodField()
-#     eve_id = eveId_wise_call_serializer()
-#     ser_subSer_sd_ed = serializers.SerializerMethodField()
-#     class Meta:
-#         model = agg_hhc_payment_details
-#         fields = ['pay_dt_id', 'utr', 'transaction_id', 'Remark', 'added_date', 'Payment_mode', 'eve_id', 'ser_subSer_sd_ed']
-
-
-#     def get_ser_subSer_sd_ed(self, obj):
-#         ser_subSer_sd_ed = agg_hhc_event_plan_of_care.objects.filter(eve_id=obj.eve_id)  # Assuming 'follow_up' is the related_name
-#         serialized_data = service_subSer_Ester_serilizer(ser_subSer_sd_ed, many=True).data
-#         return serialized_data
-
-#     def get_Payment_mode(self, obj):
-#         Payment_mode = {
-#             1: 'Cash',
-#             2: 'Cheque',
-#             3: 'Online',
-#             4: 'Card',
-#             5: 'QR Code',
-#             None:'NULL',
-#         }
-#         if isinstance(obj, dict):
-#             mode = obj.get('mode')
-#         else:
-#             mode = getattr(obj, 'mode', None)
-#         if mode is None:
-#             return 'NULL'
-#         return Payment_mode.get(mode, 'NULL')
-
-#     def get_added_date(self, obj):
-#         if isinstance(obj, dict):
-#             added_date = obj.get('added_date')
-#         else:
-#             added_date = getattr(obj, 'added_date', None)
-#         if added_date:
-#             return added_date.date()
-#         return None
-
 
 class callers_info_serializer(serializers.ModelSerializer):
     class Meta:
@@ -486,6 +397,7 @@ class pending_UTR_Payment_Details_serializer(serializers.ModelSerializer):
             return added_date.strftime('%Y-%m-%d')
         return None
     
+    
 
 class eveId_wise_call_POST_serializer(serializers.ModelSerializer):
     class Meta:
@@ -496,18 +408,17 @@ class pending_UTR_Payment_Details_POST_serializer(serializers.ModelSerializer):
     eve_id = eveId_wise_call_POST_serializer()
     class Meta:
         model = agg_hhc_payment_details
-        fields = ['pay_dt_id', 'eve_id', 'utr', 'mode', 'transaction_id', 'last_modified_by', 'last_modified_date']
+        fields = ['pay_dt_id', 'eve_id', 'utr', 'transaction_id', 'mode', 'last_modified_by', 'last_modified_date']
         extra_kwargs = {
             'pay_dt_id': {'required': False},
             'eve_id': {'required': False},
         }
 
     def update(self, instance, validated_data):
-        validated_data.pop('pay_dt_id', None)  
-        validated_data.pop('eve_id', None)
+        validated_data.pop('pay_dt_id', None)  # Ignore pay_dt_id if it is in the validated data
+        validated_data.pop('eve_id', None)  # Ignore eve_id if it is in the validated data
 
         return super().update(instance, validated_data)
-
 # __________ UTR pending_UTR_Payment_Details_serializer ______________________________
 
 
@@ -515,4 +426,3 @@ class pending_UTR_Payment_Details_POST_serializer(serializers.ModelSerializer):
 
 
 # ________________________________ Amit Rasale ________________________________________
-

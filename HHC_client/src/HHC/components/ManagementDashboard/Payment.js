@@ -251,6 +251,7 @@ const Payment = ({ inprocesscount, inpaymentcount, inpendingcount, value, assign
       if (value === '2') filtered = unassignProf.month;
       if (value === '3') filtered = unassignProf.tilldate;
       setFilteredUnassignProf(filtered || []);
+      console.log(filtered,'ffffffffffffff');
       setPage(0);
     };
     filterUnassignProfEnquiries();

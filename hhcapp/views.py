@@ -11,6 +11,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.utils import timezone
+from django.db.models import Sum
 from django.core.cache import cache
 from . serializer import *
 from hhc_professional_app.views import get_prof
@@ -18,9 +19,8 @@ from hhc_professional_app.renders import UserRenderer
 from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 from django.db.models import Q
+from django.http import JsonResponse
 import http
-
-
 
 ##################################################### Whatsapp otp function ##################################
 
@@ -76,6 +76,8 @@ def whatsapp_sms(to_number,template_name,placeholders):
 ################################################ Whatsapp otp function Ends  ##############################################
 
 
+
+
 def cancellation_charges(event_id):
     try:
         event_plan_care_data=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=event_id,status=1)
@@ -90,6 +92,7 @@ def cancellation_charges(event_id):
             return 200
     except:
         return 0
+
 
 
 def send_otp(mobile,msg):
@@ -241,10 +244,10 @@ class add_multiple_address_api(APIView):
     #         callers_record=webmodels.agg_hhc_app_add_address.objects.filter(caller_id=caller_id,status=1)
     #         print(callers_record)
     #         for i in callers_record:
-    #             print(i)
     #             all_address={'address_id':i.address_id,'address':i.address,'pincode':i.pincode,'locality':i.locality,'google_address':i.google_address,'zone':i.prof_zone_id.Name,'state':i.state_id.state_name,'city':i.city_id.city_name}
     #             address_list.append(all_address)
     #         return Response({'address_list':address_list})
+        
     
     def get(self, request):
         address_list = []
@@ -266,7 +269,6 @@ class add_multiple_address_api(APIView):
             }
             address_list.append(all_address)
         return Response({'address_list': address_list})
-
 
 ################################################_______get patients record from caller id____###############    
 class agg_hhc_app_patient_by_caller_api(APIView):
@@ -573,98 +575,7 @@ def calculate_days(start_date,end_date):
         return message
     day = (end_date - start_date).days
     day+=1
-    return day 
-
-
-
-class create_service(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def post(self,request):
-        try:
-            request.data['added_by']=get_prof(request)[1]
-            # caller=get_prof(request)[2]
-            #-----------------------------------------if caller is selecting self option----start----------------------
-            if(request.data.get('agg_sp_pt_id')==0):
-                caller=webmodels.agg_hhc_callers.objects.get(caller_id=request.data.get('caller_id'))
-                print("this is enum",caller.service_taken)
-                if caller.service_taken==1:
-                    return Response({'message':'select name from list'})
-                else:
-
-                    patient=webmodels.agg_hhc_patients.objects.create()
-                    patient.save()
-                    print(patient.agg_sp_pt_id)
-                    request.data["caller_id"]=request.data.get('caller_id')
-                    request.data["name"]=caller.caller_fullname
-                    request.data["state_id"]=caller.state.state_id
-                    request.data["city_id"]=caller.city.city_id
-                    request.data["address"]=caller.Address
-                    request.data["pincode"]=caller.pincode
-                    patient_serializer=agg_hhc_patient_serializer(patient,data=request.data)
-                    if(patient_serializer.is_valid()):
-                        # patient_serializer.validated_data['phone_no']=int(caller.phone)
-                        print("record is saved in data")
-                        patient_serializer.save()
-                        print("data not getting")
-                    print("caller",patient_serializer.data)
-                    patient.name=caller.caller_fullname
-                    patient.Age=caller.Age
-                    patient.gender_id=caller.gender
-                    patient.patient_email_id=caller.email
-                    patient.phone_no=caller.phone
-                    patient.save()
-                    ("workoing on api",patient.caller_id)
-                    request.data['agg_sp_pt_id']=patient.agg_sp_pt_id
-                    caller.service_taken=1
-                    caller.save()
-            #-----------------------------------------if caller is selecting self option----end----------------------
-
-            total_days=calculate_days(request.data.get("start_date"),request.data.get("end_date"))
-            #---------------get address from agg_hhc_app_add_address table and save it to agg_hhc_patient table---- start---
-            addres=webmodels.agg_hhc_app_add_address.objects.get(address_id=request.data.get('address_id'))
-            patient=webmodels.agg_hhc_patients.objects.get(agg_sp_pt_id=request.data.get("agg_sp_pt_id"))
-            patient.address=addres.address
-            patient.google_address=addres.google_address
-            patient.city_id=addres.city_id
-            patient.state_id=addres.state_id
-            patient.prof_zone_id=addres.prof_zone_id
-            patient.pincode=addres.pincode
-            patient.save()
-            #---------------get address from agg_hhc_app_add_address table and save it to agg_hhc_patient table---- end---
-            if(total_days is False):
-                return Response({'error':"select right date"})
-            event_data=agg_hhc_event_serializer(data=request.data)
-            if(event_data.is_valid()):
-                a=event_data.save()
-            else:
-                return Response({'error':event_data.errors}, status=status.HTTP_400_BAD_REQUEST)
-            request.data['eve_id']=a.eve_id
-            event_plan_of_care_data=agg_hhc_event_plan_of_care_serializer(data=request.data)
-            if(event_plan_of_care_data.is_valid()):
-                epc_id=event_plan_of_care_data.save()
-            else:
-                return Response({'error':event_data.errors}, status=status.HTTP_400_BAD_REQUEST)
-            request.data['eve_poc_id']=epc_id.eve_poc_id
-            #___________________working or detail event plan _of care
-            request.data['actual_StartDate_Time']=datetime.strptime(str(request.data.get("start_date")), '%Y-%m-%d').date()
-            request.data['actual_EndDate_Time']=datetime.strptime(str(request.data.get("start_date")), '%Y-%m-%d').date()
-            print("this is total days",total_days)
-            for i in range(int(total_days)):
-                request.data['index_of_Session']=i+1
-                request.data['Reason_for_no_serivce']=1
-                detail=detail_event_plan_of_care_serializer(data=request.data)
-                if (detail.is_valid()):
-                    detail.save()
-                    request.data['actual_StartDate_Time']=datetime.strptime(str(request.data.get("actual_StartDate_Time")), '%Y-%m-%d').date()+timedelta(days=1)
-                    request.data['actual_EndDate_Time']=datetime.strptime(str(request.data.get("actual_EndDate_Time")), '%Y-%m-%d').date()+timedelta(days=1)
-            patient_doc_seri=patient_document_serializer(data=request.data)
-            if(patient_doc_seri.is_valid()):
-                patient_doc_seri.save()
-            return Response({"message":"Service created","eve_id":a.eve_id})
-        except Exception as e:
-            return Response({'message':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+    return day     
 
 class completed_services(APIView):
     renderer_classes = [UserRenderer]
@@ -674,6 +585,7 @@ class completed_services(APIView):
         # caller=1
         completed_list=[]
         record=webmodels.agg_hhc_events.objects.filter(caller_id=caller,event_status=3,status=1)
+        print("events",record)
         for i in record:
             event_p_c=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
             event_p_c_serializer=agg_hhc_event_plan_of_care_serializer(event_p_c)
@@ -681,7 +593,6 @@ class completed_services(APIView):
             sub_service_name=webmodels.agg_hhc_sub_services.objects.get(sub_srv_id=event_p_c_serializer.data.get("sub_srv_id")).recommomded_service
             patient=webmodels.agg_hhc_events.objects.get(eve_id=i.eve_id).agg_sp_pt_id
             payment_details=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS")
-
             todays_date=timezone.now().date()
             detail_event_p_c=None
             event_start_date=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first().actual_StartDate_Time
@@ -737,33 +648,39 @@ class active_services(APIView):
         completed_list=[]
         event=webmodels.agg_hhc_events.objects.filter(caller_id=caller,status=1,event_status=2)
         for i in event:
-            event_p_c=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
-            event_p_c_serializer=agg_hhc_event_plan_of_care_serializer(event_p_c)
-            services_name=webmodels.agg_hhc_services.objects.get(srv_id=event_p_c_serializer.data.get("srv_id")).service_title
-            sub_service_name=webmodels.agg_hhc_sub_services.objects.get(sub_srv_id=event_p_c_serializer.data.get("sub_srv_id")).recommomded_service
-            patient=webmodels.agg_hhc_events.objects.get(eve_id=i.eve_id).agg_sp_pt_id
-            payment_details=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS")
-            paid_amount=0
-            for j in payment_details:
-                paid_amount+=int(j.amount_paid)
-            todays_date=timezone.now().date()
-            print("todays date is ",todays_date)
-            detail_event_p_c=None
-            event_start_date=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first().actual_StartDate_Time
-            event_end_date=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last().actual_StartDate_Time
-            if(event_start_date>todays_date):
-                detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first().srv_prof_id
-                detail_event_p_c=detail_event_p_c.prof_fullname
-            elif(event_end_date<todays_date):
-                detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last().srv_prof_id
-                detail_event_p_c=detail_event_p_c.prof_fullname
-            else:
-                detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=todays_date,eve_id=i.eve_id,status=1).last().srv_prof_id
-                detail_event_p_c=detail_event_p_c.prof_fullname
-            patient_address=webmodels.agg_hhc_events.objects.get(eve_id=i.eve_id).agg_sp_pt_id
-            patient_address=patient_address.address
-            record={"services_name":services_name,"sub_service_name":sub_service_name,"patient_name":patient.name,"start_date":event_p_c_serializer.data.get("start_date"),"start_time":event_p_c_serializer.data.get("start_time"),"end time":event_p_c_serializer.data.get("end_time"),"paid_amount":paid_amount,"professional_name":detail_event_p_c,"patient_address":patient_address,"eve_id":i.eve_id}
-            completed_list.append(record)
+            try:
+                event_p_c=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
+                event_p_c_serializer=agg_hhc_event_plan_of_care_serializer(event_p_c)
+                services_name=webmodels.agg_hhc_services.objects.get(srv_id=event_p_c_serializer.data.get("srv_id")).service_title
+                sub_service_name=webmodels.agg_hhc_sub_services.objects.get(sub_srv_id=event_p_c_serializer.data.get("sub_srv_id")).recommomded_service
+                patient=webmodels.agg_hhc_events.objects.get(eve_id=i.eve_id).agg_sp_pt_id
+                payment_details=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS")
+                paid_amount=0
+                for j in payment_details:
+                    try:
+                        paid_amount+=int(j.amount_paid)
+                    except Exception as e:
+                        paid_amount+=0
+                todays_date=timezone.now().date()
+                print("todays date is ",todays_date)
+                detail_event_p_c=None
+                event_start_date=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first().actual_StartDate_Time
+                event_end_date=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last().actual_StartDate_Time
+                if(event_start_date>todays_date):
+                    detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).first().srv_prof_id
+                    detail_event_p_c=detail_event_p_c.prof_fullname
+                elif(event_end_date<todays_date):
+                    detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).last().srv_prof_id
+                    detail_event_p_c=detail_event_p_c.prof_fullname
+                else:
+                    detail_event_p_c=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time=todays_date,eve_id=i.eve_id,status=1).last().srv_prof_id
+                    detail_event_p_c=detail_event_p_c.prof_fullname
+                patient_address=webmodels.agg_hhc_events.objects.get(eve_id=i.eve_id).agg_sp_pt_id
+                patient_address=patient_address.address
+                record={"services_name":services_name,"sub_service_name":sub_service_name,"patient_name":patient.name,"start_date":event_p_c_serializer.data.get("start_date"),"start_time":event_p_c_serializer.data.get("start_time"),"end time":event_p_c_serializer.data.get("end_time"),"paid_amount":paid_amount,"professional_name":detail_event_p_c,"patient_address":patient_address,"eve_id":i.eve_id}
+                completed_list.append(record)
+            except Exception as e:
+                print(e)
         return Response({'data':completed_list})
 
 
@@ -796,10 +713,7 @@ class can_services(APIView):
                     paid_amount=0
                     print("payment")
                     for j in payment_details:
-                        try:
-                            paid_amount+=int(j.amount_paid)
-                        except Exception as e:
-                            paid_amount+=0
+                        paid_amount+=int(j.amount_paid)
                     print("payment 2")
                     todays_date=timezone.now().date()
                     print("payment 3",i.eve_id)
@@ -828,6 +742,7 @@ class can_services(APIView):
         except Exception as e:
             return Response({"data":str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class agg_hhc_consultant_api_android(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -842,11 +757,6 @@ class agg_hhc_consultant_api_android(APIView):
         consultants=[other]+list(consultantSerializer.data)
 
         return Response(consultants)
-    
-
-
-
-
 
 
 class create_service_new(APIView):
@@ -906,7 +816,8 @@ class create_service_new(APIView):
             #---------------get address from agg_hhc_app_add_address table and save it to agg_hhc_patient table---- end---
             if(total_days is False):
                 return Response({'error':"select right dates"})
-            event_data=webmodels.agg_hhc_events.objects.create(agg_sp_pt_id=patient,caller_id=caller,Suffered_from=a['Suffered_from'][0],address_id=addres,purp_call_id=int(a['purp_call_id'][0]),enquiry_status=1,Total_cost=int(a['Total_cost'][0]),final_amount=int(a['final_amount'][0]),enq_spero_srv_status=int(a['enq_spero_srv_status'][0]),event_status=int(a['event_status'][0]),refer_by=int(a['refer_by'][0]),patient_service_status=int(a['patient_service_status'][0]))
+            remark = a['extra_remark'] if a['extra_remark'] else None
+            event_data=webmodels.agg_hhc_events.objects.create(agg_sp_pt_id=patient,caller_id=caller,Suffered_from=a['Suffered_from'][0],address_id=addres,purp_call_id=int(a['purp_call_id'][0]),enquiry_status=1,Total_cost=int(a['Total_cost'][0]),final_amount=int(a['final_amount'][0]),enq_spero_srv_status=int(a['enq_spero_srv_status'][0]),event_status=int(a['event_status'][0]),refer_by=int(a['refer_by'][0]),patient_service_status=int(a['patient_service_status'][0]), note=remark)
             event_data.save()
             # request.data['eve_id']=a.eve_id
             service=webmodels.agg_hhc_services.objects.get(srv_id=request.data.get("srv_id"))
@@ -921,12 +832,15 @@ class create_service_new(APIView):
                 dates.append(current_date.strftime('%Y-%m-%d'))
                 current_date += timedelta(days=1)
 #--------------------------------------------------------convert date into date list end-----------------------------
+            hsp = a['hosp_id'] if a['hosp_id'] else None
+            hsp=webmodels.agg_hhc_hospitals.objects.filter(hosp_id=hsp).first()
+            
             if int(a['doct_cons_id'][0])==0:
-                event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.create(eve_id=event_data,srv_id=service,sub_srv_id=sub_service,start_date=request.data.get("start_date"),end_date=request.data.get("end_date"),start_time=request.data.get("start_time"),end_time=request.data.get("end_time"),initail_final_amount=request.data.get("initail_final_amount"),serivce_dates=dates)
+                event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.create(eve_id=event_data,srv_id=service,sub_srv_id=sub_service,start_date=request.data.get("start_date"),end_date=request.data.get("end_date"),start_time=request.data.get("start_time"),end_time=request.data.get("end_time"),initail_final_amount=request.data.get("initail_final_amount"),serivce_dates=dates, hosp_id=hsp)
                 event_plan_of_care.save()
             else:
                 doctor=webmodels.agg_hhc_doctors_consultants.objects.get(doct_cons_id=request.data.get("doct_cons_id"))
-                event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.create(eve_id=event_data,srv_id=service,sub_srv_id=sub_service,doct_cons_id=doctor,start_date=request.data.get("start_date"),end_date=request.data.get("end_date"),start_time=request.data.get("start_time"),end_time=request.data.get("end_time"),initail_final_amount=request.data.get("initail_final_amount"),serivce_dates=dates)
+                event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.create(eve_id=event_data,srv_id=service,sub_srv_id=sub_service,doct_cons_id=doctor,start_date=request.data.get("start_date"),end_date=request.data.get("end_date"),start_time=request.data.get("start_time"),end_time=request.data.get("end_time"),initail_final_amount=request.data.get("initail_final_amount"),serivce_dates=dates, hosp_id=hsp)
                 event_plan_of_care.save()
             print("createdd event plan of care")
             agg_hhc_enquiry_follow_up=webmodels.agg_hhc_enquiry_follow_up.objects.create(event_id=event_data,follow_up=4)
@@ -967,97 +881,6 @@ class create_service_new(APIView):
             return Response({'message':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-# class payment_completed(APIView):
-#     renderer_classes = [UserRenderer]
-#     permission_classes = [IsAuthenticated]
-#     def get(self,request):
-#         caller=get_prof(request)[2]
-#         completed_payment_list=[]
-#         incompleted_payment_list=[]
-#         professional_list=[]
-#         professional=[]
-#         professional_amount={}
-#         try:
-#             events=webmodels.agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),Q(enq_spero_srv_status=1)|Q(enq_spero_srv_status=2),caller_id=caller,status=1)
-#             for i in events:
-#                 eve_id=i.eve_id
-#                 Total_amount=int(i.Total_cost)
-#                 Final_amount=int(i.final_amount)
-#                 discount_type=i.discount_type
-#             #_________________________________________________discount type and given discount start__________________
-#                 if(i.discount_type==1 or 2):
-#                     discount_value=i.discount_value
-#                 else:
-#                     discount_value=None
-#             #_________________________________________________discount type and given discount end__________________
-#                 payment_date=None
-#                 Tran_number=None
-#                 detaile_event_plan_of_care=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1)
-#                 total_detaile_eve=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).count()
-#                 per_prof_amount=Final_amount//total_detaile_eve
-
-#                 conveniance_charges=0
-#                 sessions=0
-#                 for j in detaile_event_plan_of_care:
-#                     if j.srv_prof_id !=None:
-#                         print("in\t")
-#                         if(str(j.srv_prof_id.prof_fullname) in professional_list):
-#                             print("n0")
-#                         else:
-#                             print("in else")
-#                             total_services=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,srv_prof_id=j.srv_prof_id,status=1).count()
-#                             if j.is_convinance==True:
-#                                 con=j.convinance_charges*total_services
-#                                 amount=abs((per_prof_amount*total_services)-con)
-#                             else:
-#                                 amount=per_prof_amount*total_services
-#                             professional_amount['service_amount']=per_prof_amount
-#                             professional_list.append(str(j.srv_prof_id.prof_fullname))
-#                             prof={'professional_name':str(j.srv_prof_id.prof_fullname),'sessions':int(total_services),'amount':amount}
-#                             professional.append(prof)
-#                     try:
-#                         sessions+=1
-#                         conveniance_charges=int(j.convinance_charges+conveniance_charges)
-#                     except:
-#                         conveniance_charges=conveniance_charges
-#                 payments=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS").last()
-#                 if payments:
-#                     print("paid")
-#                     amount_paid=int(payments.amount_paid)
-#                     amount_remaining=int(payments.amount_remaining)
-#                     payment_mode=payments.mode
-#                     payment_date=str(payments.added_date)
-#                 else:
-#                     amount_paid=0
-#                     amount_remaining=int(i.final_amount)
-#                     payment_mode=None
-#                 patient_name=i.agg_sp_pt_id.name
-#                 patient_number=i.agg_sp_pt_id.phone_no
-#                 patient_address=i.agg_sp_pt_id.address
-#                 print("finding event ",i.eve_id)
-#                 event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
-#                 print("event_plan_of_care.start_date")
-#                 event_date=event_plan_of_care.start_date
-#                 service_name=event_plan_of_care.srv_id.service_title
-#                 sub_service_name=event_plan_of_care.sub_srv_id.recommomded_service
-#                 print("service_professional_list",professional_list)
-#                 print("professional",professional_amount)
-#                 if(amount_remaining<=0):
-#                     print("here",i.eve_id)
-#                     payment_details={'Total_amount':Total_amount,'Final_amount':Final_amount,'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':patient_name,'service_name':service_name,'sub_service_name':sub_service_name,'Tran_number':Tran_number,'eve_id':eve_id,'event_code':i.event_code,'event_date':str(event_date),'patient_number':patient_number,'conveniance_charges':conveniance_charges,'sessions':sessions,'patient_address':patient_address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}
-#                     completed_payment_list.append(payment_details)
-#                 else:
-#                     payment_details={'Total_amount':Total_amount,'Final_amount':Final_amount,'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':patient_name,'service_name':service_name,'sub_service_name':sub_service_name,'Tran_number':Tran_number,'eve_id':eve_id,'event_code':i.event_code,'event_date':str(event_date),'patient_number':patient_number,'conveniance_charges':conveniance_charges,'sessions':sessions,'patient_address':patient_address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}   
-#                     incompleted_payment_list.append(payment_details)
-#             return Response({'data':{"completed_payment_list":completed_payment_list,"incompleted_payment_list":incompleted_payment_list}})
-#         except Exception as e:
-#             return Response({"data":str(e)})
-
-
-
-
-
 class payment_completed(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1070,6 +893,8 @@ class payment_completed(APIView):
         try:
             events=webmodels.agg_hhc_events.objects.filter(Q(event_status=2) | Q(event_status=3),Q(enq_spero_srv_status=1)|Q(enq_spero_srv_status=2),caller_id=caller,status=1)
             for i in events:
+                professional=None
+                professional=[]
                 professional_amount={}
                 try:
                     discount_type=i.discount_type
@@ -1086,56 +911,59 @@ class payment_completed(APIView):
                 detaile_event_plan_of_care=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).order_by('actual_StartDate_Time')
                 # total_detaile_eve=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,status=1).count()
                 # per_prof_amount=Final_amount//total_detaile_eve
-                per_prof_amount= int(detaile_event_plan_of_care.last().eve_poc_id.sub_srv_id.cost)
+                try:
+                    per_prof_amount= int(detaile_event_plan_of_care.last().eve_poc_id.sub_srv_id.cost)
+                    print(per_prof_amount,'per_prof_amount')
 
-                conveniance_charges=0
-                sessions=0
-                for j in detaile_event_plan_of_care:
-                    if j.srv_prof_id !=None:
-                        print("in\t")
-                        if(str(j.srv_prof_id.prof_fullname) in professional_list):
-                            pass
-                        else:
-                            print("in else")
-                            total_services=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,srv_prof_id=j.srv_prof_id,status=1).count()
-                            if j.is_convinance==True:
-                                con=j.convinance_charges*total_services
-                                # amount=abs((per_prof_amount*total_services)-con)
-                                amount=per_prof_amount*total_services#+con
+                    conveniance_charges=0
+                    sessions=0
+                    for j in detaile_event_plan_of_care:
+                        if j.srv_prof_id !=None:
+                            print("in\t")
+                            if(str(j.srv_prof_id.prof_fullname) in professional_list):
+                                pass
                             else:
-                                amount=per_prof_amount*total_services
-                            professional_amount['service_amount']=per_prof_amount
-                            professional_list.append(str(j.srv_prof_id.prof_fullname))
-                            prof={'professional_name':str(j.srv_prof_id.prof_fullname),'sessions':int(total_services),'amount':amount}
-                            professional.append(prof)
-                    try:
-                        sessions+=1
-                        conveniance_charges=int(j.convinance_charges+conveniance_charges)
-                    except:
-                        conveniance_charges=conveniance_charges
-                payments=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS").last()
-                if payments:
-                    print("paid")
-                    amount_paid=int(payments.amount_paid)
-                    amount_remaining=int(payments.amount_remaining)
-                    payment_mode=payments.mode
-                    payment_date=str(payments.added_date)
-                else:
-                    amount_paid=0
-                    amount_remaining=int(i.final_amount)
-                    payment_mode=None
-                event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
-                if(amount_remaining<=0):
-                    print("here",i.eve_id)
-                    payment_details={'Total_amount':int(i.Total_cost),'Final_amount':int(i.final_amount),'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':i.agg_sp_pt_id.name,'service_name':event_plan_of_care.srv_id.service_title,'sub_service_name':event_plan_of_care.sub_srv_id.recommomded_service,'Tran_number':Tran_number,'eve_id':i.eve_id,'event_code':i.event_code,'event_date':str(event_plan_of_care.start_date),'patient_number':i.agg_sp_pt_id.phone_no,'conveniance_charges':conveniance_charges,'sessions':detaile_event_plan_of_care.count(),'patient_address':i.agg_sp_pt_id.address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}
-                    completed_payment_list.append(payment_details)
-                else:
-                    payment_details={'Total_amount':int(i.Total_cost),'Final_amount':int(i.final_amount),'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':i.agg_sp_pt_id.name,'service_name':event_plan_of_care.srv_id.service_title,'sub_service_name':event_plan_of_care.sub_srv_id.recommomded_service,'Tran_number':Tran_number,'eve_id':i.eve_id,'event_code':i.event_code,'event_date':str(event_plan_of_care.start_date),'patient_number':i.agg_sp_pt_id.phone_no,'conveniance_charges':conveniance_charges,'sessions':detaile_event_plan_of_care.count(),'patient_address':i.agg_sp_pt_id.address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}   
-                    incompleted_payment_list.append(payment_details)
+                                print("in else")
+                                total_services=webmodels.agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=i.eve_id,srv_prof_id=j.srv_prof_id,status=1).count()
+                                if j.is_convinance==True:
+                                    con=j.convinance_charges*total_services
+                                    # amount=abs((per_prof_amount*total_services)-con)
+                                    amount=per_prof_amount*total_services#+con
+                                else:
+                                    amount=per_prof_amount*total_services
+                                professional_amount['service_amount']=per_prof_amount
+                                professional_list.append(str(j.srv_prof_id.prof_fullname))
+                                prof={'professional_name':str(j.srv_prof_id.prof_fullname),'sessions':int(total_services),'amount':amount}
+                                professional.append(prof)
+                        try:
+                            sessions+=1
+                            conveniance_charges=int(j.convinance_charges+conveniance_charges)
+                        except:
+                            conveniance_charges=conveniance_charges
+                    payments=webmodels.agg_hhc_payment_details.objects.filter(eve_id=i.eve_id,status=1,overall_status="SUCCESS").last()
+                    if payments:
+                        print("paid")
+                        amount_paid=int(payments.amount_paid)
+                        amount_remaining=int(payments.amount_remaining)
+                        payment_mode=payments.mode
+                        payment_date=str(payments.added_date)
+                    else:
+                        amount_paid=0
+                        amount_remaining=int(i.final_amount)
+                        payment_mode=None
+                    event_plan_of_care=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
+                    if(amount_remaining<=0):
+                        print("here",i.eve_id)
+                        payment_details={'Total_amount':int(i.Total_cost),'Final_amount':int(i.final_amount),'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':i.agg_sp_pt_id.name,'service_name':event_plan_of_care.srv_id.service_title,'sub_service_name':event_plan_of_care.sub_srv_id.recommomded_service,'Tran_number':Tran_number,'eve_id':i.eve_id,'event_code':i.event_code,'event_date':str(event_plan_of_care.start_date),'patient_number':i.agg_sp_pt_id.phone_no,'conveniance_charges':conveniance_charges,'sessions':detaile_event_plan_of_care.count(),'patient_address':i.agg_sp_pt_id.address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}
+                        completed_payment_list.append(payment_details)
+                    else:
+                        payment_details={'Total_amount':int(i.Total_cost),'Final_amount':int(i.final_amount),'payment_date':payment_date,'payment_mode':payment_mode,'amount_paid':amount_paid,'patient_name':i.agg_sp_pt_id.name,'service_name':event_plan_of_care.srv_id.service_title,'sub_service_name':event_plan_of_care.sub_srv_id.recommomded_service,'Tran_number':Tran_number,'eve_id':i.eve_id,'event_code':i.event_code,'event_date':str(event_plan_of_care.start_date),'patient_number':i.agg_sp_pt_id.phone_no,'conveniance_charges':conveniance_charges,'sessions':detaile_event_plan_of_care.count(),'patient_address':i.agg_sp_pt_id.address,'amount_remaining':amount_remaining,'professional_amount':professional,'discount_value':discount_value,'discount_type':discount_type}#,'professional':professional}   
+                        incompleted_payment_list.append(payment_details)
+                except:
+                    pass
             return Response({'data':{"completed_payment_list":completed_payment_list,"incompleted_payment_list":incompleted_payment_list}})
         except Exception as e:
             return Response({"data":str(e)})
-
 
 
 
@@ -1357,7 +1185,7 @@ def create_cf_token(request):
     event_id=webmodels.agg_hhc_events.objects.get(eve_id=eve_id)
     if cf_token is not None:
         # Save CF token in your database
-        payment_record = webmodels.agg_hhc_cashfree_online_payment.objects.create(
+        payment_record = webmodels.agg_hhc_payment_details.objects.create(
             order_id=order_id,
             cf_token=cf_token,
             amount_paid=amount,
@@ -1370,6 +1198,7 @@ def create_cf_token(request):
             customer_phone=phone_no,
             eve_id=event_id,
             mode=mode,
+            
         )
 
         data = {
@@ -1405,7 +1234,6 @@ class professional_details(APIView):
             return Response({'data':data})
         except Exception as e:
             return Response({'data':str(e)})
-
         
 class feedback(APIView):
     renderer_classes = [UserRenderer]
@@ -1463,24 +1291,39 @@ class feedback(APIView):
             return Response({"message":str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class feedback_status(APIView):
+# class feedback_status(APIView):# api updated as per new requirements
+#     renderer_classes = [UserRenderer]
+#     permission_classes = [IsAuthenticated]
+#     def get(self,request):
+#         caller=get_prof(request)[2]
+#         try:
+#             data=webmodels.agg_hhc_events.objects.filter(status=1,event_status=3,caller_id=caller)
+#             for i in data:
+#                 feedback=webmodels.agg_hhc_feedback_media_note.objects.filter(eve_id=i.eve_id,feedback_by=2).last()
+#                 if feedback:
+#                     feedback=True
+#                 else:
+#                     feedback=False
+#                     return Response({'feedback':{'event_id':i.eve_id,'feedback':feedback}})
+#             return Response({'feedback':None})
+#         except Exception as e:
+#             return Response({'feedback':str(e)})
+        
+class feedback_status(APIView):# api updated as per new requirements
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def get(self,request):
         caller=get_prof(request)[2]
         try:
-            data=webmodels.agg_hhc_events.objects.filter(status=1,event_status=3,caller_id=caller)
-            for i in data:
-                feedback=webmodels.agg_hhc_Professional_app_feedback.objects.filter(eve_id=i.eve_id,feedback_by=2).last()
-                if feedback:
-                    feedback=True
-                else:
-                    feedback=False
-                    return Response({'feedback':{'event_id':i.eve_id,'feedback':feedback}})
+            data=webmodels.agg_hhc_events.objects.filter(status=1,event_status=3,caller_id=caller,patient_feedback_status=1).last()
+            if data:
+                feedback=True
+            else:
+                feedback=False
+                return Response({'feedback':{'event_id':data.eve_id,'feedback':feedback}})
             return Response({'feedback':None})
         except Exception as e:
             return Response({'feedback':str(e)})
-    
         
 
 class cancellation_charges_for_all_app(APIView):
@@ -1499,10 +1342,9 @@ class cancellation_charges_for_all_app(APIView):
 
 
 
+
 #update check#
 class update_check(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
     def get(self,request,device_type,version_number,build_number,App):
         if device_type==1:
             and_latest_version=webmodels.Android_updates.objects.filter(device=1,Application=App).last()
@@ -1512,6 +1354,7 @@ class update_check(APIView):
                 update_status=True
         elif  device_type==2:
             ios_latest_version=webmodels.Android_updates.objects.filter(device=2,Application=App).last()
+            print(version_number==ios_latest_version.version)
             if version_number==ios_latest_version.version and ios_latest_version.Build_number==build_number:
                 update_status=False
             else:
@@ -1525,21 +1368,35 @@ class change(APIView):
     def get(self,request):
         events=webmodels.agg_hhc_events.objects.filter(Q(enq_spero_srv_status=1)|Q(enq_spero_srv_status=2),status=1)
         unwanted=[]
-        added_list=[]
         for i in events:
             if(i.agg_sp_pt_id.preferred_hosp_id!=None):
                 try:
-                    a=i.agg_sp_pt_id.preferred_hosp_id
-                    print(a.hosp_id)
-                    hospital=webmodels.agg_hhc_hospitals.objects.get(hosp_id=a.hosp_id)
+                    hospital=webmodels.agg_hhc_hospitals.objects.get(hosp_id=i.agg_sp_pt_id.preferred_hosp_id)
                     event_plan=webmodels.agg_hhc_event_plan_of_care.objects.get(eve_id=i.eve_id)
                     event_plan.hosp_id=hospital
-                    print("hi")
                     event_plan.save()
-                    print("done id ")
-                    added_list.append(i.eve_id)
                 except:
                     unwanted.append(i.eve_id)
         print("event id is ",unwanted)
-        print("events are ",added_list)
         return Response({'done':'done message'})
+    
+class wallet(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(myobj,request,wid,phone=None):
+        try:
+            if wid==1 or 2:
+                try:
+                    caller=webmodels.agg_hhc_callers.objects.get(phone=phone).caller_id
+                except Exception as e:
+                    return Response({'error':'New User'})
+            else:                
+                try:
+                    caller=get_prof(request)[2]
+                except Exception as e:
+                    return Response({'error':str(e)})
+            # wallet_data=webmodels.agg_hhc_wallet.objects.filter(status=1,Amount_status=2).values_list('Amount_remain')
+            total_amount_remain = webmodels.agg_hhc_wallet.objects.filter(status=1, Amount_status=2,caller_id=caller).aggregate(Sum('wallet_Amount'))['wallet_Amount__sum']
+            return Response({'Amount in wallet is ':total_amount_remain})
+        except Exception as e:
+            return Response({'error':str(e)})

@@ -231,7 +231,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
         <Box
             sx={{
                 width: '100%', typography: 'body1', mt: 2,
-                height: "28rem",
+                height: "30rem",
                 overflowY: "scroll",
                 overflowX: "hidden",
                 scrollbarWidth: 'thin',
@@ -287,7 +287,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     </TextField> */}
                 </Grid>
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         id="mode_id"
                         name="mode_id"
@@ -314,7 +314,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
 
                 {selectedPayMode === 2 && (
                     <>
-                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Cheque no"
@@ -332,7 +332,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                                 helperText={errors.chequeNo}
                             />
                         </Grid>
-                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Cheque date"
@@ -354,7 +354,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                                 helperText={errors.chequeDate}
                             />
                         </Grid>
-                        {/* <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        {/* <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Upload cheque"
@@ -376,7 +376,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                                 helperText={errors.chequeImg}
                             />
                         </Grid> */}
-                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Bank Name"
@@ -402,7 +402,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
 
                 {selectedPayMode === 4 && (
                     <>
-                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Card Number"
@@ -420,7 +420,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                                 helperText={errors.cardNo}
                             />
                         </Grid>
-                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                        <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                             <TextField
                                 required
                                 label="Transaction Number"
@@ -442,7 +442,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                 )}
 
                 {(selectedPayMode === 5 || selectedPayMode === 6) && (
-                    <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                    <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                         <TextField
                             required
                             label="Transaction ID"
@@ -462,7 +462,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     </Grid>
                 )}
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         id="Total_Amount"
                         label="Total Payable"
@@ -479,7 +479,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     />
                 </Grid>
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         id="name"
                         name="name"
@@ -496,7 +496,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     />
                 </Grid>
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         required
                         id="amount_paid"
@@ -517,7 +517,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     />
                 </Grid>
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         id="utr"
                         name="utr"
@@ -534,7 +534,7 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                     />
                 </Grid>
 
-                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "5px" }}>
                     <TextField
                         required
                         id="remark"
@@ -566,7 +566,6 @@ const RecvdPayment = ({ eveID, ptnData, payAmt, sesCount }) => {
                         <Alert
                             variant="filled"
                             onClose={handleSnackbarClose}
-                            // severity="success"
                             severity={snackbarSeverity}
                             sx={{ width: '100%', ml: 2 }}
                         >

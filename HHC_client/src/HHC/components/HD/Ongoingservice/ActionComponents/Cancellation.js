@@ -189,12 +189,12 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
 
     const formatDate = (dateString) => {
         const dateTime = new Date(dateString);
-        const day = dateTime.getDate().toString().padStart(2, '0'); // Get day with leading zero
-        const month = (dateTime.getMonth() + 1).toString().padStart(2, '0'); // Get month with leading zero
+        const day = dateTime.getDate().toString().padStart(2, '0');
+        const month = (dateTime.getMonth() + 1).toString().padStart(2, '0');
         const year = dateTime.getFullYear();
-        const hours = dateTime.getHours() % 12 || 12; // Get hours in 12-hour format
-        const minutes = dateTime.getMinutes().toString().padStart(2, '0'); // Get minutes with leading zero
-        const ampm = dateTime.getHours() >= 12 ? 'PM' : 'AM'; // Determine AM or PM
+        const hours = dateTime.getHours() % 12 || 12;
+        const minutes = dateTime.getMinutes().toString().padStart(2, '0');
+        const ampm = dateTime.getHours() >= 12 ? 'PM' : 'AM';
 
         return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
     };
@@ -204,12 +204,19 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
     async function handleCancelService(event) {
         event.preventDefault();
         const hasEmptyFields = handleEmptyFieldService();
+
         if (hasEmptyFields) {
             setOpenSnackbar(true);
             setSnackbarMessage('Please fill all required details.');
             setSnackbarSeverity('error');
             return;
         }
+
+        if (remark.trim().length < 15) {
+            setErrors({ remark: 'Remark must be at least 15 characters long.' });
+            return;
+        }
+
         const requestData = {
             event_id: eventID,
             cancellation_by: selectedReasonID,
@@ -238,7 +245,10 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
                 setSnackbarMessage('Service Cancelled successfully!');
                 setSnackbarSeverity('success');
                 // onClose();
-                window.location.reload();
+                // window.location.reload();
+                // setTimeout(() => {
+                //     window.location.reload();
+                // }, 3000);
             } catch (error) {
                 console.error("Error fetching Service Cancellation:", error);
             }
@@ -247,13 +257,20 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
 
     async function handleCancelSession(event) {
         event.preventDefault();
-        const hasEmptyFields = handleEmptyFieldSession();
+        const hasEmptyFields = handleEmptyFieldService();
+
         if (hasEmptyFields) {
             setOpenSnackbar(true);
             setSnackbarMessage('Please fill all required details.');
             setSnackbarSeverity('error');
             return;
         }
+
+        if (remark.trim().length < 15) {
+            setErrors({ remark: 'Remark must be at least 15 characters long.' });
+            return;
+        }
+
         const requestData = {
             eve_id: eventID,
             sub_srv_id: subSrvID,
@@ -292,7 +309,7 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
                 setOpenSnackbar(true);
                 setSnackbarMessage('Session Cancelled successfully!');
                 setSnackbarSeverity('success');
-                window.location.reload();
+                // window.location.reload();
             }
             // onClose();
         } catch (error) {
@@ -484,7 +501,8 @@ const Cancellation = ({ eventID, subSrvID, jobClosureStatus, endDateTime, onClos
                             multiline
                             rows={2}
                             error={!!errors.remark}
-                            helperText={errors.remark}
+                            // helperText={errors.remark}
+                            helperText={errors.remark || "Remark must be at least 15 characters"}
                             sx={{
                                 '& input': {
                                     fontSize: '14px',

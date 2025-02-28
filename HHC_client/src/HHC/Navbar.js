@@ -1,35 +1,29 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { useAuth } from './components/Context/ContextAPI';
 import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
-import Menu from '@mui/material/Menu';
-import Avatar from '@mui/material/Avatar';
-import Header from './Header';
 import Drawer from '@mui/material/Drawer';
-import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
+import { Box, Typography, Modal, Stack, Button, useMediaQuery, IconButton, Menu, MenuItem, Avatar, Grid, TextField } from '@mui/material';
+import Header from './Header';
+import Footer from "./Footer"
 import Logo from "./assets/spero_logo.png";
 import SOS from "./assets/sos.png";
-import { Button } from '@mui/material';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
-import Footer from "./Footer"
-import { useNavigate } from "react-router-dom";
-import Modal from '@mui/material/Modal';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LocalPhoneOutlinedIcon from '@mui/icons-material/LocalPhoneOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import Stack from '@mui/material/Stack';
 import "./Navbar.css";
-import { useAuth } from './components/Context/ContextAPI';
+import HRHeader from './components/HR/HRHeader';
 
 export default function Navbar() {
+
+  const userGroup = localStorage.getItem('user_group');
+  console.log('user_groupuser_groupuser_group', userGroup);
+
   const navigate = useNavigate();
   const { handleAuthLogout } = useAuth();
   const port = process.env.REACT_APP_API_KEY;
@@ -292,6 +286,13 @@ export default function Navbar() {
     }
   }
 
+  const formatLastName = (lastName) => {
+    if (!lastName || lastName === "null" || lastName === "undefined") {
+        return "";
+    }
+    return lastName;
+};
+
   return (
     <>
       <Box
@@ -350,7 +351,8 @@ export default function Navbar() {
                 sx={{ mr: -3 }}
               >
                 <div style={{ marginBottom: isSmallScreen ? "10px" : "0px", marginTop: isSmallScreen ? "0px" : "20px" }}>
-                  Welcome, {userName} {userLastName}
+                  {/* Welcome, {userName} {userLastName ? ` ${userLastName}` : ""} */}
+                  Welcome, {userName} {formatLastName(userLastName)}
                 </div>
                 <IconButton
                   size="large"
@@ -504,8 +506,13 @@ export default function Navbar() {
             )}
           </Toolbar>
         </AppBar>
-        <div style={{ marginTop: 10, }}>
+        {/* <div style={{ marginTop: 10, }}>
           <Header />
+        </div> */}
+
+        <div style={{ marginTop: 10, }}>
+          {/* <HRHeader /> */}
+          {userGroup !== "HHC_Analytics" && <Header />}
         </div>
       </Box>
       {/* <div style={{ marginTop: 55, }}>

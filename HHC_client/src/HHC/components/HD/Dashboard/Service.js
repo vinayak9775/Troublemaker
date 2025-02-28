@@ -132,6 +132,9 @@ const Service = ({ value }) => {
                     fontSize: '12px',
                 },
             },
+            stroke: {
+                show: false,
+            },
         },
     };
 
@@ -189,11 +192,11 @@ const Service = ({ value }) => {
 
     return (
         <Box sx={{ flexGrow: 1, width: "100%", height: "100%" }} style={{ background: '#ffffff', boxShadow: '4px 4px 10px 7px rgba(135, 135, 135, 0.05)', borderRadius: '8px' }}>
-            <Typography align="left" sx={{ fontSize: 16, fontWeight: 600, pl: "10px", pt: "8px" }} color="text.secondary" gutterBottom>SERVICE DETAILS</Typography>
+            <Typography align="left" sx={{ fontSize: 16, fontWeight: 600, pl: "10px", pt: "8px" }} color="text.secondary" gutterBottom>SESSION DETAILS</Typography>
             <Grid item xs={12} container spacing={1}>
                 <Grid item lg={12} md={12} xs={12}>
                     <Typography variant='h5' sx={{ fontWeight: "600" }}>{service.Total_services}</Typography>
-                    <Typography variant='subtitle2'>TOTAL SERVICES</Typography>
+                    <Typography variant='subtitle2'>TOTAL SESSION</Typography>
 
                     <Chart
                         options={chartData.options}

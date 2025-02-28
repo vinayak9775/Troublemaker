@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Button from '@mui/material/Button';
 import { border, styled } from '@mui/system';
 import CloseIcon from '@mui/icons-material/Close';
-import { Typography, Grid, Box, Card, CardContent, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination } from "@mui/material";
+import RemoveRedEyeOutlinedIcon from '@mui/icons-material/RemoveRedEyeOutlined';
+import { Typography, Modal, Grid, Box, Card, CardContent, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination } from "@mui/material";
 
 const DetailsCard = styled(Card)({
     display: 'flex',
@@ -32,6 +33,8 @@ const EventDetails = ({ eveID, onClose }) => {
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
     const [details, setDetails] = useState([]);
+    const [sesDetails, setSesDetails] = useState([]);
+    const [openSessions, setOpenSessions] = useState(false);
 
     useEffect(() => {
         const getEventDetails = async () => {
@@ -53,6 +56,34 @@ const EventDetails = ({ eveID, onClose }) => {
         };
         getEventDetails();
     }, [eveID]);
+
+    useEffect(() => {
+        const getSesDetails = async () => {
+            if (eveID) {
+                try {
+                    const res = await fetch(`${port}/web/all_session_details/${eveID}/`, {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    const data = await res.json();
+                    console.log("Session Details....", data);
+                    setSesDetails(data.all_session_details);
+                } catch (error) {
+                    console.error("Error fetching Session Details:", error);
+                }
+            }
+        };
+        getSesDetails();
+    }, [eveID]);
+
+    const handleOpenSessions = () => {
+        setOpenSessions(true);
+    };
+    const handleCloseSessions = () => {
+        setOpenSessions(false);
+    };
 
     return (
         <>
@@ -83,7 +114,7 @@ const EventDetails = ({ eveID, onClose }) => {
                     <Button onClick={onClose} sx={{ ml: "46rem", color: "gray", marginTop: "2px", }}><CloseIcon /></Button>
                 </div>
                 <hr />
-                {/* <div style={{ display: "flex" }}> */}
+
                 <div>
                     <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>CALLER DETAILS</Typography>
                     <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
@@ -96,10 +127,7 @@ const EventDetails = ({ eveID, onClose }) => {
                         <Typography inline variant="body2" sx={{ ml: 2 }}>{details[0]?.caller.caller_name ?? ""}</Typography>
                     </Grid>
                 </div>
-                {/* <hr style={{
-                        borderBottom: "1px dashed gray",
-                        height: "200px",
-                    }} /> */}
+
                 <div style={{ marginTop: "15px" }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>PATIENT DETAILS</Typography>
                     <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
@@ -110,6 +138,16 @@ const EventDetails = ({ eveID, onClose }) => {
                     <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
                         <Typography inline variant="body2" color="text.secondary">Mobile</Typography>
                         <Typography inline variant="body2" sx={{ ml: 2 }}>+91 {details[0]?.patient.patient_contact ?? ""}</Typography>
+                    </Grid>
+
+                    <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
+                        <Typography inline variant="body2" color="text.secondary">Age</Typography>
+                        <Typography inline variant="body2" sx={{ ml: 2 }}> {details[0]?.patient.patient_age ?? ""}</Typography>
+                    </Grid>
+
+                    <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
+                        <Typography inline variant="body2" color="text.secondary">Gender</Typography>
+                        <Typography inline variant="body2" sx={{ ml: 2 }}> {details[0]?.patient.patient_gender ?? ""}</Typography>
                     </Grid>
 
                     <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
@@ -147,16 +185,14 @@ const EventDetails = ({ eveID, onClose }) => {
                         <Typography inline variant="body2" color="text.secondary">-</Typography>
                     </Grid> */}
                 </div>
-                {/* </div> */}
-
-                {/* <hr /> */}
 
                 <div style={{ marginTop: "15px" }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>SERVICE DETAILS</Typography>
                     <Typography variant='body2' sx={{ mt: 1 }}><b>Service:</b> {details[0]?.service_name}</Typography>
                     <Typography variant='body2' sx={{ mt: 1 }}><b>Sub Service:</b> {details[0]?.sub_service_name}</Typography>
-	    <Typography variant='body2' sx={{ mt: 1 }}><b>Hospital Name:</b> {details[0]?.service.hospital_name}</Typography>
+                    <Typography variant='body2' sx={{ mt: 1 }}><b>Hospital Name:</b> {details[0]?.service.hospital_name}</Typography>
                     <Typography variant='body2' sx={{ mt: 1 }}><b>Consultant Name:</b> {details[0]?.service.consultant_name}</Typography>
+                    <Typography variant='body2' sx={{ mt: 1 }}><b>Suffered From:</b> {details[0]?.service.suffer_from}</Typography>
                     <TableContainer sx={{ mt: 1 }}>
                         <Table>
                             <TableHead >
@@ -172,10 +208,10 @@ const EventDetails = ({ eveID, onClose }) => {
                                             <Typography variant='subtitle2'>Sessions</Typography>
                                         </CardContent>
                                         <CardContent style={{ width: "15%" }}>
-                                            <Typography variant='subtitle2'>Start Date Time</Typography>
+                                            <Typography variant='subtitle2'>Start Date</Typography>
                                         </CardContent>
                                         <CardContent style={{ width: "15%" }}>
-                                            <Typography variant='subtitle2'>End Date Time</Typography>
+                                            <Typography variant='subtitle2'>End Date</Typography>
                                         </CardContent>
                                         <CardContent style={{ width: "10%", }}>
                                             <Typography variant='subtitle2'>Session Amt</Typography>
@@ -186,6 +222,9 @@ const EventDetails = ({ eveID, onClose }) => {
                                         <CardContent style={{ width: "10%" }}>
                                             <Typography variant='subtitle2'>Total Amt</Typography>
                                         </CardContent>
+                                        {/* <CardContent style={{ width: "5%" }}>
+                                            <Typography variant='subtitle2'>Action</Typography>
+                                        </CardContent> */}
                                     </DetailsCard>
                                 </TableRow>
                             </TableHead>
@@ -201,7 +240,6 @@ const EventDetails = ({ eveID, onClose }) => {
                                 ) : (
                                     details
                                         .map((row, index) => (
-
                                             <TableRow
                                                 key={index}
                                                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
@@ -225,31 +263,145 @@ const EventDetails = ({ eveID, onClose }) => {
                                                         </CardContent>
                                                         <CardContent style={{ width: "15%" }}>
                                                             <Typography variant="body2" >
-                                                                {professional.start_date} | {professional.start_time}
+                                                                {professional.start_date}
+                                                                {/* {professional.start_date} | {professional.start_time} */}
                                                             </Typography>
                                                         </CardContent>
                                                         <CardContent style={{ width: "15%" }}>
                                                             <Typography variant="body2">
-                                                                {professional.end_date} | {professional.end_time}
+                                                                {professional.end_date}
+                                                                {/* {professional.end_date} | {professional.end_time} */}
                                                             </Typography>
                                                         </CardContent>
+                                                        {/* <CardContent style={{ width: "10%" }}>
+                                                            <Typography variant="body2">
+                                                                ₹{professional.amount},
+                                                            </Typography>
+                                                        </CardContent> */}
+                                                        {row.service_name === 'Medical transportation' ? (
+                                                            <CardContent style={{ width: "10%" }}>
+                                                                <Typography variant='body2'>
+                                                                    ₹{row.sessions ? (row.Total_amount / row.sessions) : professional.amount}
+                                                                </Typography>
+                                                            </CardContent>
+                                                        ) : (
+                                                            <CardContent style={{ width: "10%" }}>
+                                                                <Typography variant='body2'>₹{professional.amount}</Typography>
+                                                            </CardContent>
+                                                        )}
                                                         <CardContent style={{ width: "10%" }}>
                                                             <Typography variant="body2">
-                                                                ₹{professional.amount}
+                                                                {/* ₹{professional.convinance ? professional.convinance : '0'} */}
+                                                                ₹{professional.conv_charges ? professional.conv_charges : '0'}
                                                             </Typography>
                                                         </CardContent>
-                                                        <CardContent style={{ width: "10%" }}>
-                                                            <Typography variant="body2">
-                                                                ₹{professional.convinance ? professional.convinance : '0'}
-                                                            </Typography>
-                                                        </CardContent>
-                                                        <CardContent style={{ width: "10%" }}>
+                                                        {/* <CardContent style={{ width: "10%" }}>
                                                             <Typography variant="body2">
                                                                 ₹{professional.prof_tot_amt ? professional.prof_tot_amt : '0'}
                                                             </Typography>
-                                                        </CardContent>
+                                                        </CardContent> */}
+
+                                                        {row.service_name === 'Medical transportation' ? (
+                                                            <CardContent style={{ width: "10%" }}>
+                                                                <Typography variant='body2'>
+                                                                    ₹{row.sessions ? (((row.Total_amount / row.sessions) + professional.conv_charges )*professional.sessions) : professional.amount}
+                                                                </Typography>
+                                                            </CardContent>
+                                                        ) : (
+                                                            <CardContent style={{ width: "10%" }}>
+                                                                <Typography variant="body2">
+                                                                    ₹{professional.prof_tot_amt ? professional.prof_tot_amt : '0'}
+                                                                </Typography>
+                                                            </CardContent>
+                                                        )}
+                                                        {/* <CardContent style={{ width: "5%" }}>
+                                                            <RemoveRedEyeOutlinedIcon sx={{ fontSize: "20px", color: "#606467" }} onClick={handleOpenSessions} />
+                                                        </CardContent> */}
+                                                        <Modal
+                                                            open={openSessions}
+                                                            onClose={handleCloseSessions}
+                                                            aria-labelledby="parent-modal-title"
+                                                            aria-describedby="parent-modal-description"
+                                                        >
+                                                            <Box sx={{ ...style, width: 650, borderRadius: "10px", border: "none" }}>
+                                                                <div style={{ display: "flex" }}>
+                                                                    <Typography align="center" style={{ fontSize: "16px", fontWeight: 600, color: "gray", marginTop: "10px" }}>SESSION DETAILS</Typography>
+                                                                    <Button onClick={handleCloseSessions} sx={{ marginLeft: "450px", color: "gray", marginTop: "2px", }}><CloseIcon /></Button>
+                                                                </div>
+
+                                                                <TableContainer sx={{ mt: 1, maxHeight: sesDetails.length >= 8 ? '450px' : 'auto', overflowY: sesDetails.length >= 8 ? 'scroll' : 'visible' }}>
+                                                                    <Table>
+                                                                        <TableHead >
+                                                                            <TableRow >
+                                                                                <DetailsCard style={{ background: "#FAAF30", color: "#FFFFFF", borderRadius: "8px 10px 0 0", }}>
+                                                                                    <CardContent style={{ width: "30%" }}>
+                                                                                        <Typography variant='subtitle2'>Professional Name</Typography>
+                                                                                    </CardContent>
+                                                                                    {details[0]?.service_name === 'Medical transportation' &&
+                                                                                        (
+                                                                                            <CardContent style={{ width: "20%" }}>
+                                                                                                <Typography variant='subtitle2'>Ambulance No</Typography>
+                                                                                            </CardContent>
+                                                                                        )}
+                                                                                    <CardContent style={{ width: "25%" }}>
+                                                                                        <Typography variant='subtitle2'>Start Date Time</Typography>
+                                                                                    </CardContent>
+                                                                                    <CardContent style={{ width: "25%" }}>
+                                                                                        <Typography variant='subtitle2'>End Date Time</Typography>
+                                                                                    </CardContent>
+                                                                                </DetailsCard>
+                                                                            </TableRow>
+                                                                        </TableHead>
+                                                                        <TableBody>
+                                                                            {sesDetails.length === 0 ? (
+                                                                                <TableRow>
+                                                                                    <CardContent >
+                                                                                        <Typography variant="body2" sx={{ ml: 40 }}>
+                                                                                            No Data Available
+                                                                                        </Typography>
+                                                                                    </CardContent>
+                                                                                </TableRow>
+                                                                            ) : (
+                                                                                sesDetails
+                                                                                    .map((professional, index) => (
+                                                                                        <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                                                                            <DetailsCard key={index}>
+                                                                                                <CardContent style={{ width: "30%" }}>
+                                                                                                    <Typography variant="body2">
+                                                                                                        {professional.professional_name}
+                                                                                                    </Typography>
+                                                                                                </CardContent>
+
+                                                                                                {details[0]?.service_name === 'Medical transportation' &&
+                                                                                                    (
+                                                                                                        <CardContent style={{ width: "20%" }}>
+                                                                                                            <Typography variant='body2'>{professional.ambs}</Typography>
+                                                                                                        </CardContent>
+                                                                                                    )}
+                                                                                                <CardContent style={{ width: "25%" }}>
+                                                                                                    <Typography variant="body2" >
+                                                                                                        {professional.start_date} | {professional.start_time}
+                                                                                                    </Typography>
+                                                                                                </CardContent>
+                                                                                                <CardContent style={{ width: "25%" }}>
+                                                                                                    <Typography variant="body2">
+                                                                                                        {professional.end_date} | {professional.end_time}
+                                                                                                    </Typography>
+                                                                                                </CardContent>
+                                                                                            </DetailsCard>
+                                                                                        </TableRow>
+                                                                                    )
+                                                                                    ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </TableContainer>
+                                                            </Box>
+                                                        </Modal>
                                                     </DetailsCard>
                                                 ))}
+                                                <div style={{ display: "flex", marginTop: "12px" }}>
+                                                    <Typography sx={{ ml: 2 }} variant='subtitle2'>View all session details:</Typography> <RemoveRedEyeOutlinedIcon sx={{ fontSize: "22px", color: "#606467", cursor: "pointer", ml: 85 }} onClick={handleOpenSessions} />
+                                                </div>
                                             </TableRow>
                                         )
                                         ))}
@@ -257,7 +409,6 @@ const EventDetails = ({ eveID, onClose }) => {
                         </Table>
                     </TableContainer>
                 </div>
-                {/* <hr /> */}
 
                 <div style={{ marginTop: "15px" }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>PAYMENT DETAILS</Typography>
@@ -295,10 +446,10 @@ const EventDetails = ({ eveID, onClose }) => {
                             <Typography variant="body2">
                                 {details[0]?.payment_mode === 1 ? 'Cash' :
                                     details[0]?.payment_mode === 2 ? 'Cheque' :
-                                    details[0]?.payment_mode === 3 ? 'Online':
-                                    details[0]?.payment_mode === 4 ? 'Card' :
-                                    details[0]?.payment_mode === 5 ? 'QR' :
-                                    details[0]?.payment_mode === 6 ? 'NEFT' : 'None'}
+                                        details[0]?.payment_mode === 3 ? 'Online' :
+                                            details[0]?.payment_mode === 4 ? 'Card' :
+                                                details[0]?.payment_mode === 5 ? 'QR' :
+                                                    details[0]?.payment_mode === 6 ? 'NEFT' : 'None'}
                             </Typography>
                         </CardContent>
                         <CardContent style={{ width: "10%" }}>

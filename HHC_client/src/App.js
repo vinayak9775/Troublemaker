@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 // import { Counter } from './features/counter/Counter';
-import Navbar from "./HHC/Navbar";
-import Footer from "./HHC/Footer";
-import Header from "./HHC/Header";
+// import Navbar from "./HHC/Navbar";
+// import Footer from "./HHC/Footer";
+// import Header from "./HHC/Header";
 import NotFound from './HHC/NotFound';
 import './App.css';
 import { BrowserRouter, Router, Routes, Route } from "react-router-dom";
@@ -27,8 +27,6 @@ import HRDashboard from './HHC/components/HR/Dashboard/HRDashboard';
 import Attendence from './HHC/components/HR/Attendence/Attendence';
 import Permission from './HHC/components/ADMIN/Permission';
 import AdminDashboard from './HHC/components/ADMIN/AdminDashboard';
-import HRHeader from './HHC/components/HR/HRHeader';
-import HRNavbar from './HHC/components/HR/HRNavbar';
 import AdminReport from './HHC/components/ADMIN/Reports/AdminReport';
 import EnquiryReport from './HHC/components/ADMIN/Reports/EnquiryReport';
 import ConsultantReport from './HHC/components/ADMIN/Reports/ConsultantReport';
@@ -60,14 +58,24 @@ import HospitalDashboard from './HHC/components/Hospitals/Dashboard/HospitalDash
 import AllocatedList from './HHC/components/ADMIN/HCM/ProfessionalAllocation/AllocatedList';
 import PaymentUTR from './HHC/components/ADMIN/ACCOUNT/PaymentUTR';
 import ManageAttendance from './HHC/components/Attendance/ManageAttendance';
-import ManageReports from './HHC/components/Attendance/ManageReports';
 import AtteDashboard from './HHC/components/Attendance/AtteDashboard';
 import ManagementDashboard from './HHC/components/ManagementDashboard/MDashboard';
+import ManageReports from './HHC/components/Attendance/ManageReports';
 import ProfessionalDetails from './HHC/components/ADMIN/HCM/ProfessionalDetails';
 import SystemUser from './HHC/components/HR/SystemUser/SystemUser';
-// import AuthUser from './HHC/components/AuthUser';
-
-// import ProtectedRoute from './HHC/ProtectedRoute';
+import Header from './HHC/components/Clinical/Header';
+import ManageInventory from './HHC/components/InventoryModule/ManageInventory';
+import HrDashboard from './HHC/components/HrPartner/Dashboard/HrDashboard';
+import ManageProfessionals from './HHC/components/HrPartner/Professionals/ManageProfessionals';
+import AddProfPartner from './HHC/components/HrPartner/Professionals/AddProfPartner';
+import ExternalProf from './HHC/components/HR/ExternalProfessional/ExternalProf';
+import Servicedetails from './HHC/components/HrPartner/ServiceDetails/Servicedetails';
+import Home from './HHC/components/HHC_Analytics/Home';
+import { Insurance } from './HHC/components/ADMIN/HCM/Insurance';
+import ClosureRevalidation from './HHC/components/ADMIN/HCM/ClosureRevalidation/ClosureRevalidation';
+import Telemedicine from './HHC/components/Clinical/ClinicalComponents/Telemedicine';
+import ClosureDetails from './HHC/components/Clinical/ClosureDetails';
+import VideoCall from './HHC/components/Clinical/ClinicalComponents/VideoCall';
 
 function App() {
 
@@ -86,8 +94,8 @@ function App() {
     <div className="App">
       <BrowserRouter basename="">
         <div>
-          {isLoggIn && <HRNavbar />}
-          {isLoggIn && <HRHeader />}
+          {/* {isLoggIn && <HRNavbar />} */}
+          {/* {isLoggIn && <HRHeader />} */}
           <Routes>
             <Route exact path="/" element={<Login />} />
 
@@ -127,6 +135,10 @@ function App() {
             <Route path='/hhc/HCM/login employee' element={<LoginEmployees />} />
             <Route path='/hhc/HCM/professional allocation' element={<AllocatedList />} />
             <Route path='/hhc/HCM/professional details' element={<ProfessionalDetails />} />
+            <Route path='/hhc/HCM/insurance' element={<Insurance />} />
+            <Route path='/hhc/HCM/closure revalidation' element={<ClosureRevalidation />} />
+
+            <Route path="/video-call/:roomID" element={<VideoCall />} />
 
             {/* ACCOUNT Routing */}
             <Route path='/hhc/account/dashboard' element={<AccountDashboard />} />
@@ -142,6 +154,20 @@ function App() {
             <Route path='/hhc/account/online transaction' element={<OnlineTransaction />} />
             <Route path='/hhc/account/payment utr' element={<PaymentUTR />} />
 
+            <Route path='/account/dashboard' element={<AccountDashboard />} />
+            <Route path='/account/new export receipt' element={<NewExportReceipt />} />
+            <Route path='/account/export invoice' element={<ExportInvoice />} />
+            <Route path='/account/payment with professional' element={<PaymentWithProfessional />} />
+            <Route path='/account/payment with patient' element={<PaymentPatient />} />
+            <Route path='/account/manage cashfree payment' element={<Cashfree />} />
+            <Route path='/account/pending payment' element={<PendingPayment />} />
+            <Route path='/account/day print' element={<DayPrintBHV />} />
+            <Route path='/account/job closure report' element={<JobClosureAccount />} />
+            <Route path='/account/professional unit calculation' element={<ProfessionalUnit />} />
+            <Route path='/account/online transaction' element={<OnlineTransaction />} />
+            <Route path='/account/payment utr' element={<PaymentUTR />} />
+
+
             {/* HR Module */}
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/manage profiles" element={<ManageProfile />} />
@@ -151,40 +177,74 @@ function App() {
             <Route path="/hr/our employees" element={<Employee />} />
             <Route path="/hr/attendance" element={<Attendence />} />
             <Route path="/hr/system user" element={<SystemUser />} />
-            {/* <Route path="/hhc/hr/dashboard" element={<HRDashboard />} />
-            <Route path="/hhc/hr/manage profiles" element={<ManageProfile />} />
-            <Route path="/hhc/hr/manage profiles/add-prof" element={<AddProfessional />} />
-            <Route path="/hhc/hr/interview scheduled" element={<Interview />} />
-            <Route path="/hhc/hr/onboarding" element={<Candidates />} />
-            <Route path="/hhc/hr/our employees" element={<Employee />} />
-            <Route path="/hhc/hr/attendance" element={<Attendence />} /> */}
+            <Route path="/hr/external professionals" element={<ExternalProf />} />
+            <Route path="/hr/gis analytics" element={<Home />} />
+
+            <Route path="hhc/hr/dashboard" element={<HRDashboard />} />
+            <Route path="hhc/hr/manage profiles" element={<ManageProfile />} />
+            <Route path="hhc/hr/manage profiles/add-prof" element={<ManageProfile />} />
+            <Route path="hhc/hr/interview scheduled" element={<Interview />} />
+            <Route path="hhc/hr/onboarding" element={<Candidates />} />
+            <Route path="hhc/hr/our employees" element={<Employee />} />
+            <Route path="hhc/hr/attendance" element={<Attendence />} />
+            <Route path="hhc/hr/system user" element={<SystemUser />} />
+            <Route path="hhc/hr/external professionals" element={<ExternalProf />} />
+            <Route path="hhc/gis analytics" element={<Home />} />
 
             {/* temporary basis */}
-            <Route path="/hhc/attendance" element={<DemoPurpose />} />
+            {/* <Route path="/hhc/attendance" element={<DemoPurpose />} /> */}
             <Route path="/hhc/inventory" element={<DemoPurpose />} />
             <Route path="/hhc/hcm/manage professional" element={<DemoPurpose />} />
             <Route path="/hhc/hcm/manage system users" element={<DemoPurpose />} />
             <Route path="/hhc/hcm/manage availability" element={<DemoPurpose />} />
             <Route path="/hhc/hcm/manage payments(vip)" element={<DemoPurpose />} />
             <Route path="/hhc/dashboard/dashboard" element={<DemoPurpose />} />
-            <Route path="/hhc/account/paytm payment" element={<DemoPurpose />} />
+            <Route path="/hhc/accounts/paytm payment" element={<DemoPurpose />} />
 
             {/* temporary basis */}
 
 
             {/* ATTENDANCE module */}
+            {/* <Route path="/attendance/attendance-view" element={<ManageAttendance />} />
+            <Route path="/attendance/attendance-dashboard" element={<AtteDashboard />} />
+            <Route path="/attendance/attendance-report" element={<ManageReports />} /> */}
+
             <Route path="/hhc/attendance/manage attendance" element={<ManageAttendance />} />
             <Route path="/hhc/attendance/attendance-dashboard" element={<AtteDashboard />} />
             <Route path="/hhc/attendance/manage report" element={<ManageReports />} />
 
+            <Route path="/hhc/attendance/manage attendance" element={<ManageAttendance />} />
+
             {/* Management Dashboard */}
             <Route path="/management/management-dashboard" element={<ManagementDashboard />} />
+
+            {/* clinical governance */}
+            {/* <Route exact path="/hhc/clinical" element={<Header />} /> */}
+            <Route exact path="/hhc/clinical/closure" element={<ClosureDetails />} />
+            <Route path="/hhc/clinical/telemed" element={<Telemedicine />} />
+            {/* Inventory module */}
+            <Route path="/hhc/inventory/manageinventory" element={<ManageInventory />} />
+            {/* <Route path="/hhc/attendance/attendance-dashboard" element={<AtteDashboard />} />
+            <Route path="/hhc/attendance/manage report" element={<ManageReports />} /> */}
 
 
             <Route path="*" element={<NotFound />} />
 
             {/* Hospital ROuting */}
             <Route path='/hospital/dashboard' element={<HospitalDashboard />} />
+
+            {/* HR PARTNER */}
+            <Route path='/hr partner/dashboard' element={<HrDashboard />} />
+            <Route path="/hr partner/manage professionals" element={<ManageProfessionals />} />
+            <Route path="/hr partner/Add professionals" element={<AddProfPartner />} />
+            <Route path="/hr partner/service details" element={<Servicedetails />} />
+
+            <Route path='hhc/hr partner/dashboard' element={<HrDashboard />} />
+            <Route path="hhc/hr partner/manage professionals" element={<ManageProfessionals />} />
+            <Route path="hhc/hr partner/Add professionals" element={<AddProfPartner />} />
+            <Route path="hhc/hr partner/service details" element={<Servicedetails />} />
+
+            <Route path="/analytics/home" element={<Home />} />
 
           </Routes>
         </div>

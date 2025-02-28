@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Box, InputBase, Stack, CardContent, Tooltip, IconButton, CircularProgress, useMediaQuery, Modal, Typography, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination, Button } from '@mui/material';
-import { styled } from '@mui/system';
-import Followup from './ActionComponent/Followup';
-import DoneAllOutlinedIcon from '@mui/icons-material/DoneAllOutlined';
-import CloseIcon from '@mui/icons-material/Close';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import SmartphoneIcon from '@mui/icons-material/Smartphone';
-import LanguageIcon from '@mui/icons-material/Language';
-import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
-import DirectionsWalkOutlinedIcon from '@mui/icons-material/DirectionsWalkOutlined';
-import CircleIcon from '@mui/icons-material/Circle';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import SearchIcon from '@mui/icons-material/Search';
 import Navbar from '../../../Navbar';
 import Footer from '../../../Footer';
 import Header from '../../../Header';
+import EnqDetails from './EnqDetails';
+import { styled } from '@mui/system';
+import CloseIcon from '@mui/icons-material/Close';
+import Followup from './ActionComponent/Followup';
+import CircleIcon from '@mui/icons-material/Circle';
+import SearchIcon from '@mui/icons-material/Search';
+import LanguageIcon from '@mui/icons-material/Language';
+import SmartphoneIcon from '@mui/icons-material/Smartphone';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
+import DoneAllOutlinedIcon from '@mui/icons-material/DoneAllOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import DirectionsWalkOutlinedIcon from '@mui/icons-material/DirectionsWalkOutlined';
 
 const style = {
     position: 'absolute',
@@ -67,6 +68,8 @@ const Enquiries = () => {
 
     const [loading, setLoading] = useState(true);
 
+    const flag = 1;
+
     const handleDateChange = (e) => {
         setSelectedDate(e.target.value);
         setPage(0);
@@ -114,7 +117,7 @@ const Enquiries = () => {
                     },
                 });
                 const data = await res.json();
-                // console.log("Enquiries Data.........", data);
+                console.log("Enquiries Data.........", data);
                 if (data.detail === "No matching records found") {
                     setEnq([]);
                     setLoading(false);
@@ -132,9 +135,11 @@ const Enquiries = () => {
     }, [accessHospitalID]);
 
     function findPreFollowupRecords(eveId) {
+        console.log(eveId,'.................');
+        
         const matchingRecords = enq.find((record) => record.eve_id === eveId);
         if (matchingRecords) {
-            // console.log("Previos Followup ID", matchingRecords.eve_id);
+            console.log("Previos Followup ID", matchingRecords.eve_id);
             setEnqID(matchingRecords.eve_id);
         }
     }
@@ -144,7 +149,7 @@ const Enquiries = () => {
             if (enqID) {
                 console.log("Event ID.....", enqID)
                 try {
-                    const res = await fetch(`${port}/web/previous_follow_up/${enqID}`, {
+                    const res = await fetch(`${port}/web/previous_follow_up/1/${enqID}`, {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json',
@@ -160,6 +165,22 @@ const Enquiries = () => {
         };
         getPreFollowup();
     }, [enqID]);
+
+
+    // ####Enquiry single record
+    const [openDetails, setOpenDeatils] = useState(false);
+    const [evntId, setEvntId] = useState('');
+
+    const handleOpenDetails = () => {
+        setOpenDeatils(true);
+    };
+    const handleCloseDetails = () => {
+        setOpenDeatils(false);
+    };
+
+    const eventIDRequest = (evt_id) =>{
+        setEvntId(evt_id)
+    } 
 
     // const filteredData = enq.filter((item) => {
     //     if (
@@ -398,10 +419,37 @@ const Enquiries = () => {
                                                             {getCallerStatusTooltip(row.patient_service_status)}
                                                         </Typography>
                                                     </CardContent>
-                                                    <CardContent style={{ flex: 1 }}>
+                                                    {/* <CardContent style={{ flex: 1 }}>
                                                         <Typography variant="body2">
                                                             {row.event_code}
                                                         </Typography>
+                                                    </CardContent> */}
+                                                    <CardContent style={{ flex: 1 }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                eventIDRequest(row.eve_id);
+                                                                handleOpenDetails();
+                                                            }}
+                                                            style={{
+                                                                border: 'none',
+                                                                background: 'none',
+                                                                outline: 'none',
+                                                                cursor: 'pointer',
+                                                                // borderBottom: eventID === row.eve_id ? '2px solid #26C0E2' : 'none',
+                                                                height: '40px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                            }}> <Typography variant="body2">{row.event_code}</Typography></button>
+                                                        <Modal
+                                                            open={openDetails}
+                                                            onClose={handleCloseDetails}
+                                                            aria-labelledby="parent-modal-title"
+                                                            aria-describedby="parent-modal-description"
+                                                            sx={{height:'500px',marginTop:"50px"}}
+                                                        >
+                                                            <EnqDetails eveID={evntId} open={openDetails}
+                                                                onClose={handleCloseDetails} />
+                                                        </Modal>
                                                     </CardContent>
                                                     <CardContent style={{ flex: 1.2 }}>
                                                         <Typography variant="body2" textAlign="left">
@@ -430,11 +478,18 @@ const Enquiries = () => {
                                                             {row.agg_sp_pt_id ? row.Suffered_from : "-"}
                                                         </Typography> */}
 
-                                                        <Tooltip title={row.agg_sp_pt_id?.Suffered_from || ""} arrow>
+                                                        {/* <Tooltip title={row.agg_sp_pt_id?.Suffered_from || ""} arrow>
                                                             <Typography variant="body2" textAlign="left">
                                                                 {row.agg_sp_pt_id?.Suffered_from?.length > 10
                                                                     ? `${row.agg_sp_pt_id?.Suffered_from.slice(0, 6)}...`
                                                                     : row.agg_sp_pt_id?.Suffered_from}
+                                                            </Typography>
+                                                        </Tooltip> */}
+                                                        <Tooltip title={row.Suffered_from || ""} arrow>
+                                                            <Typography variant="body2" textAlign="left">
+                                                                {row.Suffered_from?.length > 10
+                                                                    ? `${row.Suffered_from.slice(0, 6)}...`
+                                                                    : row.Suffered_from}
                                                             </Typography>
                                                         </Tooltip>
                                                     </CardContent>
@@ -482,7 +537,7 @@ const Enquiries = () => {
                                                                     <Typography align="center" style={{ fontSize: "16px", fontWeight: 600, marginLeft: "14px", marginTop: "10px" }}>FOLLOW UP</Typography>
                                                                     <Button onClick={handleClose} sx={{ marginLeft: "9rem", color: "gray", }}><CloseIcon /></Button>
                                                                 </div>
-                                                                <Followup sendData={preFollowup} enqData={enqID} onClose={handleClose} />
+                                                                <Followup sendData={preFollowup} enqData={enqID} onClose={handleClose} flag={flag} />
                                                             </Box>
                                                         </Modal>
                                                     </CardContent>

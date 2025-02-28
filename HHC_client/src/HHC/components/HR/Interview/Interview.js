@@ -9,11 +9,13 @@ import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined
 import SearchIcon from '@mui/icons-material/Search';
 import { fontSize, styled } from '@mui/system';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Typography, Card, CardContent, Box, InputBase, Stack, Tooltip, IconButton, TextField, MenuItem, Button, CircularProgress } from '@mui/material';
+import { Typography, Card, CardContent, Box, InputBase, Modal, Stack, Tooltip, IconButton, TextField, MenuItem, Button, CircularProgress } from '@mui/material';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import Navbar from '../../../Navbar';
 import Footer from '../../../Footer';
 import HRNavbar from '../HRNavbar';
+import CloseIcon from '@mui/icons-material/Close';
+import { useNavigate } from 'react-router-dom';
 
 const InterviewCard = styled(Card)({
     display: 'flex',
@@ -56,6 +58,53 @@ const status = [
 ];
 
 const Interview = () => {
+
+    const [clgId, setClgId] = useState(null);
+
+    useEffect(() => {
+        const id = localStorage.getItem('clg_id');
+        setClgId(id);
+    }, []);
+
+    const navigate = useNavigate();
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState(null);
+    const [statusID, setStatusID] = useState(null);
+    console.log(statusID, 'fetching the statusID');
+
+    const handleOpenModal = (option) => {
+        // const confirmationMessage = `Are you sure you want to ${option.label}?`;
+        // setModalContent(confirmationMessage);
+        const confirmationMessage = option.label === "Selected "
+            ? "Are you sure you want to Select?"
+            : `Are you sure you want to ${option.label}?`;
+
+        setModalContent(confirmationMessage);
+        console.log(confirmationMessage, 'confirmationMessage');
+
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        setModalContent(null);
+    };
+
+    // const handleConfirm = () => {
+    //     if (modalContent.includes('Selected')) {
+    //         navigate('/hr/onboarding');
+    //     } else {
+    //         console.log("Confirmed!");
+    //     }
+    //     handleCloseModal();
+    // };
+
+    const handleCancel = () => {
+        // Handle the cancel action here
+        console.log("Cancelled!");
+        handleCloseModal();
+    };
+
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
 
@@ -70,12 +119,18 @@ const Interview = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value.toLowerCase());
+        setSearchQuery(event.target.value.toLowerCase()); // Store the search query as lowercase
+        setPage(0);
     };
 
-    const filteredInterview = interview.filter((row) =>
-        row.srv_prof_id.prof_fullname.toLowerCase().includes(searchQuery)
-    );
+    const filteredInterview = interview.filter((row) => {
+        const fullName = row?.srv_prof_id?.prof_fullname?.toLowerCase() || '';
+        return fullName.includes(searchQuery);
+    });
+
+    // const filteredInterview = interview.filter((row) =>
+    //     row.srv_prof_id.prof_fullname.toLowerCase().includes(searchQuery)
+    // );
 
     const handleChangeStatus = (event) => {
         setSelectedStatus(event.target.value);
@@ -86,38 +141,41 @@ const Interview = () => {
     };
 
     const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(+event.target.value);
+        setRowsPerPage(event.target.value);
         setPage(0);
     };
+
     const [statusMap, setStatusMap] = useState({});
 
-    useEffect(() => {
-        const getInterview = async () => {
-            try {
-                const res = await fetch(`${port}/hr/prof_int_dtls/`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json',
-                    },
+
+    const getInterview = async () => {
+        try {
+            const res = await fetch(`${port}/hr/prof_int_dtls/`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await res.json();
+            console.log("Interview Schedule Data.........", data);
+            if (Array.isArray(data) && data.length > 0) {
+                setInterview(data);
+                const initialStatusMap = {};
+                data.forEach(row => {
+                    initialStatusMap[row.eve_id] = row.status_id || '';
                 });
-                const data = await res.json();
-                console.log("Interview Schedule Data.........", data);
-                if (Array.isArray(data) && data.length > 0) {
-                    setInterview(data);
-                    const initialStatusMap = {};
-                    data.forEach(row => {
-                        initialStatusMap[row.eve_id] = row.status_id || ''; // Initialize with current status if available
-                    });
-                    setStatusMap(initialStatusMap);
-                } else {
-                    setInterview([]);
-                }
-                setLoading(false);
-            } catch (error) {
-                console.error("Error fetching Interview Schedule  Data:", error);
-                setLoading(false);
+                setStatusMap(initialStatusMap);
+            } else {
+                setInterview([]);
             }
-        };
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching Interview Schedule  Data:", error);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         getInterview();
     }, []);
 
@@ -133,6 +191,53 @@ const Interview = () => {
                 return '#F7A825';
             default:
                 return '#00E08F';
+        }
+    };
+
+    ///fetch the ID
+    const [srvProfIntId, setProfIntId] = useState('')
+    const [srvProfId, setProfId] = useState('')
+    const [remark, setRemark] = useState('');
+    const [dateJoin, setDateJoin] = useState('')
+
+    console.log("srv_prof_int_id:", srvProfIntId);
+    console.log("srv_prof_id:", srvProfId);
+
+    const handleConfirm = async () => {
+        const payload = {
+            srv_prof_int_id: srvProfIntId,
+            srv_prof_id: srvProfId,
+            int_status: statusID,
+            last_modified_by: clgId,
+            Remark: remark,
+            Date_Join: dateJoin
+        };
+
+        console.log(payload, 'payload');
+
+        try {
+            const response = await fetch(`${port}/hr/interview_status/${srvProfId}/`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            console.log(data);
+            handleCloseModal();
+            if (statusID === 1) {
+                navigate('/hr/onboarding');
+            }
+            await getInterview();
+        } catch (error) {
+            console.error('Error while hitting the API:', error);
+            alert('An error occurred. Please try again.');
         }
     };
 
@@ -191,12 +296,19 @@ const Interview = () => {
                                     <CardContent style={{ flex: 1.5, borderRight: "1px solid #FFFFFF" }}>
                                         <Typography variant="subtitle2">Interviewer Name</Typography>
                                     </CardContent>
+                                    <CardContent style={{ flex: 1, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant="subtitle2">Interview Round</Typography>
+                                    </CardContent>
+                                    <CardContent style={{ flex: 1.5, borderRight: "1px solid #FFFFFF" }}>
+                                        <Typography variant="subtitle2">Interview Scheduled With</Typography>
+                                    </CardContent>
                                     <CardContent style={{ flex: 1.2 }}>
                                         <Typography variant="subtitle2">Status</Typography>
                                     </CardContent>
                                 </InterviewCard>
                             </TableRow>
                         </TableHead>
+
                         {loading ? (
                             <Box sx={{ display: 'flex', mt: 15, ml: 80, height: '100px', }}>
                                 <CircularProgress />
@@ -243,19 +355,32 @@ const Interview = () => {
                                                     <CardContent style={{ flex: 1.5 }}>
                                                         <Typography variant="body2">
                                                             <CalendarMonthOutlinedIcon sx={{ fontSize: "15px", color: "#69A5EB" }} />
-                                                            {row.int_schedule_date ? `${row.int_schedule_date} ${row.int_schedule_time}` : "NA"}
+                                                            {row.int_schedule_date ? `${row.int_schedule_date ? row.int_schedule_date : ''} ${row.int_schedule_time ? row.int_schedule_time : ''}` : "NA"}
                                                         </Typography>
                                                     </CardContent>
                                                     <CardContent style={{ flex: 1 }}>
-                                                        {row.int_mode === 1 ? (
+                                                        {/* {row.int_mode === 2 ? (
                                                             <Typography variant='body2'>Offline</Typography>
                                                         ) : (
                                                             <Typography variant='body2'>Online</Typography>
-                                                        )}
+                                                        )} */}
+                                                        {row.int_mode ? row.int_mode : '-'}
                                                     </CardContent>
                                                     <CardContent style={{ flex: 1.5 }}>
                                                         <Typography variant="body2">
                                                             {row.int_schedule_with}
+                                                        </Typography>
+                                                    </CardContent>
+
+                                                    <CardContent style={{ flex: 1 }}>
+                                                        <Typography variant="body2">
+                                                            Interview Round
+                                                        </Typography>
+                                                    </CardContent>
+
+                                                    <CardContent style={{ flex: 1.5 }}>
+                                                        <Typography variant="body2">
+                                                            Interview Scheduled With
                                                         </Typography>
                                                     </CardContent>
 
@@ -267,20 +392,32 @@ const Interview = () => {
                                                             name="status_id"
                                                             size="small"
                                                             fullWidth
-                                                            value={selectedStatus[row.srv_prof_id.srv_prof_id]}
-                                                            onChange={(e) => handleChangeStatus(e, row.eve_id)}
-                                                            // onChange={handleChangeStatus}
+                                                            // value={selectedStatus[row.srv_prof_id.srv_prof_id]}
+                                                            value={selectedStatus[row.srv_prof_id.srv_prof_id] || row.int_status}
+                                                            onChange={(e) => {
+                                                                handleChangeStatus(e, row.eve_id);
+                                                                handleOpenModal(status.find(option => option.status_id === e.target.value));
+
+                                                                const srv_prof_int_id = row.srv_prof_int_id;
+                                                                const srv_prof_id = row.srv_prof_id.srv_prof_id;
+
+                                                                setProfIntId(srv_prof_int_id);
+                                                                setProfId(srv_prof_id);
+                                                                setStatusID(e.target.value);
+                                                            }}
                                                             sx={{
                                                                 textAlign: "left",
                                                                 mt: "8px",
                                                                 '& .MuiSelect-select': {
                                                                     fontSize: '14px',
-                                                                    color: getStatusColor(selectedStatus), // Set color based on selected status
+                                                                    color: getStatusColor(selectedStatus),
                                                                 },
                                                             }}
                                                         >
                                                             {status.map((option) => (
-                                                                <MenuItem key={option.status_id} value={option.status_id}
+                                                                <MenuItem
+                                                                    key={option.status_id}
+                                                                    value={option.status_id}
                                                                     sx={{
                                                                         fontSize: "14px",
                                                                         color: getStatusColor(option.status_id),
@@ -291,6 +428,157 @@ const Interview = () => {
                                                             ))}
                                                         </TextField>
                                                     </CardContent>
+
+                                                    <Modal
+                                                        open={modalOpen}
+                                                        onClose={handleCloseModal}
+                                                        aria-labelledby="modal-title"
+                                                        aria-describedby="modal-description"
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: '40%',
+                                                                left: '50%',
+                                                                transform: 'translate(-50%, -50%)',
+                                                                width: 350,
+                                                                bgcolor: 'background.paper',
+                                                                boxShadow: 24,
+                                                                p: 4,
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'left',
+                                                                borderRadius: '5px'
+                                                            }}
+                                                        >
+                                                            <IconButton
+                                                                edge="end"
+                                                                color="inherit"
+                                                                onClick={handleCloseModal}
+                                                                aria-label="close"
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: 8,
+                                                                    right: 8,
+                                                                }}
+                                                            >
+                                                                <CloseIcon />
+                                                            </IconButton>
+
+                                                            {
+                                                                statusID === 1 && (
+                                                                    <>
+                                                                        <Typography id="modal-title">
+                                                                            Date of Joining
+                                                                        </Typography>
+                                                                        <TextField
+                                                                            type='date'
+                                                                            variant="outlined"
+                                                                            style={{ width: '60%' }}
+                                                                            size='small'
+                                                                            name='Date_Join'
+                                                                            value={dateJoin}
+                                                                            onChange={(e) => setDateJoin(e.target.value)}
+                                                                        />
+                                                                    </>
+                                                                )
+                                                            }
+                                                            {
+                                                                statusID === 2 && (
+                                                                    <>
+                                                                        <Typography id="modal-title">
+                                                                            Rejection Remark
+                                                                        </Typography>
+                                                                        <TextField
+                                                                            variant="outlined"
+                                                                            style={{ width: '100%' }}
+                                                                            size="small"
+                                                                            name="Remark"
+                                                                            value={remark}
+                                                                            onChange={(e) => setRemark(e.target.value)}
+                                                                            multiline
+                                                                            rows={4}
+                                                                        />
+
+                                                                    </>
+                                                                )
+                                                            }
+
+                                                            {
+                                                                statusID === 3 && (
+                                                                    <>
+                                                                        <Typography id="modal-title">
+                                                                            OnHold Remark
+                                                                        </Typography>
+                                                                        <TextField
+                                                                            variant="outlined"
+                                                                            style={{ width: '100%' }}
+                                                                            size="small"
+                                                                            name="Remark"
+                                                                            value={remark}
+                                                                            onChange={(e) => setRemark(e.target.value)}
+                                                                            multiline
+                                                                            rows={4}
+                                                                        />
+
+                                                                    </>
+                                                                )
+                                                            }
+
+                                                            {
+                                                                statusID === 4 && (
+                                                                    <>
+                                                                        <Typography id="modal-title">
+                                                                            Pending Remark
+                                                                        </Typography>
+                                                                        <TextField
+                                                                            variant="outlined"
+                                                                            style={{ width: '100%' }}
+                                                                            size="small"
+                                                                            name="Remark"
+                                                                            value={remark}
+                                                                            onChange={(e) => setRemark(e.target.value)}
+                                                                            multiline
+                                                                            rows={4}
+                                                                        />
+
+                                                                    </>
+                                                                )
+                                                            }
+
+                                                            {
+                                                                statusID === 5 && (
+                                                                    <>
+                                                                        <Typography id="modal-title">
+                                                                            Shortlisted Remark
+                                                                        </Typography>
+                                                                        <TextField
+                                                                            variant="outlined"
+                                                                            style={{ width: '100%' }}
+                                                                            size="small"
+                                                                            name="Remark"
+                                                                            value={remark}
+                                                                            onChange={(e) => setRemark(e.target.value)}
+                                                                            multiline
+                                                                            rows={4}
+                                                                        />
+
+                                                                    </>
+                                                                )
+                                                            }
+                                                            <Typography id="modal-description" sx={{ mt: 2, mb: 0.5 }}>
+                                                                {modalContent}
+                                                            </Typography>
+                                                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                                                <Button variant="contained" onClick={handleConfirm}>
+                                                                    OK
+                                                                </Button>
+                                                                <Button variant="outlined" onClick={handleCancel}>
+                                                                    Cancel
+                                                                </Button>
+                                                            </Box>
+                                                        </Box>
+                                                    </Modal>
                                                 </InterviewCard>
                                             </TableRow>
                                         )
@@ -310,7 +598,7 @@ const Interview = () => {
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
-            </Box >
+            </Box>
             <Footer />
         </>
     )

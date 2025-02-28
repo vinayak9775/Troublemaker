@@ -109,8 +109,15 @@ export default function HRNavbar() {
         };
     }, []);
 
+    const formatLastName = (lastName) => {
+        if (!lastName || lastName === "null" || lastName === "undefined") {
+            return "";
+        }
+        return lastName;
+    };
+
     return (
-        <div  style={{ backgroundColor: '#FFFFFF'}}>
+        <div style={{ backgroundColor: '#FFFFFF' }}>
             <Box sx={{ flexGrow: 1 }}>
                 <AppBar position="fixed" style={{
                     background: 'linear-gradient(45deg, #1FD0C4 38.02%, #0E8FE4 100%)',
@@ -142,7 +149,8 @@ export default function HRNavbar() {
                                 alignItems={isSmallScreen ? 'center' : 'stretch'}
                             >
                                 <div style={{ marginBottom: isSmallScreen ? "10px" : "0px", marginTop: isSmallScreen ? "0px" : "20px" }}>
-                                    Welcome, {userName} {userLastName}
+                                    {/* Welcome, {userName} {userLastName && userLastName.trim() ? ` ${userLastName}` : ""} */}
+                                    Welcome, {userName} {formatLastName(userLastName)}
                                 </div>
                                 <IconButton
                                     size="large"

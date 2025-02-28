@@ -32,7 +32,7 @@ class colleagueRegistersSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = webmodels.agg_hhc_callers
-        fields = ('caller_id', 'email', 'fname', 'lname','otp')
+        fields = ('caller_id', 'email', 'caller_fullname','otp')
 
 class verifyPhoneSerializer(serializers.ModelSerializer):
     otp = serializers.CharField(write_only=True)

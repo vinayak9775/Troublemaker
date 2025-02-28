@@ -7,6 +7,7 @@ from decimal import Decimal
 from rest_framework import status
 from datetime import time
 import pytz
+from hhcspero import settings
 
 class UserRegistrationSerializer3(serializers.ModelSerializer):
     class Meta:
@@ -17,7 +18,6 @@ class UserRegistrationSerializer3(serializers.ModelSerializer):
     def validate(self, data):
         return data
     
-
 class UserLoginInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -32,7 +32,7 @@ class agg_hhc_service_professionals_serializer2(serializers.Serializer):
 
     class Meta:
         model = agg_hhc_service_professionals
-        fields = ['srv_prof_id', 'clg_ref_id', 'phone_no', 'work_phone_no', 'OTP', 'OTP_count', 'otp_expire_time']
+        fields = ['srv_prof_id', 'clg_ref_id', 'phone_no','work_phone_no', 'OTP', 'OTP_count', 'otp_expire_time']
 
     def validate(self, data):
         return data
@@ -44,12 +44,24 @@ class agg_hhc_service_professionals_serializer2(serializers.Serializer):
         return pro_obj
     
 
+
+class professional_otp_dtl(serializers.ModelSerializer):
+    class Meta:
+        model  = SMS_sent_details
+        fields = ["professional_name","contact_number","sent_status","sms_type","status","added_by"]
+
+
+
+
+
+
 class UserRegistrationSerializer2(serializers.ModelSerializer):
     class Meta:
         model  = agg_com_colleague
         fields = ['pk', 'clg_Work_phone_number', 'clg_otp', 'clg_otp_expire_time', 'clg_otp_count', 'grp_id']
 
     def validate(self, data):
+        print("data", data)
         return data
     
 class UserCallerSerializer2(serializers.ModelSerializer):
@@ -115,7 +127,7 @@ class UserProfileSerializer3(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_service_professionals
         # fields = '__all__'
-        fields = ['profile_file', 'prof_fullname', 'Ratings', 'Reviews', 'srv_id', 'Experience', 'professional_code','email_id']
+        fields = ['profile_file', 'prof_fullname', 'Ratings', 'Reviews', 'srv_id', 'Experience', 'professional_code', 'email_id']
             
         def validate(self, data):
             return data
@@ -203,7 +215,7 @@ class agg_hhc_professional_location_zones_serializer(serializers.ModelSerializer
         pro_loc_zone_details = agg_hhc_professional_locations_as_per_zones.objects.create(**validated_data)
         pro_loc_zone_details.save(force_insert=False)
         return pro_loc_zone_details
-
+    
     
 class agg_hhc_prof_availability_serializer(serializers.ModelSerializer):
 
@@ -213,6 +225,12 @@ class agg_hhc_prof_availability_serializer(serializers.ModelSerializer):
         model  = agg_hhc_professional_availability
 
         fields = ['professional_avaibility_id','srv_prof_id', 'day', 'last_modified_by']
+
+    # def get_date(self,obj):
+    #     if(obj.date!=None):
+    #         return obj.date.strftime("%d-%m-%Y")
+    #     else:
+    #         return None
         
     def validate(self, data):
         return data
@@ -226,8 +244,17 @@ class agg_hhc_prof_availability_serializer(serializers.ModelSerializer):
         pro_loc.save(force_insert=False)
         return pro_loc
     
-    def update(self, instance, validated_data):
-        return instance
+
+
+class agg_hhc_professional_availability_detail_serializer123(serializers.ModelSerializer):
+
+    prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_availability.objects.all(),many=False)
+    prof_loc_zone_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_locations_as_per_zones.objects.all(),many=False)
+
+    class Meta:
+        model  = agg_hhc_professional_availability_detail
+
+        fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time', 'prof_loc_zone_id','last_modified_by', 'prof_zone_id']
 
 
 class agg_hhc_professional_availability_detail_serializer(serializers.ModelSerializer):
@@ -283,6 +310,9 @@ class agg_hhc_professional_availability_detail_serializer(serializers.ModelSeria
         pro_loc_details.save(force_insert=False)
         return pro_loc_details 
     
+    def update(self, instance, validated_data):
+        return instance
+    
 class agg_hhc_professional_availability_detail_serializer2(serializers.ModelSerializer):
 
     prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_availability.objects.all(),many=False)
@@ -335,18 +365,40 @@ class agg_hhc_professional_availability_detail_serializer2(serializers.ModelSeri
 
         pro_loc_details = agg_hhc_professional_availability_detail.objects.create(**validated_data)
         pro_loc_details.save(force_insert=False)
-        return pro_loc_details   
+        return pro_loc_details 
+    
+    def update(self, instance, validated_data):
+        return instance
 
 
 
+class agg_hhc_professional_availability_detail_serializer3(serializers.ModelSerializer):
 
+    prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_availability.objects.all(),many=False)
+    prof_loc_zone_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_locations_as_per_zones.objects.all(),many=False)
 
-
-class professional_otp_dtl(serializers.ModelSerializer):
     class Meta:
-        model  = SMS_sent_details
-        fields = ["professional_name","contact_number","sent_status","sms_type","status","added_by"]
+        model  = agg_hhc_professional_availability_detail
 
+        fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time', 'prof_loc_zone_id','last_modified_by']
+
+    def validate(self, data):
+        return data
+ 
+
+class agg_hhc_professional_availability_detail_serializer4(serializers.ModelSerializer):
+
+    # prof_avaib_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_availability.objects.all(),many=False)
+    # prof_zone_id = serializers.PrimaryKeyRelatedField(queryset=agg_hhc_professional_zone.objects.all(),many=False)
+    
+
+    class Meta:
+        model  = agg_hhc_professional_availability_detail
+
+        fields = ['prof_avaib_dt_id','prof_avaib_id', 'start_time', 'end_time','prof_zone_id' , 'last_modified_by']
+
+    def validate(self, data):
+        return data
 
 
 
@@ -358,6 +410,11 @@ class colleage_add_prof_data(serializers.ModelSerializer):
         # fields = ['','clg_email','']
         fields = ['clg_email', 'clg_first_name', 'clg_gender', 'clg_mobile_no', 'clg_Work_phone_number','clg_Date_of_birth',
         'clg_address', 'clg_state','clg_district']
+    def get_clg_Date_of_birth(self,obj):
+        if (obj.clg_Date_of_birth!=None):
+            return obj.clg_Date_of_birth.strftime('%d-%m-%Y')
+        else:
+            return None
 
 class reg_prof_api_serializer(serializers.ModelSerializer):
 
@@ -365,7 +422,7 @@ class reg_prof_api_serializer(serializers.ModelSerializer):
         model = agg_hhc_service_professionals
         fields = ['srv_id', 'title','prof_fullname','dob','gender','email_id','phone_no','alt_phone_no','eme_contact_no','eme_contact_relation',
                   'eme_conact_person_name','mode_of_service','availability_status','prof_zone_id','lattitude','langitude','state_name','prof_address','city','pin_code_id',
-                  'prof_sub_srv_id','Education_level','cv_file','certificate_registration_no','availability']
+                  'prof_sub_srv_id','Education_level','cv_file','certificate_registration_no','availability','last_modified_by']
                   
     
     def create(self, validated_data):
@@ -431,7 +488,7 @@ class get_ptn_dtl(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_patients
         fields = ['agg_sp_pt_id', 'name', 'address']
-
+        
 class UpcomingServiceAppSerializer(serializers.ModelSerializer):
     Total_amount = serializers.SerializerMethodField()
     Pending_amount = serializers.SerializerMethodField()
@@ -452,7 +509,7 @@ class UpcomingServiceAppSerializer(serializers.ModelSerializer):
 
     def get_requested_reschedule(self, obj):
         get_request = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = obj.eve_id, epoc_id=obj.eve_poc_id, is_reschedule=1,professional_request_status=3)
-        if get_request.exists():  
+        if get_request.exists():
             return True
         else:
             return False
@@ -528,6 +585,7 @@ class UpcomingServiceAppSerializer(serializers.ModelSerializer):
       eve_id_instance = obj.eve_id
       serialized_sessions = get_ptn_dtl(eve_id_instance.agg_sp_pt_id)
       return serialized_sessions.data
+
 # ----------------------------PROfessional app feedback----------------------
 
 class agg_hhc_get_role_serializer(serializers.ModelSerializer):
@@ -535,13 +593,20 @@ class agg_hhc_get_role_serializer(serializers.ModelSerializer):
         model = agg_hhc_services
         fields = ['srv_id','service_title']
 
-class Pro_app_feedback_serializer(serializers.ModelSerializer):
+class feedback_serializer(serializers.ModelSerializer):
     class Meta:
-        model = agg_hhc_Professional_app_feedback
-        fields = ['feedbk_id', 'srv_prof_id', 'pt_id', 'eve_id', 'rating', 'comment', 'date_time', 'q1', 'q2', 'q3', 'image', 'vedio', 'audio']
+        model=agg_hhc_Professional_app_feedback
+        fields=['feedbk_id','srv_prof_id','eve_id','rating','q1']
 
+class feedback_media_serializer(serializers.ModelSerializer):
+    class Meta:
+        model=agg_hhc_feedback_media_note
+        fields=['feedbk_med_id','eve_id','image','vedio','audio','feedback_by','additional_comment']
 
-
+class question_feedback_serializer(serializers.ModelSerializer):
+    class Meta:
+        model=FeedBack_Questions
+        fields="__all__"
 
 
 
@@ -572,7 +637,10 @@ class Ongoing_srv_sess_serializer(serializers.ModelSerializer):
         model = agg_hhc_event_plan_of_care
         fields = ['eve_poc_id','srv_prof_id', 'eve_id', 'patient_dtl', 'srv_id', 'start_date', 'end_date','start_time','end_time', 'Total_amount',
                   'Pending_amount','requested_cancel','requested_reschedule','ongoing_sesson']
-    
+    def get_start_date(self,obj):
+        return obj.start_date.strftime("%d-%m-%Y")
+    def get_end_date(self,obj):
+        return obj.start_date.strftime("%d-%m-%Y")
     def get_requested_reschedule(self, obj):
         get_request = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = obj.eve_id, epoc_id=obj.eve_poc_id, is_reschedule=1)
         if get_request.exists():  
@@ -589,7 +657,6 @@ class Ongoing_srv_sess_serializer(serializers.ModelSerializer):
 
 
     def get_Total_amount(self, obj):
-       
         event_id = obj.eve_id_id 
         total_amt = agg_hhc_events.objects.filter(eve_id=event_id,status=1).aggregate(Sum('final_amount'))['final_amount__sum']
 
@@ -646,6 +713,21 @@ class service_closure_serializer(serializers.ModelSerializer):
     class Meta:
         model=agg_hhc_events
         fields=['eve_id','event_code','caller_id','added_from_hosp','agg_sp_pt_id','purp_call_id','event_date','note','enquiry_added_date','enquiry_status','enquiry_cancellation_reason','enquiry_cancel_date','Total_cost','discount_type','discount_value','final_amount','day_convinance','total_convinance','isConvertedService','Suffered_from','address_id','enq_spero_srv_status','event_status','refer_by','Patient_status_at_present','patient_service_status']
+    def get_event_date(self,obj):
+        if obj.event_date!=None:
+            return obj.event_date.strftime("%d-%m-%Y")
+        else:
+            return None
+    def get_enquiry_added_date(self,obj):
+        if obj.enquiry_added_date!=None:
+            return obj.enquiry_added_date.strftime("%d-%m-%Y")
+        else:
+            return None
+    def get_enquiry_cancel_date(self,obj):
+        if obj.enquiry_cancel_date!=None:
+            return obj.enquiry_cancel_date.strftime("%d-%m-%Y")
+        else:
+            return None
     # def get_patient(self, instance):
     #     patient_id_is = instance.patient
     #     state_name_serializer = agg_hhc_patients(patient_id_is)
@@ -663,6 +745,46 @@ class preffered_proffesional(serializers.ModelSerializer):
         fields = ['doct_cons_id','cons_fullname','mobile_no']
 
 
+
+class agg_hhc_patient_documents_serializer(serializers.ModelSerializer):
+    discharge_summary=serializers.SerializerMethodField()
+    prescription=serializers.SerializerMethodField()
+    lab_reports=serializers.SerializerMethodField()
+    dressing=serializers.SerializerMethodField()
+    class Meta:
+        model=agg_hhc_patient_documents
+        fields=['doc_id','discharge_summary','prescription','lab_reports','dressing','verification_status']
+    def get_discharge_summary(self,obj):
+        if obj.discharge_summary!="":
+            cors_allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+            file_path = str(cors_allowed_origins[1])+"/media/"+str(obj.discharge_summary)
+            return file_path
+        else:
+            return None
+    def get_prescription(self,obj):
+        if obj.prescription!="":
+            cors_allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+            file_path = str(cors_allowed_origins[1])+"/media/"+str(obj.prescription)
+            return file_path
+        else:
+            return None
+    def get_lab_reports(self,obj):
+        if obj.lab_reports!="":
+            cors_allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+            file_path = str(cors_allowed_origins[1])+"/media/"+str(obj.lab_reports)
+            return file_path
+        else:
+            return None
+    def get_dressing(self,obj):
+        if obj.dressing!="":
+            cors_allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+            file_path = str(cors_allowed_origins[1])+"/media/"+str(obj.dressing)
+            return file_path
+        else:
+            return None
+
+
+
 class agg_hhc_patients_serializer_from_pro_app(serializers.ModelSerializer):
     doct_cons=serializers.SerializerMethodField()
     class Meta:
@@ -678,7 +800,6 @@ class agg_hhc_patients_serializer_from_pro_app(serializers.ModelSerializer):
             return obj.dob.strftime("%d-%m-%Y")
         else:
             return None
-
 
 class patient_serializer_to_select_number_to_send_opt(serializers.ModelSerializer):
     numbers=serializers.SerializerMethodField()
@@ -711,7 +832,6 @@ class agg_hhc_payment_details_serializer(serializers.ModelSerializer):
             return obj.cheque_date.strftime("%d-%m-%Y")
         else:
             return None
-
     
 
 
@@ -747,7 +867,6 @@ class agg_hhc_transport_serializer(serializers.ModelSerializer):
         return obj.start_date.strftime('%d-%m-%Y')
     def get_end_date(self,obj):
         return obj.end_date.strftime('%d-%m-%Y')
-
         # fields='__all__'
 
 class agg_hhc_transport_serializer1(serializers.ModelSerializer):
@@ -814,10 +933,12 @@ class srv_sess_serializer(serializers.ModelSerializer):
                   'Total_amount','Pending_amount','actual_EndDate_Time','start_time','end_time', 'patient_dtl', 'Session_status', 'requested_cancel',
                   'requested_reschedule','status','total_session_count','Session_jobclosure_status','event_discount','session_start_status','vip_status','last_session','professional_last_session','payment_skip','rechedule_status','previous_session_remain']
     def get_event_discount(self,obj):
-        event_id = obj.eve_id_id
-        discount=agg_hhc_events.objects.get(eve_id=event_id)
-        return discount.discount_type
-
+        try:
+            event_id = obj.eve_id_id
+            discount=agg_hhc_events.objects.get(eve_id=event_id)
+            return discount.discount_type
+        except Exception as e:
+            return 5
     def get_actual_StartDate_Time(self,obj):
         if obj.actual_StartDate_Time!=None:
             # return obj.actual_StartDate_Time.strftime("%d-%m-%Y")
@@ -830,13 +951,12 @@ class srv_sess_serializer(serializers.ModelSerializer):
             return obj.actual_EndDate_Time
         else:
             return None
-
     def get_total_session_count(self, obj):
         get_total_session = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id=obj.eve_poc_id, eve_id=obj.eve_id, status=1).count()
         return get_total_session
              
     def get_requested_reschedule(self, obj):
-        get_request = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = obj.eve_id, epoc_id=obj.eve_poc_id,dtl_eve_id=obj.agg_sp_dt_eve_poc_id,is_reschedule=1,professional_request_status=3)
+        get_request = agg_hhc_cancellation_and_reschedule_request.objects.filter(eve_id = obj.eve_id, epoc_id=obj.eve_poc_id,dtl_eve_id=obj.agg_sp_dt_eve_poc_id, is_reschedule=1,professional_request_status=3)
         if get_request.exists():  
             return True
         else:
@@ -856,30 +976,38 @@ class srv_sess_serializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # data['recommomded_service'] = instance.eve_poc_id.sub_srv_id.recommomded_service
-        # data['sub_service_id'] = instance.eve_poc_id.sub_srv_id
         recommomded_service_name = None
         recommomded_service_id = None
+        
         if instance.eve_poc_id:
             event_plan_of_care = instance.eve_poc_id
+            
             if event_plan_of_care.sub_srv_id:
                 recommomded_service_name = event_plan_of_care.sub_srv_id.recommomded_service
                 recommomded_service_id = event_plan_of_care.sub_srv_id.sub_srv_id
+        
         data['recommomded_service_name'] = recommomded_service_name
         data['recommomded_service_id'] = recommomded_service_id
+        
         return data
 
     def get_Total_amount(self, obj):
+       
         event_id = obj.eve_id_id 
         total_amt = agg_hhc_events.objects.filter(eve_id=event_id,status=1).aggregate(Sum('final_amount'))['final_amount__sum']
+
         return total_amt if total_amt is not None else 0
     
-    def get_Pending_amount(self, obj):  
+    def get_Pending_amount(self, obj):
+      
         event_id = obj.eve_id_id
+
         total_amt_agg = agg_hhc_events.objects.filter(eve_id=event_id,status=1).aggregate(Sum('final_amount'))
         total_paid_agg = agg_hhc_payment_details.objects.filter(eve_id=event_id,status=1,overall_status="SUCCESS").aggregate(Sum('amount_paid'))
+
         total_amt = total_amt_agg['final_amount__sum'] or Decimal('0.0')
         total_paid = total_paid_agg['amount_paid__sum'] or Decimal('0.0')
+
         Pending_amt = float(total_amt) - float(total_paid)
         return Pending_amt
     def get_session_start_status(self,obj):
@@ -888,12 +1016,9 @@ class srv_sess_serializer(serializers.ModelSerializer):
             return True
         else:
             return False
-
-
     def get_vip_status(self,obj):
         event_id = obj.eve_id_id
         total_amt_agg = agg_hhc_events.objects.filter(eve_id=event_id,status=1).last()
-        discount_type=None
         try:
             if (int(total_amt_agg.discount_type)==1):
                 discount_type="In_Percentage"
@@ -918,7 +1043,7 @@ class srv_sess_serializer(serializers.ModelSerializer):
         else:
             last_session=False
         return last_session
-           
+        
     def get_professional_last_session(self,obj):
         if(obj.srv_prof_id):
             detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id_id,status=1,srv_prof_id=obj.srv_prof_id_id).last()
@@ -926,8 +1051,7 @@ class srv_sess_serializer(serializers.ModelSerializer):
                 return True
             else:
                 return False
-           
-
+            
     def get_rechedule_status(self, obj):
         if obj.start_time and obj.actual_StartDate_Time:
             start_time = time.fromisoformat(str(obj.start_time))
@@ -942,16 +1066,12 @@ class srv_sess_serializer(serializers.ModelSerializer):
             else:
                 return False
         return False
+
     def get_previous_session_remain(self,obj):
         if(obj.srv_prof_id):
-        #     # detial_event_count=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id,srv_prof_id=obj.srv_prof_id,status=1,Session_jobclosure_status=2,actual_StartDate_Time__lte=datetime.now().date(),start_time__lte=datetime.now().time()).count()
-        #     if(detial_event_count>=3):
-        #         return True
-        #     else:
-        #         return False
-        # return False
-            detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id,srv_prof_id=obj.srv_prof_id,status=1,actual_StartDate_Time__lte=datetime.now().date(),start_time__lte=datetime.now().time()).order_by('actual_StartDate_Time')
             try:
+                # detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id,srv_prof_id=obj.srv_prof_id,status=1,actual_StartDate_Time__lte=datetime.now().date(),start_time__lte=datetime.now().time()).order_by('actual_StartDate_Time')
+                detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=obj.eve_id,srv_prof_id=obj.srv_prof_id,status=1,actual_StartDate_Time__lte=datetime.now().date()).order_by('actual_StartDate_Time')                
                 if(detail_event.count()<=2):
                     return False
                 elif(detail_event.count()>=3):
@@ -977,29 +1097,8 @@ class srv_sess_serializer(serializers.ModelSerializer):
                     return False
             except Exception as e:
                 return False
-
-    # def get_rechedule_status(self, obj):
-    #     if obj.start_time and obj.actual_StartDate_Time:
-    #         start_time = time.fromisoformat(str(obj.start_time))
-    #         start_datetime = timezone.make_aware(
-    #             datetime.combine(obj.actual_StartDate_Time, start_time), 
-    #             timezone.get_current_timezone()
-    #         )+timedelta(hours=2)
-    #         original_datetime = datetime.fromisoformat(str(start_datetime))
-    #         # Convert to UTC
-    #         utc_datetime = original_datetime.astimezone(pytz.utc)
-    #         adjusted_datetime = utc_datetime - timedelta(hours=1, minutes=24, seconds=45) #+ timedelta(microseconds=666700)
-    #         target_datetime = adjusted_datetime.replace(tzinfo=None)
-    #         print("now time is ================",target_datetime)
-    #         if target_datetime > timezone.now():
-    #             return True
-    #         else:
-    #             return False
-    #     return False
-
-
-
-
+        else:
+            return False
 
 # --------------------------- professional service cancellation APi --------------------
 
@@ -1046,13 +1145,9 @@ class get_event_poc_data(serializers.ModelSerializer):
     class Meta:
         model = agg_hhc_event_plan_of_care
         fields = ['eve_poc_id','eve_id','srv_id','sub_srv_id','canceled_date','start_date']
-    
-    # def get_canceled_date(self, obj):
-    #     date = agg_hhc_cancellation_history.objects.get(event_id=obj.eve_id)
-    #     return date.cancelled_date.isoformat()
     # def get_canceled_date(self,obj):
-    #     # print(obj.canceled_date,';;;........')
-    #     if obj.canceled_date!=None:
+    #     # print(obj.canceled_date, 'canceled_date..........')
+    #     if obj.canceled_date!=None:   
     #         return obj.canceled_date.strftime('%d-%m-%Y')
     #     else:
     #         return None
@@ -1062,6 +1157,10 @@ class get_event_poc_data(serializers.ModelSerializer):
         else:
             return None
     
+    # def get_canceled_date(self, obj):
+    #     date = agg_hhc_cancellation_history.objects.get(event_id=obj.eve_id)
+    #     return date.cancelled_date.isoformat()
+
     def get_canceled_date(self, obj):
         cancellation_history = agg_hhc_cancellation_history.objects.filter(event_id=obj.eve_id)
         if cancellation_history.exists():
@@ -1069,7 +1168,6 @@ class get_event_poc_data(serializers.ModelSerializer):
             latest_cancellation = cancellation_history.latest('cancelled_date')
             return latest_cancellation.cancelled_date.isoformat()
         return None
-
 
 
 
@@ -1144,29 +1242,11 @@ class event_count(serializers.ModelSerializer):
         model = agg_hhc_events
         fields = ['eve_id','agg_sp_pt_id', 'enq_spero_srv_status']
 
-    # def get_feedback(self, obj):
-    #     feedback = agg_hhc_Professional_app_feedback.objects.filter(pt_id=obj.eve_id.agg_sp_pt_id)
-    #     if feedback.exists():
-    #         serializer = Patient_feedback(feedback, many=True)
-    #         return serializer.data
-    #     else:
-    #         return None
-
 # -----------------------------------------
 class CustomSerializer(serializers.Serializer):
     # field1 = serializers.SerializerMethodField()
     field2 = serializers.SerializerMethodField()
     field3 = serializers.SerializerMethodField()
-
-    # def get_field1(self, obj):
-    #     serialized_data = Patient_feedback(obj.get("field1")).data if obj.get("field1") else None
-    #     #write your code in this serializer if you would like to make chages in this api 
-    #     return serialized_data
-    
-    # def get_field1(self,obj):
-    #     patient_id = instance.pt_id
-    #     patient_id_serializer = get_ptn_dtl(patinet_id)
-    #     return patient_id_serializer.data
 
     def get_field2(self, obj):
         serialized_data = Patient_detail_page(obj.get("field2")).data if obj.get("field2") else None
@@ -1190,9 +1270,9 @@ class canellation_service_request_from_prof(serializers.ModelSerializer):
     class Meta:
         # model = agg_hhc_cancellation_request
         model = agg_hhc_cancellation_and_reschedule_request
-        fields = ['req_id','eve_id','epoc_id','is_srv_sesn','is_canceled','req_resson','srv_prof_id','last_modified_by']
+        fields = ['req_id','eve_id','epoc_id','is_srv_sesn','is_canceled','req_resson','remark','srv_prof_id','added_by','last_modified_by']
         # fields = ['canc_req_id','eve_id','epoc_id','dtl_eve_id','is_srv_sesn','cncel_req_resson']
-        # fields = ['req_id','eve_id','epoc_id','is_srv_sesn','req_resson','remark','is_canceled', 'last_modified_by','srv_prof_id', 'dtl_eve_id']
+        # fields = ['req_id','eve_id','epoc_id','is_srv_sesn','req_resson','remark','is_canceled', 'last_modified_by', 'srv_prof_id', 'dtl_eve_id']
 
 
 class canellation_session_request_from_prof(serializers.ModelSerializer):
@@ -1200,7 +1280,7 @@ class canellation_session_request_from_prof(serializers.ModelSerializer):
         # model = agg_hhc_cancellation_request
         # fields = ['canc_req_id','eve_id','epoc_id','is_srv_sesn','cncel_req_resson']
         model = agg_hhc_cancellation_and_reschedule_request
-        fields = ['req_id','eve_id','epoc_id','dtl_eve_id','is_srv_sesn','req_resson','remark','is_canceled', 'last_modified_by']
+        fields = ['req_id','eve_id','epoc_id','dtl_eve_id','is_srv_sesn','req_resson','remark','is_canceled', 'added_by','last_modified_by']
 
 
 
@@ -1213,7 +1293,8 @@ class Reschedule_service_request_from_prof(serializers.ModelSerializer):
         # fields = ['req_id','eve_id','epoc_id','is_srv_sesn','req_resson','is_reschedule','reschedule_date', 'last_modified_by']
         fields = ['req_id','eve_id','epoc_id','is_srv_sesn','req_resson','is_reschedule','reschedule_date', 'last_modified_by','srv_prof_id']
     def get_reschedule_date(self,obj):
-        return obj.reschedule_date.strftime('%d-%m-%Y')
+        return obj.reschedule_date.strftime('%d-%m-%Y')#this object is used to change date formate
+
 
 class Reschedule_session_request_from_prof(serializers.ModelSerializer):
     class Meta:
@@ -1222,7 +1303,6 @@ class Reschedule_session_request_from_prof(serializers.ModelSerializer):
         fields = ['req_id','eve_id','epoc_id','dtl_eve_id','is_srv_sesn','req_resson','is_reschedule','reschedule_date', 'last_modified_by']
     def get_reschedule_date(self,obj):
         return obj.reschedule_date.strftime('%d-%m-%Y')
-    
 class DeviceToken_serializer(serializers.ModelSerializer):
     class Meta:
         model=DeviceToken
@@ -1267,7 +1347,7 @@ class professional_list_serializer(serializers.ModelSerializer):
     noti_id=Notif_details_serializer()
     class Meta:
         model=Professional_notification
-        fields = ['prof_noti','noti_id','srv_prof_id',]
+        fields = ['prof_noti','noti_id','srv_prof_id']
 
 
 class professional_call_back_serializer(serializers.ModelSerializer):
@@ -1275,18 +1355,13 @@ class professional_call_back_serializer(serializers.ModelSerializer):
         model=professional_call_back
         fields=['cb_id','clg_id','remark','status','call_back_done_by','last_modified_by']
         # fields='__all__'
-
+    
 class feedback_serializer(serializers.ModelSerializer):
     class Meta:
         model=agg_hhc_Professional_app_feedback
-        fields=['feedbk_id','srv_prof_id','eve_id','rating','q1']
+        fields=['feedbk_id','srv_prof_id','eve_id','rating','comment','q1','q2','q3','image','vedio','audio']
 
-class feedback_media_serializer(serializers.ModelSerializer):
+class professional_sub_service_serializer(serializers.ModelSerializer):
     class Meta:
-        model=agg_hhc_feedback_media_note
-        fields=['feedbk_med_id','eve_id','image','vedio','audio','feedback_by','additional_comment']
-
-class question_feedback_serializer(serializers.ModelSerializer):
-    class Meta:
-        model=FeedBack_Questions
-        fields="__all__"
+        model=agg_hhc_professional_sub_services
+        fields=['prof_sub_srv_id', 'srv_prof_id','sub_srv_id', 'last_modified_by']

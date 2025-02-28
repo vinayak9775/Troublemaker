@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, MenuItem, Typography, TextField, Button, Alert, Snackbar } from "@mui/material"
+import { Box, Grid, MenuItem, Typography, TextField, Button, Alert, Snackbar, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
 import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import CircularProgress from '@mui/material/CircularProgress';
+import Checkbox from '@mui/material/Checkbox';
 
 const payMode = [
     {
@@ -29,7 +30,8 @@ const payMode = [
     },
 ];
 
-const Payment = ({ eveID, pay, ptnData, onClose }) => {
+const Payment = ({ eveID, pay, ptnData, onClose, walletData }) => {
+
     const port = process.env.REACT_APP_API_KEY;
     const accessToken = localStorage.getItem('token');
 
@@ -38,22 +40,47 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
     const [selectedPayMode, setSelectedPayMode] = useState(1);
     const [chequeNo, setChequeNo] = useState('');
     const [chequeDate, setChequeDate] = useState('');
-    const [chequeImg, setChequeImg] = useState('');
     const [bankName, setBankName] = useState('');
     const [cardNo, setCardNo] = useState('');
     const [transNo, setTransNo] = useState('');
     const [utr, setUTR] = useState('');
+    // const [walletamout, setWalletamout] = useState(null);
 
     const [remark, setRemark] = useState('')
     const [paymentData, setPaymentData] = useState({ ...pay });
     const [patientData, setPatientData] = useState({ ...ptnData });
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [phoneNumberError, setPhoneNumberError] = useState('');
-
     const [amountError, setAmountError] = useState('');
     const [sessionError, setSessionError] = useState('');
-    const [amount, setAmount] = useState('');
-    const [convCharge, setConvCharge] = useState('');
+    const [amount, setAmount] = useState(0);
+    // const [convCharge, setConvCharge] = useState('');
+
+    ///Anjali's Code Start
+    const [walletamout, setWalletamout] = useState(0);
+    const [isChecked, setIsChecked] = useState(false);
+    const [convCharge, setConvCharge] = useState({
+        total_sessions: 0,
+        no_of_serssion: 0,
+        total_cahrge: 0,
+        amount_return: 0,
+    });
+
+    console.log(convCharge.wallet, 'wwwwww');
+
+    useEffect(() => {
+        if (!isChecked) {
+            setWalletamout(0);
+            setAmount(0);
+            setConvCharge({
+                total_sessions: 0,
+                no_of_serssion: 0,
+                total_cahrge: 0,
+                amount_return: 0,
+            });
+        }
+    }, [isChecked]);
+
+
+    ///Anjali's Code End
 
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -91,19 +118,75 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
         setValue(newValue);
     };
 
+    //__________________________________Wallet Start________________________
+
+    useEffect(() => {
+        console.log("Received walletData:", walletData);
+    }, [walletData]);
+
+    const handleCheckboxChange = (e) => {
+        setIsChecked(e.target.checked);
+    };
+
+    useEffect(() => {
+        if (isChecked && walletData && walletData["Amount in wallet is "] !== null) {
+            const maxAmount = walletData["Amount in wallet is "];
+            const totalAmount = paymentData.Total_Amount;
+            setWalletamout(Math.min(maxAmount, totalAmount)); // Set wallet amount when checkbox is checked
+        } else {
+            setWalletamout(0); // Reset wallet amount when checkbox is unchecked
+        }
+    }, [isChecked, walletData, paymentData.Total_Amount]);
+
+    // ___________________________________Wallet End________________________
+    const [amountValidate, setAmountValidate] = useState(false);
+    const [selectedOption, setSelectedOption] = useState('');
+    const [selectedOptionOnline, setSelectedOptionOnline] = useState('');
+
+    const handleWalletClick = () => {
+        setAmountValidate(true);
+    };
+
+    const [dynamicAmountPaid, setDynamicAmountPaid] = useState(paymentData.amount_paid || "");
+    const [dynamicAmountPaidOnline, setDynamicAmountPaidOnline] = useState(paymentData.amount_paid || 0);
+
+    const handleRadioChange = (event) => {
+        const selectedValue = event.target.value;
+        setSelectedOption(selectedValue);
+
+        if (selectedValue === 'yes') {
+            setDynamicAmountPaid(paymentData.amount_paid || 0);
+        } else if (selectedValue === 'no') {
+            setDynamicAmountPaid(paymentData.Total_Amount || 0);
+        }
+
+    };
+
+    const handleRadioChangeOnline = (event) => {
+        const selectedValue = event.target.value;
+        setSelectedOptionOnline(selectedValue);
+
+        if (selectedValue === 'yes') {
+            setDynamicAmountPaidOnline(paymentData.amount_paid || 0);
+        } else if (selectedValue === 'no') {
+            setDynamicAmountPaidOnline(paymentData.Total_Amount || 0);
+        }
+    };
+
+    const handleAmountValidation = (amountPaid) => {
+        if (Number(amountPaid) || Number(convCharge.wallet) > Number(paymentData.Total_Amount)) {
+            setAmountValidate(true);
+        } else {
+            setAmountValidate(false);
+        }
+    };
+
     const handleFieldChange = (field, value) => {
         setPaymentData({ ...pay, [field]: value });
-        // setPatientData({ ...ptnData, [field]: value });
         setPatientData({ ...patientData, [field]: value });
         if (field === 'phone') {
             validatePhoneNumber(value);
         }
-        // setPatientData(prevData => ({ ...prevData, [field]: value }));
-        // setPaymentData(prevPaymentData => ({
-        //     ...prevPaymentData,
-        //     [field]: parseFloat(value), // Parse the value to a float
-        // }));
-        // Calculate Pending_Amount as the difference between Total_Amount and Paid_Amount
         if (field === 'amount_paid') {
             setPaymentData(paymentData => {
                 const pendingAmount = paymentData.Pending_Amount - parseFloat(value);
@@ -112,25 +195,13 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                 console.log("Paid Amount.....", paymentData.amount_paid)
                 console.log("Pending Amount.....", demo)
                 setAmount(paymentData.amount_paid)
-
-                if (parseFloat(value) > paymentData.Pending_Amount) {
-                    setAmountError("Paid Amount cannot be greater than Pending Amount");
-                    // return paymentData; 
-                } else if (parseFloat(value) < 0) {
-                    setAmountError("Paid Amount cannot be negative");
-                }
-                else {
-                    setAmountError("");
-                }
-                // else {
-                //     return paymentData;
-                // }
                 return {
                     ...paymentData,
                     Pending_Amount: isNaN(pendingAmount) ? 0 : pendingAmount,
                 };
             });
         }
+        handleAmountValidation(value);
     };
 
     const validatePhoneNumber = (value) => {
@@ -142,12 +213,15 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
         }
     };
 
-    // Calculate Convinience
     useEffect(() => {
-        const getCalculateConvinance = async () => {
-            if (eveID && amount) {
+        const totalAmount = Number(walletamout) + Number(amount);
+
+        console.log(totalAmount, 'totalAmounttotalAmount');
+
+        if (eveID && totalAmount > 0) {
+            const getCalculateConvinance = async () => {
                 try {
-                    const res = await fetch(`${port}/web/CalculateConvinanceCharge/${eveID}/${amount}/`, {
+                    const res = await fetch(`${port}/web/CalculateConvinanceCharge/${eveID}/${totalAmount}/`, {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json',
@@ -155,27 +229,30 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                     });
                     const data = await res.json();
                     setConvCharge(data);
-                    if (data.no_of_serssion === 0) {
-                        setSessionError("Please ensure sufficient payment to secure your session.")
-                    } else {
-                        setSessionError("")
-                    }
                 } catch (error) {
                     console.error("Error fetching Calculate Convinance:", error);
                 }
-            }
-        };
-        getCalculateConvinance();
-    }, [eveID, amount]);
+            };
+            getCalculateConvinance();
+        }
+    }, [eveID, walletamout, amount]);
 
     async function handleCashPaymentSubmit(event) {
         event.preventDefault();
-        if (!paymentData.amount_paid || !!amountError || !!sessionError) {
+        if (!walletamout && !paymentData.amount_paid) {
             setOpenSnackbar(true);
-            setSnackbarMessage(!paymentData.amount_paid ? 'Please fill required details.' : 'Please fill valid details.');
+            setSnackbarMessage('Please Enter Amount');
             setSnackbarSeverity('error');
             return;
         }
+
+        if (!!amountError || !!sessionError) {
+            setOpenSnackbar(true);
+            setSnackbarMessage('Please fill valid details.');
+            setSnackbarSeverity('error');
+            return;
+        }
+
         handleEmptyField();
 
         let hasEmptyFields = false;
@@ -219,20 +296,17 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
             eve_id: eveID,
             Total_cost: pay.Total_Amount,
             paid_by: ptnData.name,
-            // amount_paid: paymentData.amount_paid,
-            amount_paid: convCharge.total_cahrge,
+            amount_paid: dynamicAmountPaid || 0,
             no_of_session: convCharge.no_of_serssion,
-            // amount_remaining: paymentData.Pending_Amount,
             amount_remaining: 0,
-            // mode: parseInt(value, 10),
             utr: utr,
             Remark: remark,
             mode: selectedPayMode,
+            wallet_Amount: walletamout
         };
         if (selectedPayMode === 2) {
             requestData.cheque_number = chequeNo;
             requestData.cheque_date = chequeDate;
-            // requestData.cheque_image = chequeImg;
             requestData.bank_name = bankName;
         } else if (selectedPayMode === 4) {
             requestData.card_no = cardNo;
@@ -252,6 +326,16 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                 },
                 body: JSON.stringify(requestData),
             });
+
+            if (response.status === 409) {
+                setOpenSnackbar(true);
+                setSnackbarMessage('Payment has already done !!!');
+                setSnackbarSeverity('error');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+
             if (!response.ok) {
                 console.error(`HTTP error! Status: ${response.status}`);
                 return;
@@ -268,34 +352,103 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
         }
     }
 
+    // async function handleOnlinePaymentSubmit(event) {
+    //     event.preventDefault();
+    //     // console.log("Updated phone no & amount...", patientData.phone, paymentData.amount_paid)
+    //     if (!amount || !!amountError || !!sessionError) {
+    //         setOpenSnackbar(true);
+    //         setSnackbarMessage(!amount ? 'Please fill required details.' : 'Please fill valid details.');
+    //         setSnackbarSeverity('error');
+    //         return;
+    //     }
+    //     setLoading(true);
+    //     // var contact = patientData.phone_no
+    //     var contact = patientData.phone
+    //     const requestData = {
+    //         eve_id: eveID,
+    //         total_amount: pay.Total_Amount,
+    //         customerName: ptnData.name,
+    //         customeremail: ptnData.patient_email_id,
+    //         // customerPhone: str(patientData.phone_no),
+    //         customerPhone: contact.toString(),
+    //         // orderAmount: paymentData.amount_paid,
+    //         orderAmount: convCharge.total_cahrge,
+    //         // Remaining_amount: paymentData.Pending_Amount,
+    //         Remaining_amount: 0,
+    //         // amount_remaining: 0,
+    //         // Mode: value,
+    //     };
+    //     console.log("POST API Hitting......", requestData)
+    //     try {
+    //         const response = await fetch(`${port}/web/create_payment/`, {
+    //             method: "POST",
+    //             headers: {
+    //                 'Authorization': `Bearer ${accessToken}`,
+    //                 "Content-Type": "application/json",
+    //                 Accept: "application/json",
+    //             },
+    //             body: JSON.stringify(requestData),
+    //         });
+    //         if (!response.ok) {
+    //             console.error(`HTTP error! Status: ${response.status}`);
+    //             setLoading(false);
+    //             return;
+    //         }
+    //         const result = await response.json();
+    //         console.log("Online Payment data", result);
+    //         setOpenSnackbar(true);
+    //         setSnackbarMessage('Payment saved successfully.');
+    //         setSnackbarSeverity('success');
+    //         // onClose();
+    //         window.location.reload();
+    //     } catch (error) {
+    //         console.error("An error occurred:", error);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
+
     async function handleOnlinePaymentSubmit(event) {
         event.preventDefault();
-        // console.log("Updated phone no & amount...", patientData.phone, paymentData.amount_paid)
-        if (!amount || !!amountError || !!sessionError) {
-            setOpenSnackbar(true);
-            setSnackbarMessage(!amount ? 'Please fill required details.' : 'Please fill valid details.');
-            setSnackbarSeverity('error');
-            return;
-        }
+        const walletAmountUsed = isChecked ? walletamout : 0;
+        // const finalOrderAmount = Math.max(dynamicAmountPaidOnline - walletAmountUsed, 0); 
+        const finalOrderAmount = isChecked
+            ? Math.max((paymentData.amount_paid || 0) - walletAmountUsed, 0) // Default paymentData.amount_paid to 0 if null
+            : paymentData.amount_paid || 0;
         setLoading(true);
-        // var contact = patientData.phone_no
-        var contact = patientData.phone
+
+        var contact = patientData.phone;
         const requestData = {
             eve_id: eveID,
             total_amount: pay.Total_Amount,
             customerName: ptnData.name,
             customeremail: ptnData.patient_email_id,
-            // customerPhone: str(patientData.phone_no),
             customerPhone: contact.toString(),
-            // orderAmount: paymentData.amount_paid,
-            orderAmount: convCharge.total_cahrge,
-            // Remaining_amount: paymentData.Pending_Amount,
+            // orderAmount: orderAmount,
+            orderAmount: finalOrderAmount,
             Remaining_amount: 0,
-            // amount_remaining: 0,
-            // Mode: value,
+            amount_from_wallet: walletAmountUsed
         };
-        console.log("POST API Hitting......", requestData)
+
         try {
+            const cancelResponse = await fetch(`${port}/web/cancel-payment-link/${eveID}/`, {
+                method: "POST",
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+            });
+
+            if (!cancelResponse.ok) {
+                console.error(`HTTP error! Status: ${cancelResponse.status}`);
+                setLoading(false);
+                return;
+            }
+
+            console.log("Cancel Payment response:", await cancelResponse.json());
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
             const response = await fetch(`${port}/web/create_payment/`, {
                 method: "POST",
                 headers: {
@@ -305,18 +458,21 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                 },
                 body: JSON.stringify(requestData),
             });
+
             if (!response.ok) {
                 console.error(`HTTP error! Status: ${response.status}`);
                 setLoading(false);
                 return;
             }
+
             const result = await response.json();
             console.log("Online Payment data", result);
+
             setOpenSnackbar(true);
             setSnackbarMessage('Payment saved successfully.');
             setSnackbarSeverity('success');
-            // onClose();
             window.location.reload();
+
         } catch (error) {
             console.error("An error occurred:", error);
         } finally {
@@ -351,11 +507,11 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                     </TabList>
                 </Box>
                 {/* <Box sx={{ width: '100%', typography: 'body1', marginTop: '-10px', }}> */}
-                <Box sx={{ width: '100%', typography: 'body1', mt: 2 }}>
+                <Box sx={{ width: '100%', typography: 'body1', mt: 2, overflowY: 'scroll', height: '400px' }}>
                     <TabPanel value="1"
                         sx={{
-                            height: "26rem",
-                            overflowY: "scroll",
+                            // height: "26rem",
+                            // overflowY: "scroll",
                             overflowX: "hidden",
                             scrollbarWidth: 'thin',
                             '&::-webkit-scrollbar': {
@@ -372,6 +528,39 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                             },
                         }}>
                         <Grid container spacing={2}>
+                            <Grid item lg={12} sm={12} xs={12}>
+                                <Box component="form">
+                                    <Typography variant='body2' sx={{ fontSize: '15px' }}>
+                                        <strong>Amount in Wallet :</strong>
+                                        <strong
+                                            style={{
+                                                marginLeft: '5px',
+                                                color: walletData && walletData["Amount in wallet is "] === null ? 'black' : 'green'
+                                            }}
+                                        >
+                                            {walletData && walletData["Amount in wallet is "] !== null
+                                                ? walletData["Amount in wallet is "]
+                                                : "00"
+                                            }
+                                        </strong>
+                                    </Typography>
+                                </Box>
+                            </Grid>
+
+                            {walletData && walletData["Amount in wallet is "] > 0 && (
+                                <Grid item lg={12} sm={12} xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={isChecked}
+                                                onChange={handleCheckboxChange}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Use Wallet Amount"
+                                    />
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12}>
                                 <TextField
@@ -568,7 +757,6 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                                     id="Total_Amount"
                                     label="Total Payable"
                                     name="Total_Amount"
-                                    // value={pay.Total_Amount}
                                     value={paymentData.Total_Amount}
                                     size="small"
                                     fullWidth
@@ -579,6 +767,34 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                                     }}
                                 />
                             </Grid>
+
+                            {isChecked && walletData && walletData["Amount in wallet is "] !== null && (
+                                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                                    <TextField
+                                        label="Enter Wallet Amount"
+                                        name="wallet_Amount"
+                                        disabled
+                                        value={walletamout}
+                                        onChange={(e) => {
+                                            const enteredValue = e.target.value;
+                                            const maxAmount = walletData["Amount in wallet is "];
+                                            const totalAmount = paymentData.Total_Amount;
+
+                                            const walletAmountToSet = Math.min(Number(enteredValue), maxAmount, totalAmount);
+                                            if (!isNaN(walletAmountToSet) && walletAmountToSet >= 0) {
+                                                setWalletamout(walletAmountToSet);
+                                            }
+                                        }}
+                                        size="small"
+                                        fullWidth
+                                        sx={{
+                                            textAlign: "left", '& input': {
+                                                fontSize: '14px',
+                                            },
+                                        }}
+                                    />
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
                                 <TextField
@@ -597,34 +813,136 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                                 />
                             </Grid>
 
-                            <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
-                                <TextField
-                                    required
-                                    id="amount_paid"
-                                    name="amount_paid"
-                                    label="Amount Paid"
-                                    placeholder='Enter amount'
-                                    size="small"
-                                    type="number"
-                                    value={paymentData.amount_paid}
-                                    onChange={(e) => handleFieldChange("amount_paid", e.target.value)}
-                                    fullWidth
-                                    sx={{
-                                        textAlign: "left", '& input': {
-                                            fontSize: '14px',
-                                        },
-                                    }}
-                                    error={!!amountError || !!sessionError}
-                                    helperText={amountError || sessionError || ''}
-                                />
-                            </Grid>
+                            {/* {
+                                Number(paymentData.Total_Amount) !== Number(walletamout) && (
+                                    <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                                        <TextField
+                                            // required
+                                            id="amount_paid"
+                                            name="amount_paid"
+                                            label="Amount Paid"
+                                            placeholder="Enter amount"
+                                            size="small"
+                                            type="number"
+                                            value={paymentData.amount_paid || ""}
+                                            onChange={(e) => {
+                                                const enteredValue = e.target.value;
+                                                const walletAmount = Number(walletamout);
+                                                const totalAmount = Number(paymentData.Total_Amount);
+                                                const maxPayable = totalAmount - walletAmount;
+
+                                                if (enteredValue === "") {
+                                                    handleFieldChange("amount_paid", "");
+                                                } else if (!isNaN(enteredValue) && Number(enteredValue) <= maxPayable) {
+                                                    handleFieldChange("amount_paid", Number(enteredValue));
+                                                }
+                                            }}
+                                            fullWidth
+                                            sx={{
+                                                textAlign: "left",
+                                                "& input": {
+                                                    fontSize: "14px",
+                                                },
+                                            }}
+                                            // error={!!amountError || !!sessionError}
+                                            helperText={
+                                                amountError ||
+                                                sessionError ||
+                                                (paymentData.amount_paid + walletamout > paymentData.Total_Amount
+                                                    ? "Amount exceeds the total payable."
+                                                    : ""
+                                                )
+                                            }
+                                        />
+                                    </Grid>
+                                )
+                            } */}
+
+                            {
+                                Number(paymentData.Total_Amount) !== Number(walletamout) && (
+                                    <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                                        <TextField
+                                            id="amount_paid"
+                                            name="amount_paid"
+                                            label="Amount Paid"
+                                            placeholder='Enter amount'
+                                            size="small"
+                                            type="number"
+                                            // value={paymentData.amount_paid}
+                                            // onChange={(e) => handleFieldChange("amount_paid", e.target.value)}
+                                            // onChange={(e) => {
+                                            //     const value = e.target.value;
+                                            //     handleFieldChange('amount_paid', value); // Call the field change handler
+                                            // }}
+                                            value={dynamicAmountPaid}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setDynamicAmountPaid(value);
+                                                handleFieldChange("amount_paid", value);
+                                            }}
+                                            fullWidth
+                                            sx={{
+                                                textAlign: "left", '& input': {
+                                                    fontSize: '14px',
+                                                },
+                                            }}
+                                            error={!!amountError || !!sessionError}
+                                            helperText={amountError || sessionError || ''}
+                                        />
+                                    </Grid>
+                                )
+                            }
+
+                            {/* {amountValidate && (
+                                <Grid item lg={12} sm={12} xs={12}>
+                                    <FormControl component="fieldset">
+                                        <FormLabel component="legend">
+                                            Are you sure you want to add extra Rs.{convCharge.wallet?.toFixed(2)} to the Wallet?
+                                        </FormLabel>
+                                        <RadioGroup row value={selectedOption} onChange={handleRadioChange}>
+                                            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                            <FormControlLabel value="no" control={<Radio />} label="No" />
+                                        </RadioGroup>
+                                    </FormControl>
+                                </Grid>
+                            )} */}
+
+                            {amountValidate && convCharge.wallet !== 0 && (
+                                <Grid item lg={12} sm={12} xs={12}>
+                                    <FormControl component="fieldset">
+                                        <FormLabel component="legend">
+                                            Are you sure you want to add extra Rs.{convCharge.wallet?.toFixed(2)} to the Wallet?
+                                        </FormLabel>
+                                        <RadioGroup row value={selectedOption} onChange={handleRadioChange}>
+                                            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                            <FormControlLabel value="no" control={<Radio />} label="No" />
+                                        </RadioGroup>
+                                    </FormControl>
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
-                                <Box component="form" sx={{ p: "4px 6px", alignItems: 'center', height: '5rem', backgroundColor: "#CBE3FF", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "5px", }}>
+                                <Box component="form" sx={{ p: "4px 6px", alignItems: 'center', height: 'auto', backgroundColor: "#CBE3FF", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "5px", }}>
                                     <Typography variant='body2'>Total No of Sessions: {convCharge.total_sessions}</Typography>
                                     <Typography variant='body2'>Billing Sessions: {convCharge.no_of_serssion}</Typography>
-                                    <Typography variant='body2'>Final Amount: {convCharge.total_cahrge}</Typography>
-                                    <Typography variant='body2'>Return Amount: {convCharge.amount_return}</Typography>
+                                    <Typography variant='body2'>Final Amount: {convCharge.total_cahrge?.toFixed(2)}</Typography>
+                                    {/* <Typography variant='body2'>Return Amount: {convCharge.amount_return?.toFixed(2)}</Typography> */}
+                                    {/* <Typography variant='body2'>Wallet Amount: {convCharge.wallet?.toFixed(2)}</Typography> */}
+                                    {selectedOption === 'yes' && (
+                                        <Typography variant='body2'>
+                                            Wallet Amount: {convCharge.wallet?.toFixed(2)}
+                                        </Typography>
+                                    )}
+                                    {selectedOption === 'no' && (
+                                        <Typography variant='body2'>
+                                            Return Amount: {convCharge.amount_return?.toFixed(2)}
+                                        </Typography>
+                                    )}
+                                    {isChecked && (
+                                        <Typography variant='body2'>
+                                            Return Amount: {convCharge.amount_return?.toFixed(2)}
+                                        </Typography>
+                                    )}
                                 </Box>
                             </Grid>
 
@@ -647,7 +965,7 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
 
                             <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
                                 <TextField
-		    required
+                                    required
                                     id="remark"
                                     name="remark"
                                     label="Remark"
@@ -669,7 +987,21 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                             </Grid>
 
                             <Grid item lg={12} sm={12} xs={12}>
-                                <Button variant="contained" sx={{ mt: 2, ml: 7, bgcolor: "#69A5EB", borderRadius: "10px", textTransform: "capitalize", width: "8rem" }} onClick={handleCashPaymentSubmit}>Done</Button>
+                                <Button
+                                    variant="contained"
+                                    sx={{
+                                        mt: 2,
+                                        ml: 7,
+                                        bgcolor: "#69A5EB",
+                                        borderRadius: "10px",
+                                        textTransform: "capitalize",
+                                        width: "8rem",
+                                    }}
+                                    onClick={handleCashPaymentSubmit}
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Processing...' : 'Done'}
+                                </Button>
                                 <Snackbar
                                     open={openSnackbar}
                                     autoHideDuration={10000}
@@ -691,6 +1023,39 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
 
                     <TabPanel value="3">
                         <Grid container spacing={2}>
+                            <Grid item lg={12} sm={12} xs={12}>
+                                <Box component="form">
+                                    <Typography variant='body2' sx={{ fontSize: '15px' }}>
+                                        <strong>Amount in Wallet :</strong>
+                                        <strong
+                                            style={{
+                                                marginLeft: '5px',
+                                                color: walletData && walletData["Amount in wallet is "] === null ? 'black' : 'green'
+                                            }}
+                                        >
+                                            {walletData && walletData["Amount in wallet is "] !== null
+                                                ? walletData["Amount in wallet is "]
+                                                : "00"
+                                            }
+                                        </strong>
+                                    </Typography>
+                                </Box>
+                            </Grid>
+
+                            {walletData && walletData["Amount in wallet is "] > 0 && (
+                                <Grid item lg={12} sm={12} xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={isChecked}
+                                                onChange={handleCheckboxChange}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Use Wallet Amount"
+                                    />
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12}>
                                 <TextField
@@ -708,6 +1073,34 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                                     }}
                                 />
                             </Grid>
+
+                            {isChecked && walletData && walletData["Amount in wallet is "] !== null && (
+                                <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "10px" }}>
+                                    <TextField
+                                        label="Enter Wallet Amount"
+                                        name="wallet_Amount"
+                                        disabled
+                                        value={walletamout}
+                                        onChange={(e) => {
+                                            const enteredValue = e.target.value;
+                                            const maxAmount = walletData["Amount in wallet is "] || 0;
+                                            const totalAmount = paymentData.Total_Amount || 0;
+
+                                            const walletAmountToSet = Math.min(Number(enteredValue) || 0, maxAmount, totalAmount);
+                                            if (!isNaN(walletAmountToSet) && walletAmountToSet >= 0) {
+                                                setWalletamout(walletAmountToSet);
+                                            }
+                                        }}
+                                        size="small"
+                                        fullWidth
+                                        sx={{
+                                            textAlign: "left", '& input': {
+                                                fontSize: '14px',
+                                            },
+                                        }}
+                                    />
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "2px" }}>
                                 <TextField
@@ -769,33 +1162,73 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                                 />
                             </Grid>
 
-                            <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "2px" }}>
-                                <TextField
-                                    required
-                                    id="orderAmount"
-                                    name="orderAmount"
-                                    label="Amount Paid"
-                                    size="small"
-                                    type="number"
-                                    value={paymentData.amount_paid}
-                                    onChange={(e) => handleFieldChange("amount_paid", e.target.value)}
-                                    fullWidth
-                                    sx={{
-                                        textAlign: "left", '& input': {
-                                            fontSize: '14px',
-                                        },
-                                    }}
-                                    error={!!amountError || !!sessionError}
-                                    helperText={amountError || sessionError || ''}
-                                />
-                            </Grid>
+                            {
+                                Number(paymentData.Total_Amount) !== Number(walletamout) && (
+                                    <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "2px" }}>
+                                        <TextField
+                                            // required
+                                            id="orderAmount"
+                                            name="orderAmount"
+                                            label="Amount Paid"
+                                            size="small"
+                                            type="number"
+                                            value={paymentData.amount_paid}
+                                            // onChange={(e) => handleFieldChange("amount_paid", e.target.value)}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                handleFieldChange('amount_paid', value); // Call the field change handler
+                                            }}
+                                            fullWidth
+                                            sx={{
+                                                textAlign: "left", '& input': {
+                                                    fontSize: '14px',
+                                                },
+                                            }}
+                                            error={!!amountError || !!sessionError}
+                                            helperText={amountError || sessionError || ''}
+                                        />
+                                    </Grid>
+                                )
+                            }
+
+                            {amountValidate && convCharge.wallet !== 0 && (
+                                <Grid item lg={12} sm={12} xs={12}>
+                                    <FormControl component="fieldset">
+                                        <FormLabel component="legend">
+                                            Are you sure you want to add extra Rs.{convCharge.wallet?.toFixed(2)} to the Wallet?
+                                        </FormLabel>
+                                        <RadioGroup row value={selectedOptionOnline} onChange={handleRadioChangeOnline}>
+                                            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                            <FormControlLabel value="no" control={<Radio />} label="No" />
+                                        </RadioGroup>
+                                    </FormControl>
+                                </Grid>
+                            )}
 
                             <Grid item lg={12} sm={12} xs={12} style={{ marginTop: "2px" }}>
-                                <Box component="form" sx={{ p: "4px 6px", alignItems: 'center', height: '5rem', backgroundColor: "#CBE3FF", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "5px", }}>
+                                <Box component="form" sx={{ p: "4px 6px", alignItems: 'center', height: 'auto', backgroundColor: "#CBE3FF", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "5px", }}>
                                     <Typography variant='body2'>Total No of Sessions: {convCharge.total_sessions}</Typography>
                                     <Typography variant='body2'>Billing Sessions: {convCharge.no_of_serssion}</Typography>
-                                    <Typography variant='body2'>Final Amount: {convCharge.total_cahrge}</Typography>
-                                    <Typography variant='body2'>Return Amount: {convCharge.amount_return}</Typography>
+                                    <Typography variant='body2'>Final Amount: {convCharge.total_cahrge?.toFixed(2)}</Typography>
+
+                                    {/* <Typography variant='body2'>Final Amount: {convCharge.total_cahrge}</Typography>
+                                    <Typography variant='body2'>Return Amount: {convCharge.amount_return}</Typography> */}
+
+                                    {selectedOptionOnline === 'yes' && (
+                                        <Typography variant='body2'>
+                                            Wallet Amount: {convCharge.wallet?.toFixed(2)}
+                                        </Typography>
+                                    )}
+                                    {selectedOptionOnline === 'no' && (
+                                        <Typography variant='body2'>
+                                            Return Amount: {convCharge.amount_return?.toFixed(2)}
+                                        </Typography>
+                                    )}
+                                    {isChecked && (
+                                        <Typography variant='body2'>
+                                            Return Amount: {convCharge.amount_return?.toFixed(2)}
+                                        </Typography>
+                                    )}
                                 </Box>
                             </Grid>
 
@@ -821,7 +1254,6 @@ const Payment = ({ eveID, pay, ptnData, onClose }) => {
                             </Grid>
                         </Grid>
                     </TabPanel>
-
                 </Box>
             </TabContext>
         </Box>

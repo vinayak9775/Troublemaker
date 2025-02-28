@@ -54,6 +54,9 @@ const Cancellation = ({ value }) => {
             dataLabels: {
                 enabled: false,
             },
+            stroke: {
+                show: false,
+              },
         }
     };
 

@@ -116,6 +116,7 @@ const ManageAttendance = () => {
         attnd_type: formData.attnd_type,
         attnd_Note: formData.attnd_Note,
         approve_status: 2,
+        added_by:fname+" "+lname
       };
     });
 
@@ -188,6 +189,11 @@ const ManageAttendance = () => {
   const [rows, setRows] = useState([]);
   const port = process.env.REACT_APP_API_KEY;
   const accessToken = localStorage.getItem('token');
+  const clg_id = localStorage.getItem('clg_id');
+  const fname = localStorage.getItem('user-name');
+  const lname = localStorage.getItem('user-lname');
+
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedService, setSelectedService] = useState('');
   const [enq, setEnq] = useState([]);
@@ -202,7 +208,6 @@ const ManageAttendance = () => {
     absent: '',
     present: '',
     woff: ''
-
   });
   const [thisMonthCount, setThisMonthCount] = useState({
     absent: '',
@@ -347,6 +352,7 @@ const ManageAttendance = () => {
       }
     };
     getEnquires();
+    // filteredProfessionals();
   }, []);
 
   const filteredProfessionals = enq.filter((professional) => {
@@ -355,6 +361,7 @@ const ManageAttendance = () => {
 
     // Check if professional.srv_name is not null before accessing its properties
     const matchesService = selectedService === '' || (professional.srv_name && professional.srv_name === selectedService);
+    // setPage(0);
     return matchesName && matchesService;
   });
 
@@ -370,6 +377,7 @@ const ManageAttendance = () => {
     attnd_Note: '',
     from_avail: '',
     to_avail: '',
+    added_by: fname+" "+lname,
   });
 
   // const handleChange = (e) => {
@@ -463,6 +471,7 @@ const ManageAttendance = () => {
       service: row.srv_name,
       job_type: row.Job_type,
       attnd_date: formattedDate,
+      added_by: fname+" "+lname
     }));
 
     console.log("Selected date for row ", eve_id, ": ", date);
@@ -503,7 +512,8 @@ const ManageAttendance = () => {
           startdate: item.actual_StartDate_Time || null,
           eve_id: item.eve_id || '',
           eve_poc_id: item.eve_poc_id || '',
-          dt_eve_poc_id: item.dt_eve_poc_id || ''
+          dt_eve_poc_id: item.dt_eve_poc_id || '',
+          // added_by: clg_id || '',
         }));
         setRows(formattedRows);
       }
@@ -605,7 +615,7 @@ const ManageAttendance = () => {
     <>
       {/* <Navbar /> */}
       <HRNavbar />
-      <Grid container spacing={4} style={{ paddingLeft: '35px', paddingRight: '35px', marginTop: '-40px' }}>
+      <Grid container spacing={4} style={{ paddingLeft: '35px', paddingRight: '35px', marginTop: '-40px'}}>
 
         <Grid item md={4}>
           <Box sx={{ typography: 'body1', mt: 2 }} >
@@ -737,143 +747,8 @@ const ManageAttendance = () => {
           </Grid>
         </Box>
 
-
-        {/* <Grid item md={3} xs={6} sx={{}}>
-          <Card sx={{ minWidth: 205 }}>
-            <CardContent style={{ borderLeft: '5px solid rgb(14, 143, 228)' }}>
-              <Typography variant="h6" component="div">
-                <PeopleAltIcon fontSize='medium' sx={{ mr: 2 }} />Total Employee
-              </Typography>
-              <Typography variant="h6" component="div">
-                {profCount}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item md={3} xs={6}>
-          <Card sx={{ minWidth: 205 }} style={{ borderLeft: '5px solid rgb(14, 143, 228)' }}>
-            <CardContent>
-              <Typography variant="h6" component="div">
-                <PeopleAltIcon fontSize='medium' sx={{ mr: 2 }} />Present Employee
-              </Typography>
-              <Typography variant="h6" component="div">
-                {alignment == 'today' ? todayCount.present : thisMonthCount.present}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item md={3} xs={6}>
-          <Card sx={{ minWidth: 205 }} style={{ borderLeft: '5px solid rgb(14, 143, 228)' }}>
-            <CardContent>
-              <Typography variant="h6" component="div">
-                <PeopleAltIcon fontSize='medium' sx={{ mr: 2 }} />Absent Employee
-              </Typography>
-              <Typography variant="h6" component="div">
-                {alignment == 'month' ? todayCount.absent : thisMonthCount.absent}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item md={3} xs={6}>
-          <Card sx={{ minWidth: 205 }} style={{ borderLeft: '5px solid rgb(14, 143, 228)' }}>
-            <CardContent>
-              <Typography variant="h6" component="div">
-                <PeopleAltIcon fontSize='medium' sx={{ mr: 2 }} />Week Off
-              </Typography>
-              <Typography variant="h6" component="div">
-                {alignment == 'today' ? todayCount.woff : thisMonthCount.woff}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid> */}
-        {/* <Grid item lg={1} md={3} xs={6} sx={{ marginTop: '-15px' }}>
-          <Button variant="outlined" style={{ textTransform: "capitalize", borderRadius: "8px", marginLeft: "0px", height: "2.6rem", backgroundColor: tabIndex === 1 ? '#69A5EB' : 'inherit', color: tabIndex === 1 ? '#FFFFFF' : 'inherit', }} onClick={() => setTabIndex(1)}>Attendance</Button>
-        </Grid>
-        <Grid item lg={2} md={3} xs={6} sx={{ marginTop: '-15px' }}>
-          <Button variant="outlined" style={{ textTransform: "capitalize", borderRadius: "8px", marginLeft: "0px", height: "2.6rem", backgroundColor: tabIndex === 2 ? '#69A5EB' : 'inherit', color: tabIndex === 2 ? '#FFFFFF' : 'inherit', }} onClick={() => setTabIndex(2)}>Leave Request</Button>
-        </Grid> */}
       </Grid>
       <Box sx={{ flexGrow: 1, mt: 3, ml: 1, mr: 1, }} >
-        {/* {tabIndex === 1 && <Stack direction={isSmallScreen ? 'column' : 'row'}
-          spacing={1}
-          alignItems={isSmallScreen ? 'center' : 'flex-start'}>
-          <Typography sx={{ fontSize: 16, fontWeight: 600, marginTop: ".6rem!important", marginLeft: "10px" }} color="text.secondary" gutterBottom>PROFESSIONAL ATTENDENCE</Typography>
-          <Box
-            component="form"
-            sx={{ marginLeft: '2rem', p: "2px 4px", display: 'flex', alignItems: 'center', width: 260, height: '2.2rem', backgroundColor: "#ffffff", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "10px", border: "1px solid #C9C9C9" }}
-          >
-            <IconButton type="button" sx={{ color: "#69A5EB", height: "36px", width: "36px" }}>
-              <SearchIcon />
-            </IconButton>
-            <InputBase
-              sx={{ ml: 1, flex: 1, }}
-              placeholder="Search Professional |"
-              inputProps={{ 'aria-label': 'select service' }}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </Box>
-
-          <Box
-            component="form"
-            sx={{ border: 'none', marginLeft: '2rem', p: "2px 4px", display: 'flex', alignItems: 'center', width: 260, height: '2.2rem', backgroundColor: "#ffffff", boxShadow: "4px 4px 10px 7px rgba(135, 135, 135, 0.05)", borderRadius: "10px", border: "1px solid #C9C9C9" }}
-          >
-
-            <TextField
-              required
-              id="srv_id"
-              name="srv_id"
-              select
-              label="Select Service"
-              value={selectedService}
-              onChange={(e) => {
-                setSelectedService(e.target.value)
-                console.log(e.target.value, 'setSelectedService');
-              }}
-              size="small"
-              fullWidth
-              // error={!!errors.selectedService}
-              // helperText={errors.selectedService}
-              sx={{
-                textAlign: "center", '& input': {
-                  fontSize: '14px',
-                }, '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    border: 'none',
-                  },
-                },
-              }}
-              // sx={{
-              //   textAlign: "left", '& input': {
-              //     fontSize: '14px',border:'none',
-              //   },
-              // }}
-              SelectProps={{
-                MenuProps: {
-                  PaperProps: {
-                    style: {
-                      maxHeight: '200px', // Adjust the height as needed
-                      maxWidth: '200px',
-                    },
-                  },
-                },
-              }}
-            >
-              <MenuItem sx={{ fontSize: "14px", }}>
-                select service
-              </MenuItem>
-              {services.map((option) => (
-                <MenuItem key={option.srv_id} value={option.service_title}
-                  sx={{ fontSize: "14px", }}>
-                  {option.service_title}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Button variant="outlined" style={{ textTransform: "capitalize", borderRadius: "8px", marginLeft: "20px", height: "2.6rem", backgroundColor: '#69A5EB', color: '#FFFFFF' }} onClick={resetForm}>Reset Form</Button>
-
-
-        </Stack >} */}
 
         <Box sx={{ typography: 'body1', marginTop: '-.7rem' }} >
           <TabContext value={value}>
@@ -1427,7 +1302,7 @@ const ManageAttendance = () => {
                       <Button onClick={handleCloseCaller} sx={{ marginLeft: "50rem", color: "#FFFFFF", marginTop: "2px", }}><CloseIcon /></Button>
                     </div>
                   </AppBar>
-                  <ProfViewAtte events={events} />
+                  <ProfViewAtte events={events} handleCloseCaller={handleCloseCaller}/>
                   {/* <CallerView caller={caller} clrID={callerID} onClose={handleCloseCaller} /> */}
                 </Box>
               </Modal>

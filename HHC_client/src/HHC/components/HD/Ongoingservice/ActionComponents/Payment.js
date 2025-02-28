@@ -15,7 +15,6 @@ const Payment = () => {
         <Box>
             <CardContent>
                 <Grid container spacing={2} sx={{ marginTop: "1px" }}>
-
                     <Grid item lg={12} sm={12} xs={12}>
                         <Box sx={{ borderRadius: "6px", backgroundColor: "#51DDD4", color: "#ffffff", height: "2.5rem" }}>
                             <Stack direction="row" justifyContent="space-around">

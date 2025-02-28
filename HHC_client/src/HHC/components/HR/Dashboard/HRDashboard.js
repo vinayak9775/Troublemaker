@@ -24,38 +24,31 @@ import ProfAvailable from './ProfAvailable';
 
 const HRDashboard = () => {
   ///// permission start
-  const accessToken = localStorage.getItem('token');
+  const permissions = JSON.parse(localStorage.getItem('permissions'));
+  console.log(permissions, 'fetching permission');
 
-  const [permissions, setPermissions] = useState([]);
+  const isDownload = permissions.some(permission =>
+    permission.modules_submodule.some(module => {
+      // Check if module has submodules
+      if (module.submodules && module.submodules.length > 0) {
+        // Check for the 'View' submodule directly in submodules
+        return module.submodules.some(sub => sub.submodule_name === 'Download');
+      }
 
-  console.log(permissions, 'Dashboard Permission');
+      // Check if module has a 'modules' array
+      if (module.modules && module.modules.length > 0) {
+        // Check each submodule in the 'modules' array
+        return module.modules.some(submodule =>
+          submodule.submodules && submodule.submodules.some(sub =>
+            sub.submodule_name === 'Download'
+          )
+        );
+      }
 
-  /////////////// Data Response
-  permissions.forEach(permission => {
-    permission.modules_submodule.forEach(module => {
-      console.log("Module:", module.name);
-      module.selectedSubmodules.forEach(submodule => {
-        console.log("Submodule:", submodule.submoduleName);
-      });
-    });
-  });
-
-  useEffect(() => {
-    const permissionsData = JSON.parse(localStorage.getItem('permissions'));
-    if (permissionsData) {
-      setPermissions(permissionsData);
-    }
-  }, []);
-
-  // Check if "Download Report permission is granted for "Dashboard" module
-  const isDownloadAllowed = permissions.some(permission =>
-    permission.modules_submodule.some(module =>
-      module.selectedSubmodules.some(submodule =>
-        submodule.submoduleName === 'Download Report'
-      )
-    )
+      // Return false if neither condition is satisfied
+      return false;
+    })
   );
-
   ///// permission end
   const [value, setValue] = useState('1');
 
@@ -94,7 +87,7 @@ const HRDashboard = () => {
             </Box>
 
             {
-              isDownloadAllowed && (
+              isDownload && (
                 <Button variant="contained" style={{ backgroundColor: "#69A5EB", textTransform: "capitalize", borderRadius: "8px", height: "42px" }}>
                   <FileDownloadOutlinedIcon />
                   Download Report

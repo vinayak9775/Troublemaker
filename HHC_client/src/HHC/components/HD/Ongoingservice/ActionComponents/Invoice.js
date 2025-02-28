@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Box, Card, CardContent, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination } from "@mui/material";
+import { Typography, Box, Card, Button, CardContent, Table, TableBody, TableContainer, TableHead, TableRow, TablePagination } from "@mui/material";
+import { styled } from '@mui/system';
+import html2PDF from 'jspdf-html2canvas';
+import CloseIcon from '@mui/icons-material/Close';
 import logo from "../../../../assets/spero_logo_3.png";
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
-import html2PDF from 'jspdf-html2canvas';
-import Button from '@mui/material/Button';
-import { styled } from '@mui/system';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
-import CloseIcon from '@mui/icons-material/Close';
 
 const style = {
     position: 'absolute',
@@ -52,15 +51,37 @@ const Invoice = ({ eveID, onClose }) => {
     const accessToken = localStorage.getItem('token');
 
     const [invoice, setInvoice] = useState([]);
-    const handleDownloadPDF = () => {
-        const boxElement = document.getElementById('pdfContent');
+    // const handleDownloadPDF = () => {
+    //     const boxElement = document.getElementById('pdfContent');
 
-        html2PDF(boxElement, {
-            jsPDF: { unit: 'px', format: 'letter', orientation: 'portrait' },
-            imageType: 'image/jpeg',
-            output: 'download.pdf',
-        });
+    //     html2PDF(boxElement, {
+    //         jsPDF: { unit: 'px', format: 'letter', orientation: 'portrait' },
+    //         imageType: 'image/jpeg',
+    //         output: 'download.pdf',
+    //     });
+    // };
+
+    const handleDownloadPDF = () => {
+        fetch(`${port}/web/generate_invoice_pdf/${eveID}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                const filename = `Invoice_${eveID}.pdf`;
+
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            })
+            .catch(error => {
+                console.error('Error generating PDF:', error);
+            });
     };
+
 
     useEffect(() => {
         const getInvoice = async () => {
@@ -101,7 +122,10 @@ const Invoice = ({ eveID, onClose }) => {
     return (
         <>
             <Box sx={{
-                ...style, width: 'auto', borderRadius: "5px", border: "none",
+                ...style,
+                width: 750,
+                borderRadius: "5px",
+                border: "none",
                 // maxHeight: "100%",
                 // overflowY: 'auto',
                 // overflowX: 'hidden',
@@ -112,13 +136,11 @@ const Invoice = ({ eveID, onClose }) => {
                 <div id="pdfContent" style={{ padding: "2em", fontWeight: "300" }}>
                     <div style={{ display: "flex" }}>
                         <Typography align="center" style={{ fontSize: "25px", fontWeight: 900, marginTop: "10px", marginLeft: "2px", }}>{invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? 'PROFORMA INVOICE' : 'INVOICE'}</Typography>
-                        {/* <img src={logo} alt="" style={{ height: "80px", width: "125px", marginLeft: "15rem", }} /> */}
                         {invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? (
                             <img src={logo} alt="" style={{ height: "80px", width: "125px", marginLeft: "15rem" }} />
                         ) : (
                             <img src={logo} alt="" style={{ height: "80px", width: "125px", marginLeft: "25rem" }} />
                         )}
-
                     </div>
 
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -140,7 +162,7 @@ const Invoice = ({ eveID, onClose }) => {
                             <Typography align="center" variant='subtitle2' sx={{ ml: 18 }} style={{ fontSize: "15px", fontWeight: 600 }}>BILL DETAILS</Typography>
                             <div style={{ display: "flex" }}>
                                 <Typography align="center" variant='subtitle2' sx={{ ml: 2 }}>Invoice ID</Typography>
-                                <Typography align="center" variant='body2' sx={{ ml: 1 }}>{invoice[0] ? invoice[0].hospital_code : 'None'} / {invoice[0] ? invoice[0].years_range : 'None'} / {(invoice && invoice.length > 0 && invoice[0].invoice_id) ? invoice[0].invoice_id : '0000'}</Typography>
+                                <Typography align="center" variant='body2' sx={{ ml: 1 }}>{invoice[0] ? invoice[0].hospital_code : 'None'}/{invoice[0] ? invoice[0].years_range : 'None'}/{(invoice && invoice.length > 0 && invoice[0].invoice_id) ? invoice[0].invoice_id : '0000'}</Typography>
                             </div>
                             <div style={{ display: "flex" }}>
                                 <Typography align="center" variant='subtitle2' sx={{ ml: 16 }}>Date:</Typography>
@@ -279,19 +301,20 @@ const Invoice = ({ eveID, onClose }) => {
                             <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Total (INR)</Typography>
                             <Typography variant='subtitle2' sx={{ ml: 56.6 }}>{invoice[0] ? `₹${invoice[0].Total_amount}` : ''}</Typography>
                         </div> */}
-
                         <div style={{ display: "flex", marginLeft: "16px", marginTop: "10px" }}>
-                            <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Final Amt (INR)</Typography>
-                            <Typography variant='subtitle2' sx={{ ml: 52.8 }}>{invoice[0] ? `₹${invoice[0].Final_amount}` : ''}</Typography>
+                            <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Final Amount (INR)</Typography>
+                            <Typography variant='subtitle2' sx={{ ml: 49.6 }}>{invoice[0] ? `₹${invoice[0].Final_amount}` : ''}</Typography>
                         </div>
-
-                        {invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? (
+                        <div style={{ display: "flex", marginLeft: "16px", marginTop: "10px" }}>
+                            <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Received Amount (INR)</Typography>
+                            <Typography variant='subtitle2' sx={{ ml: 46.4 }}>{invoice[0] ? `₹${invoice[0].amount_paid}` : ''}</Typography>
+                        </div>
+                        {/* {invoice && invoice.length > 0 && invoice[0]?.amount_paid === 0 ? (
                             <div style={{ display: "flex", marginLeft: "16px", marginTop: "10px" }}>
-                                <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Paid Amt (INR)</Typography>
-                                <Typography variant='subtitle2' sx={{ ml: 53 }}>{invoice[0] ? `₹${invoice[0].amount_paid}` : ''}</Typography>
+                                <Typography variant='subtitle2' style={{ fontWeight: 600 }}>Received Amt (INR)</Typography>
+                                <Typography variant='subtitle2' sx={{ ml: 49.6 }}>{invoice[0] ? `₹${invoice[0].amount_paid}` : ''}</Typography>
                             </div>
-                        ) : null}
-
+                        ) : null} */}
                     </div>
 
                     <div style={{ marginTop: "40px", marginLeft: "10px", }}>
@@ -303,22 +326,22 @@ const Invoice = ({ eveID, onClose }) => {
                         <CardContent>
                             <div style={{ display: "flex", justifyContent: "space-between", marginLeft: "24px", }}>
                                 <div>
-                                    <Typography align="center" variant='subtitle2' sx={{ mr: 2 }}>Company's Bank Detail:</Typography>
+                                    <Typography align="center" variant='subtitle2' sx={{ mr: 3 }}>Company's Bank Detail:</Typography>
                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <Typography align="center" variant='subtitle2'>Bank details</Typography>
+                                        <Typography align="center" variant='subtitle2'>Bank Name</Typography>
                                         <Typography align="center" variant='body2' sx={{ ml: 1 }}>HDFC BANK</Typography>
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                                         <Typography align="center" variant='subtitle2'>IFSC code</Typography>
-                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>ABCD0000XX</Typography>
+                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>HDFC0000007</Typography>
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <Typography align="center" variant='subtitle2'>Swift code</Typography>
-                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>ABCD0000XX</Typography>
+                                        <Typography align="center" variant='subtitle2'>Branch</Typography>
+                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>Bhandarkar Road</Typography>
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                                         <Typography align="center" variant='subtitle2'>Account</Typography>
-                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>000000000000</Typography>
+                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>50200010027418</Typography>
                                     </div>
                                 </div>
                             </div>
@@ -329,7 +352,7 @@ const Invoice = ({ eveID, onClose }) => {
                                 <div>
                                     <div style={{ display: "flex", marginTop: "10px" }}>
                                         <PhoneOutlinedIcon sx={{ color: "#4A4A4A" }} />
-                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>9007986666</Typography>
+                                        <Typography align="center" variant='body2' sx={{ ml: 1 }}>7620400100</Typography>
                                     </div>
                                     <div style={{ display: "flex", marginTop: "10px" }}>
                                         <EmailOutlinedIcon sx={{ color: "#4A4A4A" }} />
@@ -339,23 +362,21 @@ const Invoice = ({ eveID, onClose }) => {
                                         <LanguageOutlinedIcon sx={{ color: "#4A4A4A", }} />
                                         <Typography align="center" variant='body2' sx={{ ml: 1 }}>sperohealthcare.in</Typography>
                                     </div>
-
                                 </div>
                             </div>
                         </CardContent>
                     </Box>
                     <hr style={{
-                        width: "109.8%", height: "5px", background: '#FAAF30', marginLeft: "-32px",
+                        width: "109.8%", height: "5px", background: '#FAAF30', marginLeft: "-32px", marginTop: "-5px",
                         // marginBottom: "-25px", 
-                        marginTop: "-5px",
                     }} />
                 </div>
+
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-20px", }}>
                     <Button variant="contained" onClick={handleDownloadPDF} sx={{ background: "#B50001", '&:hover': { backgroundColor: '#B50001', cursor: 'pointer', }, }}><PictureAsPdfOutlinedIcon /></Button>
                     <Button variant="contained" onClick={onClose} sx={{ color: "#FFFFFF", ml: 1 }}><CloseIcon /></Button>
                 </div>
             </Box>
-
         </>
     )
 }

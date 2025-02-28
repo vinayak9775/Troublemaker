@@ -61,10 +61,10 @@ const ProfessionalDetails = () => {
 
     useEffect(() => {
         fetchZone();
-    }, [port, accessToken]);
+        setPage(0);
+    }, [port, accessToken, searchInput]);
 
     const filteredProfessionalData = professionalData.filter((professional) =>
-        // professional.prof_name.toLowerCase().includes(searchInput.toLowerCase())
         professional.prof_name && professional.prof_name.toLowerCase().includes(searchInput.toLowerCase())
     );
 

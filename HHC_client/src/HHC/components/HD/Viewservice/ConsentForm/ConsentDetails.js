@@ -1,28 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import Grid from '@mui/material/Grid';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import Modal from '@mui/material/Modal';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
+import { Grid, Stack, TextField, Button, Modal, Fab, Alert, AlertTitle, Snackbar, AppBar, Box, Toolbar, Typography, useMediaQuery, Checkbox, FormControlLabel, FormControl, FormLabel, Radio, RadioGroup } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import SignatureCanvas from 'react-signature-canvas'
 import CloseIcon from '@mui/icons-material/Close';
-import Button from '@mui/material/Button';
-import Fab from '@mui/material/Fab';
-import Alert from '@mui/material/Alert';
-import AlertTitle from '@mui/material/AlertTitle';
-import Snackbar from '@mui/material/Snackbar';
 
 const style = {
     position: 'absolute',
@@ -51,12 +32,6 @@ const ConsentDetails = () => {
     const [selectedFiles, setSelectedFiles] = useState(null);
     const [selectedOption, setSelectedOption] = useState('upload');
 
-    // const [consentData, setConsentData] = useState({
-    //     viewConsent: false,
-    //     selectedSign: '',
-    //     selectedFiles: [],
-    // })
-
     const isSmallScreen = useMediaQuery('(max-width:350px)');
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -82,6 +57,7 @@ const ConsentDetails = () => {
         // if (!selectedSign) {
         //     newErrors.selectedSign = 'This field is required';
         // }
+
         if (!selectedFiles) {
             newErrors.selectedFiles = 'This field is required';
         }
@@ -365,8 +341,10 @@ const ConsentDetails = () => {
                                         </Grid>
                                     </div>
                                     <hr />
+
                                     <div>
                                         <Typography sx={{ fontSize: 16, fontWeight: 600, }} color="text.secondary" gutterBottom>PATIENT DETAILS</Typography>
+
                                         <Grid container style={{ justifyContent: "space-between", marginTop: "10px" }}>
                                             <Typography inline variant="body2" color="text.secondary">Name</Typography>
                                             <Typography inline variant="body2">{consentDetails[0]?.eve_id?.agg_sp_pt_id?.name}</Typography>
@@ -455,6 +433,7 @@ const ConsentDetails = () => {
                             <li><Typography variant='body2'>Furthermore, we have been made to understand that Spero is a distinct and independent legal entity from the hospital. Spero will be solely responsible, liable, and answerable for Home Health Care services provided to the patient. The hospital will not be responsible, liable, or answerable for the policies, practices, and Home Health Care services provided by Spero, and any untoward event arising thereof. Therefore, in case of queries or feedback regarding Home Health Care services, etc., we would contact Spero.</Typography></li>
                             <li><Typography variant='body2'>We have been explained above information in our vernacular i.e Marathi/Hindi and after satisfaction, we are putting our signatures at place and date mentioned here in below.</Typography></li>
                         </ul>
+
                         <Grid item xs={12} container spacing={1}>
                             <Grid item lg={2} md={6} xs={12}>
                                 <FormControl component="fieldset">
@@ -469,7 +448,6 @@ const ConsentDetails = () => {
                                             <FormLabel component="legend">Agree with the consent</FormLabel>
                                         </div>
                                     </div>
-
                                 </FormControl>
                             </Grid>
 
@@ -542,11 +520,13 @@ const ConsentDetails = () => {
 
                             </Grid>
                         </Grid>
+
                         {viewConsent && (
                             <Grid item lg={12} md={12} xs={12} sx={{ mt: 1, mb: 2 }}>
                                 <Button variant='contained' sx={{ textTransform: "capitalize", width: "20ch", borderRadius: "10px" }} onClick={handleSubmitConsent}>Submit</Button>
                             </Grid>
                         )}
+
                         <Grid item lg={12} md={12} sm={12} xs={12}>
                             <Snackbar
                                 open={openSnackbar}
@@ -565,11 +545,8 @@ const ConsentDetails = () => {
                     </Box>
                 </>
             )}
-
         </>
     )
-
 }
-
 
 export default ConsentDetails

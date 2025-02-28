@@ -1,56 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import LocalPostOfficeOutlinedIcon from '@mui/icons-material/LocalPostOfficeOutlined';
+import CurrencyRupeeOutlinedIcon from '@mui/icons-material/CurrencyRupeeOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import LocalPhoneOutlinedIcon from '@mui/icons-material/LocalPhoneOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import LocalPostOfficeOutlinedIcon from '@mui/icons-material/LocalPostOfficeOutlined';
-import MenuItem from '@mui/material/MenuItem';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import Drawer from '@mui/material/Drawer';
-import Tab from '@mui/material/Tab';
-import TabContext from '@mui/lab/TabContext';
-import TabList from '@mui/lab/TabList';
-import TabPanel from '@mui/lab/TabPanel';
+import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import CloseIcon from '@mui/icons-material/Close';
+import { TabContext, TabList, TabPanel } from '@mui/lab';
+import { Typography, Modal, MenuItem, AppBar, Box, Grid, TextField, Button, Drawer, Snackbar, Alert, Tooltip, Badge, Fab, useMediaQuery, Tab } from '@mui/material';
+import { Link, Routes, Route, Outlet, useLocation } from "react-router-dom";
 import Addservice from './components/HD/Addservice';
 import Viewservice from './components/HD/Viewservice';
 import Ongoingservice from './components/HD/Ongoingservice/Ongoingservice';
 import ServiceRequest from './components/HD/Servicerequest/ServiceRequest';
+import ProfRequest from './components/HD/ProfRequest/ProfRequest';
 import Enquiries from './components/HD/Enquiries/Enquiries';
 import Schedule from './components/HD/Professional/Schedule';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import Dashboard from './components/HD/Dashboard/Dashboard';
 import Membership from './components/HD/Membership/Membership';
-import { Typography } from '@mui/material';
-import { Link, Routes, Route, Outlet, useLocation } from "react-router-dom";
-import Modal from '@mui/material/Modal';
-import CloseIcon from '@mui/icons-material/Close';
-import Fab from '@mui/material/Fab';
-import LocalPhoneOutlinedIcon from '@mui/icons-material/LocalPhoneOutlined';
-import CurrencyRupeeOutlinedIcon from '@mui/icons-material/CurrencyRupeeOutlined';
-import PhoneDisabledOutlinedIcon from '@mui/icons-material/PhoneDisabledOutlined';
-import "./Header.css";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import Tooltip from '@mui/material/Tooltip';
-import Badge from '@mui/material/Badge';
-import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
-import ProfRequest from './components/HD/ProfRequest/ProfRequest';
-import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import "./Header.css";
 
 const Header = () => {
   // const accessHospital = sessionStorage.getItem('selectedHospital');
   const port = process.env.REACT_APP_API_KEY;
   const accessToken = localStorage.getItem('token');
   const addedby = localStorage.getItem('clg_id');
+  const location = useLocation();
 
   const [ptnName, setPtnName] = useState('');
   const [ptnNumber, setPtnNumber] = useState('');
@@ -58,7 +41,7 @@ const Header = () => {
   const [selectedService, setSelectedService] = useState('');
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [value, setValue] = useState('1');
-  const location = useLocation();
+
   const [showComponent, setShowComponent] = useState(false);
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,6 +49,7 @@ const Header = () => {
   const [state, setState] = useState({ right: false });
   const [dayPrint, setDayPrint] = useState({ right: false });
   const [callback, setCallback] = useState([]);
+  const [isBlinking, setIsBlinking] = useState(false);
   const [profID, setProfID] = useState('');
   const [remark, setRemark] = useState('');
   const [remarkError, setRemarkError] = useState({ remark: '' });
@@ -278,6 +262,7 @@ const Header = () => {
       const data = await res.json();
       // console.log("Call Back.........", data);
       setCallback(data);
+      setIsBlinking(data.length > 0);
     } catch (error) {
       console.error("Error fetching Call Back:", error);
     }
@@ -286,6 +271,8 @@ const Header = () => {
   useEffect(() => {
     if (accessToken) {
       fetchCallbackData();
+      const interval = setInterval(fetchCallbackData, 5000);
+      return () => clearInterval(interval);
     }
   }, [accessToken]);
 
@@ -445,7 +432,6 @@ const Header = () => {
         typography: 'body1',
         // marginTop: "10px"
       }}
-
       // style={{ position: 'fixed', top: 55, width: '100%', zIndex: 1000 }}
       >
         <TabContext value={location.pathname}>
@@ -462,7 +448,6 @@ const Header = () => {
             marginLeft: '8px',
             marginRight: '8px',
           }}>
-            {/* <Typography>{accessHospital}</Typography> */}
             <TabList
               className="tab-root"
               onChange={handleChange}
@@ -472,7 +457,6 @@ const Header = () => {
               scrollButtons="auto"
               aria-label="scrollable auto tabs example"
             >
-
               <Tab component={Link} to="/dashboard" value="/dashboard" icon={<AccessTimeIcon style={{ fontSize: "18px", marginBottom: "18px" }} />} iconPosition="start" label={<span style={{ fontSize: '1rem', textTransform: "capitalize", marginBottom: "18px" }}>Dashboard</span>} />
               <Tab component={Link} to="/addservice" value="/addservice" icon={<AddCircleOutlineIcon style={{ fontSize: "18px", marginBottom: "18px" }} />} iconPosition="start" label={<span style={{ fontSize: '1rem', textTransform: "capitalize", marginBottom: "18px" }}>Add Service</span>} />
               <Tab component={Link} to="/ongoing" value="/ongoing" icon={<PersonOutlineIcon style={{ marginBottom: "18px" }} />} iconPosition="start" label={<span style={{ fontSize: '1rem', textTransform: "capitalize", marginBottom: "18px" }}>Ongoing Service</span>} />
@@ -494,14 +478,26 @@ const Header = () => {
                     color="primary"
                     aria-label="add"
                     style={{
-                      background: "#1FD0C4",
+                      // background: "#1FD0C4",
+                      // background: "#F77B7B",
+                      background: "#E90602",
                       marginTop: "10px",
                       height: "40px",
                       width: "40px",
+                      animation: isBlinking ? 'blink-animation 1s infinite' : 'none',
                     }}
                   >
                     <LocalPhoneOutlinedIcon onClick={toggleDrawer(true)} sx={{ fontSize: "22px" }} />
                   </Fab>
+                  <style>
+                    {`
+          @keyframes blink-animation {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+          }
+        `}
+                  </style>
                 </Tooltip>
 
                 <Tooltip title="Day Print">
@@ -522,7 +518,6 @@ const Header = () => {
                 </Tooltip>
               </>
             )}
-
           </Box>
 
           <Drawer
@@ -541,9 +536,10 @@ const Header = () => {
               background: 'linear-gradient(45deg, #1FD0C4 38.02%, #328EDF 100%)',
               width: '20rem',
               height: '3rem',
+              overflow:"hidden"
               // borderRadius: "8px 10px 0 0",
             }}>
-              <div style={{ display: "flex" }}>
+              <div style={{ display: "flex", }}>
                 <Typography align="left" style={{ fontSize: "16px", fontWeight: 600, color: "#FFFFFF", marginTop: "10px", marginLeft: "18px" }}>Call Back Requests</Typography>
                 <Button onClick={toggleDrawer(false)} sx={{ marginLeft: "6rem", color: "#FFFFFF", marginTop: "2px", }}><CloseIcon /></Button>
               </div>
@@ -561,7 +557,9 @@ const Header = () => {
                       </Grid>
                       <Grid container style={{ justifyContent: "space-between", marginTop: "2px" }}>
                         <Typography variant='body2' color="text.secondary">Contact Number</Typography>
-                        <Typography variant='subtilte2' color="text.primary">+91 {item ? item.phone_number : ""}</Typography>
+                        <Typography variant='subtilte2' color="text.primary"
+                          onClick={() => callbackIDRequest(item.cb_id)}
+                          style={{ cursor: "pointer" }}>+91 {item ? item.phone_number : ""}</Typography>
                       </Grid>
                       <Grid container style={{ justifyContent: "space-between", marginTop: "1px" }}>
                         <Typography variant='body2' sx={{ color: "#f44336" }}>Date & Time</Typography>
@@ -833,14 +831,13 @@ const Header = () => {
           <Box sx={{ width: '100%', typography: 'body1', m: 1 }}>
             {/* <Box sx={{ width: '100%', typography: 'body1', marginTop: '-10px' }}> */}
             {/* {value === '1' && <TabPanel value="1"><Dashboard /></TabPanel>}
-          {value === '2' && <TabPanel value="2"><Addservice /></TabPanel>}
-          {/* {value === '2' && <TabPanel value="2"><Viewservice /></TabPanel>} */}
+            {value === '2' && <TabPanel value="2"><Addservice /></TabPanel>}
+            {/* {value === '2' && <TabPanel value="2"><Viewservice /></TabPanel>} */}
             {/* {value === '3' && <TabPanel value="3"><Ongoingservice /></TabPanel>} */}
             {/* {value === '4' && <TabPanel value="4"><Schedule /></TabPanel>}
-          {value === '5' && <TabPanel value="5"><ServiceRequest /></TabPanel>}
-          {value === '6' && <TabPanel value="6"><Enquiries /></TabPanel>}
-          {value === '7' && <TabPanel value="7">Spero Membership</TabPanel>}  */}
-
+            {value === '5' && <TabPanel value="5"><ServiceRequest /></TabPanel>}
+            {value === '6' && <TabPanel value="6"><Enquiries /></TabPanel>}
+            {value === '7' && <TabPanel value="7">Spero Membership</TabPanel>} */}
             <Routes>
               <Route path="/dashboard" exact element={<Dashboard />} />
               <Route path="/addservice" element={<Addservice />} />
@@ -852,7 +849,6 @@ const Header = () => {
               {/* <Route path="/membership" element={<Membership />} /> */}
               <Route path="/viewservice" element={<Viewservice />} />
             </Routes>
-
           </Box>
         </TabContext>
       </Box>

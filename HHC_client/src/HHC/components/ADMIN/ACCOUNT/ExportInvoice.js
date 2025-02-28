@@ -146,6 +146,7 @@ const ExportInvoice = () => {
                     'Voucher Number/Bill No': item.voucher_number,
                     'Voucher Type': item.Voucher_Type,
                     'Voucher Date': item.Voucher_Date,
+                    'Voucher Ref': item.Voucher_Ref,
                     'Party Name': item.Party_Name,
                     'Address 1': item.Address_1,
                     'Address 2': item.Address_2,

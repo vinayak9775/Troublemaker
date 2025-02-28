@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.parsers import JSONParser
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework_simplejwt.tokens import OutstandingToken,BlacklistedToken
 from hhc_professional_app.serializer import *
 from hhcweb.models import*
 from hhcspero.settings import AUTH_KEY, SERVER_KEY
-import random
 import requests,random,pytz,io
 from hhc_professional_app.renders import UserRenderer
 from rest_framework.permissions import IsAuthenticated
@@ -30,7 +30,287 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from datetime import time
+import http
 import http.client
+from rest_framework.decorators import api_view
+
+
+
+def Add_payment_id_in_wallet(pay_id,Event_id):
+    wallet_data=agg_hhc_wallet.objects.filter(status=1,eve_id=Event_id,pay_dt_id=None,Amount_status=1)
+    for i in wallet_data:
+        i.pay_dt_id=pay_id
+        i.save()
+
+
+
+def utr_update_fun(wallet_id,Amount_in_wallet,remain_amount_in_wallet,amount_from_wallet=0):
+    print("hi i am inside of wallet and wallet id is ",wallet_id)
+    print("hi Amount_in_wallet",Amount_in_wallet)
+    print("hi remain_amount_in_wallet",remain_amount_in_wallet)
+    wallet_data=Multiple_utr.objects.filter(status=1,Amount_in_status=2,wallet_id=wallet_id).order_by('utr_id')
+    wallet_ids=[]
+    new_utr_ids=[]
+    if wallet_data:
+        print("inside of utr_update_function ")
+        total=0
+        if remain_amount_in_wallet=="no":
+            print("amount in wallet is remain no ")
+            for i in wallet_data:
+                i.Amount_in_status=1
+                i.utr_amount_remain=0
+                i.save()
+                wallet_ids.append(i.wallet_id)
+            return wallet_ids,new_utr_ids
+        else:
+            for k in wallet_data:
+                total+=k.utr_amount
+                k.Amount_in_status=1
+                print("total amount",total,"w")
+                print("inside of wallet else",wallet_data)
+                if (total>=amount_from_wallet):
+                    if (total==amount_from_wallet):
+                        k.utr_amount_remain=0
+                        k.save()
+                        wallet_ids.append(k.wallet_id)
+                        all_remaning_utrs=Multiple_utr.objects.filter(status=1,wallet_id=k.wallet_id,Amount_in_status=2).order_by('utr_id')
+                        for j in all_remaning_utrs:
+                            new_utr_ids.append(j.utr_id)
+                        print("before return from total==Amount_in_wallet ")
+                        return wallet_ids,new_utr_ids
+                    else :
+                        print("inside of wallet else",wallet_data)
+                        k.utr_amount_remain=total-amount_from_wallet
+                        k.save()
+                        wallet_ids.append(k.wallet_id)
+                        all_remaning_utrs=Multiple_utr.objects.filter(status=1,wallet_id=k.wallet_id,Amount_in_status=2).order_by('utr_id')
+                        print(f"total utr entry before creating",all_remaning_utrs)
+                        new_utr_no=Multiple_utr.objects.create(utr_amount=total-amount_from_wallet,Amount_in_status=2,wallet_id=k.wallet_id,utr=k.utr)
+                        new_utr_no.save()
+                        print("wallet ids is ",k.wallet_id)
+                        all_remaning_utrs=Multiple_utr.objects.filter(status=1,wallet_id=k.wallet_id,Amount_in_status=2).order_by('utr_id')
+                        print("all filtered utr ids",all_remaning_utrs)
+                        for j in all_remaning_utrs:
+                            print("all new id's",j)
+                            new_utr_ids.append(j.utr_id)
+                        print("before return from total==Amount_in_wallet else")
+                        return wallet_ids,new_utr_ids
+                else:
+                    k.utr_amount_remain=0
+                    k.save()
+                    print("#-------------------------------------------------utr in else ------------------------------------------#")
+                    print(k.utr_id)
+                    print("#-------------------------------------------------utr in else ------------------------------------------#")
+                    wallet_ids.append(k.wallet_id)
+    else:
+        print("sad news i dont find anything in this function")
+        return wallet_ids,new_utr_ids                  
+
+
+class new_utr_name(APIView):
+    def get(myself,request):
+        data_in_wallet=Multiple_utr.objects.filter(status=1,wallet_id=35,Amount_in_status=2).order_by('utr_id')
+        record=[]
+        for i in data_in_wallet:
+            record.append(i.utr_id)
+        return Response({'data':record})
+
+
+
+
+
+def change_wallet_entry(event_id,caller_id,amount_from_wallet):
+    print("inside of  error here")
+    wallet_data=agg_hhc_wallet.objects.filter(caller_id=caller_id,Amount_status=2,status=1).order_by('wallet_id')
+    print("found wallet data",wallet_data)
+    sum_of_wallet_amount = wallet_data.aggregate(Sum('wallet_Amount'))['wallet_Amount__sum'] if wallet_data.aggregate(Sum('wallet_Amount'))['wallet_Amount__sum']!=None else 0
+    print("getting sum from wallet  here",sum_of_wallet_amount)
+    # wallet_amount_used_list=[]
+    if sum_of_wallet_amount>=amount_from_wallet:
+        print("inside of condction")
+        cal_amount=0
+        remain_amount_in_wallet='no'
+        for i in wallet_data:
+            cal_amount+=i.wallet_Amount
+            if cal_amount>=amount_from_wallet:
+                print("inside of another cal cal_amount ",cal_amount)
+                if cal_amount==amount_from_wallet:
+                    remain_amount_in_wallet='no'
+                    i.Amount_remain=0
+                    i.eve_id=event_id
+                    i.Amount_status=1
+                    i.save()
+                    ## utr number updation start ######################
+                    utr_update_fun(i.wallet_id,i.wallet_Amount,remain_amount_in_wallet)
+                    ##$ utr number updation ends #######################
+                    return "Done"
+                else:
+                    remain_amount_in_wallet='yes'
+                    # print("inside of else cal_amount ",cal_amount)
+                    remain_amount=cal_amount-amount_from_wallet
+                    i.Amount_remain=remain_amount
+                    i.eve_id=event_id
+                    i.Amount_status=1
+                    # i.save()
+                    save_remain_amount=agg_hhc_wallet.objects.create(caller_id=i.caller_id,from_eve_id=i.from_eve_id,wallet_Amount=i.Amount_remain,Amount_remain=i.Amount_remain,Amount_status=2,status=1)
+                    save_remain_amount.save()
+                    print("this is amount from amount_from_wallet",amount_from_wallet)
+                    utr_function=utr_update_fun(i.wallet_id,i.wallet_Amount,remain_amount_in_wallet,amount_from_wallet)
+                    print("This is utr_function",utr_function)
+                    if utr_function==None:
+                        return "Amount is not Available"
+                    else:
+                        wallet_ids=utr_function[0]
+                        print("ids in which data is updated",wallet_ids)
+                        new_utr=utr_function[1]
+                        for j in new_utr:
+                            get_utr_data=Multiple_utr.objects.get(utr_id=j)
+                            get_utr_data.wallet_id=save_remain_amount
+                            get_utr_data.save()
+                            # i.wallet_id=save_remain_amount
+                        print("new utr number",new_utr)
+                    i.Amount_send_to_wallet_id=save_remain_amount.wallet_id# this work is remain
+                    i.save()
+                    print("data addede ")
+                    # wallet_amount_used_list.append(i.wallet_id)#
+                    return "Done"
+            else:
+                i.Amount_remain=0
+                i.eve_id=event_id
+                i.Amount_status=1
+                remain_amount_in_wallet='no'
+                utr_update_fun(i.wallet_id,i.wallet_Amount,remain_amount_in_wallet)
+                i.save()
+    else:
+        return "Amount is not Available"    
+
+
+def wallet_calculate_fun(event_id,pay_amount,amount_from_wallet=None,utr_Number="Cash"):
+    # money_added_in_wallet=False
+    print("working on wallet calculate function")
+    events=agg_hhc_events.objects.get(eve_id=event_id)
+    print("working on wallet calculate function 1")
+    if amount_from_wallet!=None:
+        print("working on amount from wallet ")
+        money_remain=change_wallet_entry(events,events.caller_id,amount_from_wallet)
+        print("not getting inside of another function")
+        if money_remain=="Amount is not Available":
+            return "Amount is not Available"
+        else:
+            print("inside of else ")
+            # print(money_remain)
+            # print("type of money_remain",type(money_remain))
+            #think what if nothing gets in return response from another function start 🤔😂😂🤣🙌👍#####
+            # amount_to_add_in_wallet=money_remain[1]
+            # wallet_amount_used_list=money_remain[0]
+            #think what if nothing gets in return response from another function ends 🤔 add try and except between this#####
+            # amount_from_wallet=amount_from_wallet+amount_to_swip
+    else:
+        amount_from_wallet=0
+    pay_amount=pay_amount+amount_from_wallet
+    print("this is Final amount from wallet",pay_amount)
+    payment_details=agg_hhc_payment_details.objects.filter(eve_id=event_id,status=1,overall_status="SUCCESS").last()
+    print("payment details",payment_details)
+    if(payment_details is None):
+        if(pay_amount==events.final_amount):
+            return pay_amount
+        elif(pay_amount<events.final_amount):
+            print("payable amount is ",pay_amount)
+            return pay_amount
+        elif(pay_amount>events.final_amount):
+            save_ramain_amount_in_wallet=pay_amount-int(events.final_amount)
+            pay_amount=int(events.final_amount)
+            #i want to save remaning money in wallet -----<    start    >######
+            wallet_obj=agg_hhc_wallet.objects.create(caller_id=events.caller_id,from_eve_id=events.eve_id,wallet_Amount=save_ramain_amount_in_wallet,Amount_remain=save_ramain_amount_in_wallet,Amount_status=2)
+            wallet_obj.save()
+            utr_entry=Multiple_utr.objects.create(utr_amount=save_ramain_amount_in_wallet,Amount_in_status=2,wallet_id=wallet_obj,utr=utr_Number)
+            utr_entry.save()
+            #i want to save remaning money in wallet -----<  ends   >   ######
+            return pay_amount
+        else:
+            pass#Thinking what to write here😕
+    else:
+        remaning_payment=int(payment_details.amount_remaining)
+        print("you can do it ",remaning_payment)
+        if(remaning_payment<=0):
+            #i want to save remaning money in wallet -----<    start    >######
+            print("inside of wallet")
+            wallet_obj=agg_hhc_wallet.objects.create(caller_id=events.caller_id,from_eve_id=events.eve_id,wallet_Amount=pay_amount,Amount_remain=pay_amount)
+            wallet_obj.save()
+            utr_entry=Multiple_utr.objects.create(utr_amount=pay_amount,Amount_in_status=2,wallet_id=wallet_obj,utr=utr_Number)
+            utr_entry.save()
+            pay_amount=0
+            return pay_amount
+            #i want to save remaning money in wallet -----<  ends   >   ######
+        elif(remaning_payment>0):
+            amount_remain=remaning_payment
+            if(pay_amount==amount_remain):
+                return pay_amount
+            elif(amount_remain>pay_amount):
+                return pay_amount
+            elif(pay_amount>amount_remain):
+                save_ramain_amount_in_wallet=int(pay_amount-amount_remain)
+                # pay_amount=int(events.amount_remain)
+                pay_amount=amount_remain
+                #i want to save remaning money in wallet -----<    start    >######
+                wallet_obj=agg_hhc_wallet.objects.create(caller_id=events.caller_id,from_eve_id=events.eve_id,wallet_Amount=save_ramain_amount_in_wallet,Amount_remain=save_ramain_amount_in_wallet)
+                wallet_obj.save()
+                utr_entry=Multiple_utr.objects.create(utr_amount=save_ramain_amount_in_wallet,Amount_in_status=2,wallet_id=wallet_obj,utr=utr_Number)
+                utr_entry.save()
+                #i want to save remaning money in wallet -----<  ends   >   ######
+                return pay_amount
+
+
+##########################################wallet ends#####################################################
+
+#########################################cancellation function starts ###################################################
+
+def Add_cancellation_changes_in_wallet(event_id,service_type,start_date=None,end_date=None):
+    detial_event=agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,eve_id=event_id)
+    if(service_type==1):#this is service
+        payment_detials=agg_hhc_payment_details.objects.filter(status=1,overall_status='SUCCESS')
+        if payment_detials:
+            for p_id in payment_detials:
+                wallet_data=agg_hhc_wallet.objects.filter(status=1,Amount_status=1,eve_id=event_id,pay_dt_id=p_id)#work on this
+                Old_wallet_amount=0
+                all_utr_ids=[]
+                for wallet_id in wallet_data:
+                    Old_wallet_amount+=wallet_id.wallet_Amount-wallet_id.Amount_remain
+                    all_utr=Multiple_utr.objects.filter(status=1,wallet_id=wallet_id,Amount_in_status=1)
+                    for utr in all_utr:
+                        new_utr=Multiple_utr.objects.create(utr_amount=utr.utr_amount-utr.utr_amount_remain,Amount_in_status=2)
+                        new_utr.save()
+                        all_utr_ids.append(new_utr)
+                amount_remain=p_id.amount_paid-Old_wallet_amount
+                if(amount_remain>0):
+                    new_utr1=Multiple_utr.objects.create(utr_amount=amount_remain,Amount_in_status=2,status=1,utr=p_id.utr)
+                    new_utr1.save()
+                    all_utr_ids.append(new_utr1)
+                    Old_wallet_amount+=amount_remain
+                wallet_obj=agg_hhc_wallet.objects.create(caller_id=p_id.eve_id.caller_id,from_eve_id=event_id,wallet_Amount=Old_wallet_amount,Amount_status=2)
+                wallet_obj.save()
+    else:#inside of session
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        session_count=detial_event.count()
+        session_removed_count=detial_event.filter(status=1,actual_StartDate_Time__range=(start_date, end_date)).count()
+        if(session_removed_count>0):
+            paid_Amount=0
+            for session in payment_detials:
+                paid_Amount+=session.amount_paid
+            if paid_Amount>0:
+                amount_remain=paid_Amount/session_count
+                remove_amount=session_removed_count*amount_remain
+                first_payment_details=payment_detials.last()
+                first_payment_details.amount_paid=first_payment_details.amount_paid-remove_amount
+                first_payment_details.save()
+                wallet_data=agg_hhc_wallet.objects.create(status=1,Amount_status=2,from_eve_id=event_id,wallet_Amount=remove_amount)
+                wallet_data.save()
+                new_utr=Multiple_utr.objects.create(status=1,utr_amount=remove_amount,utr=first_payment_details.utr,wallet_id=wallet_data,Amount_in_status=2)
+                new_utr.save()
+            print("inside of Session")
+    return Response({'Amount':"Amount added in wallet"})
+#########################################cancellation function ends ###################################################
 
 
 ##################################################### Whatsapp otp function ##################################
@@ -111,7 +391,6 @@ def whatsapp_sms(to_number,template_name,placeholders):
 
 
 
-
 def date_conveter(date):
     # return str(date.strftime("%d-%m-%Y"))
     return str(date)
@@ -125,6 +404,7 @@ def Pending_amount(eve_id):
     total_paid = total_paid_agg['amount_paid__sum'] or Decimal('0.0')
     Pending_amt = float(total_amt) - float(total_paid)
     return Pending_amt
+
 
 
 # Generate Token Manually
@@ -178,7 +458,6 @@ def get_tokens_for_user(user, clg_lng_id):
 
 # Assuming you're in a Django view or a Django REST Framework API view
 def get_prof(request):
-    # print("Hiee==1")
     pro = ""
     clg_id = ""
     caller_id = ""
@@ -188,7 +467,6 @@ def get_prof(request):
     decoded_token = jwt.decode(token, key='django-insecure-gelhauh(a&-!e01zl$_ic4l07frx!1qx^h(zjitk(c57w(n6ry', algorithms=['HS256'])
 
     clg_id = decoded_token.get('user_id')
-    print("CLG_ID______________ ", clg_id)
     clg_ref = agg_com_colleague.objects.get(id=clg_id)
 
     try:
@@ -211,17 +489,10 @@ def send_otp(mobile,msg):
     url=(f"https://wa.chatmybot.in/gateway/waunofficial/v1/api/v1/sendmessage?access-token={AUTH_KEY}&phone={mobile}&content={msg}&fileName&caption&contentType=1")
     try:
         response = requests.get(url)
-        response.raise_for_status()
-        # print(response.raise_for_status())
-        # status = response.json().get('status')
-        if response.status_code == 200:
-            print("Message sent successfully")
-        else:
-            print("Failed to send message. Status code:", response.status_code)  # Raise an exception for 4xx and 5xx status codes
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
     except requests.exceptions.RequestException as e:
         print("Error occurred while hitting the URL:", e)
-        return e
-
+        return Response({'data':str(e)})
 
 
 
@@ -232,10 +503,8 @@ def send_test_otp(number,otp):
     phone_number = number
     sender = "SPEROO"
     otp_int = otp
-    # message = f"Use {otp_int} as your verification code on Spero Application. The OTP expires within 10 mins,{otp_int} Team Spero"
-    message = f"Use {otp_int} as your verification code on Spero Application. The OTP expires within 10 mins, {otp_int} Team Spero"
-    # Use %%|otp^{"inputtype" : "text", "maxlength" : "5"}%% as your verification code on Spero Application. The OTP expires within 10 mins, %%|otp^{"inputtype" : "text", "maxlength" : "5"}%% Team Spero
-
+    message = f"Use {otp_int} as your verification code on Spero Application. The OTP expires within 10 mins,{otp_int} Team Spero"
+    # Use {#var#} as your verification code on Spero Application. The OTP expires within 10 mins, {#var#} Team Spero
     try:
         response = requests.post(
             "https://api.textlocal.in/send/",
@@ -296,15 +565,18 @@ class ProfessionalOTPLogin(APIView):
         try:
             number = request.data.get('phone_no')
             grp_id = int(request.data.get('grp_id'))
-            otp = str(random.randint(1000, 9999))
+            otp = str(random.randint(1000,9999))
+            # otp = str(1234)
             template_name="login_otp"
             placeholders=[otp]
+            # buttons=[otp]
+            print("place holder is",placeholders)
             otp_expire_time = timezone.now() + timezone.timedelta(minutes=10)
-            msg = f"Use {otp} as your verification code on Spero Application. The OTP expires within 10 mins, {otp} Team Spero"
+            # msg = f"Use {otp} as your verification code on Spero Application. The OTP expires within 10 mins, {otp} Team Spero"
             professional_found = webmodel.agg_com_colleague.objects.filter(clg_Work_phone_number=number,grp_id=grp_id).first()
             if professional_found == None and request.data.get('grp_id')==3:
                 caller=webmodel.agg_hhc_callers.objects.filter(phone=number).first()
-                if caller:
+                if caller:  
                     professional_colleague_serializer = UserRegistrationSerializer2(data=request.data)
                     if professional_colleague_serializer.is_valid():
                         grp_obj = agg_mas_group.objects.get(grp_id=grp_id)
@@ -316,13 +588,13 @@ class ProfessionalOTPLogin(APIView):
                         pro_col = professional_colleague_serializer.save()
                         custom_ref_id = pro_col.id
                         self.put(request, custom_ref_id)
-                        print("new eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeemmmmmmmmmmmmmmmmppppppppppppppppppp")
-                        print("customer id is ",custom_ref_id)
-                        print("profes",custom_ref_id)
+                        # print("new empp")
+                        # print("customer id is ",custom_ref_id)
+                        # print("profes",custom_ref_id)
                         professional_found = webmodel.agg_com_colleague.objects.filter(clg_Work_phone_number=number,grp_id=grp_id).first()
                         caller.clg_ref_id=professional_found
                         caller.save()
-            print("hiiii",professional_found)
+            # print("hiiii",professional_found)
             if number != None:
                 if professional_found:
                     try:
@@ -373,7 +645,7 @@ class ProfessionalOTPLogin(APIView):
                             # send_otp(number,msg)  
                             # except Exception as e:
                             #     print({"otp error": str(e)})#This is otp send function 
-                            send_test_otp(number,otp)
+                            # send_test_otp(number,otp)
 
                     elif grp_id == 3:
                         caller_customer = webmodel.agg_hhc_callers.objects.get(phone=number)
@@ -422,7 +694,7 @@ class ProfessionalOTPLogin(APIView):
                         serializer.save()
 
                     if grp_id == 2:
-                        print("#########  ", request.data['clg_id'])
+                        # print("#########  ", request.data['clg_id'])
                         professional_serializer = agg_hhc_service_professionals_serializer2(data=request.data)
                         request.data['clg_id']=clgref.id
 
@@ -448,11 +720,11 @@ class ProfessionalOTPLogin(APIView):
                             caller_serializer.validated_data['otp'] = otp
                             caller_serializer.validated_data['otp_expire_time'] = otp_expire_time
                             id=caller_serializer.save()
-                            print("ID)))))))))))  -  ", id)
+                            # print("ID)))))))))))  -  ", id)
                             request.data['pid']=id
                         
                     # send_otp(number,msg)     #this function will be used to send otp 
-                    send_test_otp(number,otp)
+                    # send_test_otp(number,otp)
 #------------------------------------------------otp -------------------#####################
                     to_number='91'+str(number)
                     whatsapp_sms(to_number,template_name,placeholders)
@@ -494,6 +766,77 @@ class ProfessionalOTPLogin(APIView):
             return Response({'Res_Data': {'msg':'Record not found'}}, status=status.HTTP_200_OK)
        
 
+
+
+
+
+
+
+class SendMessageView_for_allocation(APIView):
+    def post(self, request):
+        base_url = "xl6mjq.api-in.infobip.com"
+        api_key = "af099554a7f804d8fd234e3226241101-da0d6970-19a8-4e0a-9154-9da1fb64d858"  # Replace with your actual API key
+        from_number = "918956193883"
+        to_number = request.data.get('to_number', '')
+        template_name = "professional_name_sms"
+        placeholders = request.data.get('placeholders', [])
+        order_id = "SPERO_W_ID" + timezone.now().strftime("%d%m%Y%H%M%S")
+
+        if not to_number:
+            return Response({"error": "Destination number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not placeholders:
+            return Response({"error": "Placeholders are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = json.dumps({
+            "messages": [
+                {
+                    "from": from_number,
+                    "to": to_number,
+                    "messageId": order_id,
+                    "content": {
+                        "templateName": template_name,
+                        "templateData": {
+                            "body": {
+                                "placeholders": placeholders
+                            },                   
+                        },
+                        "language": "en"
+                    }
+                }
+            ]
+        })
+
+        headers = {
+            'Authorization': f'App {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        conn = http.client.HTTPSConnection(base_url)
+        conn.request("POST", "/whatsapp/1/message/template", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        conn.close()
+
+        if res.status == 200:
+            return Response({"status": "Message sent successfully", "response": json.loads(data.decode("utf-8"))}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": data.decode("utf-8")}, status=res.status)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class OTPCHECK(APIView):
     def post(self, request):
         try:
@@ -522,27 +865,24 @@ class OTPCHECK(APIView):
                 print("no working with this",device_login_token)
                 device_login_token.is_login=True
                 if(device_login_token.login_count>=1):
-                    print("hiiiiiiiiiiiiiii")
-                    device_login_token.last_modify_date=timezone.now()#this was giving error
+                    device_login_token.last_modify_date=datetime.now()#this was giving error
                 device_login_token.login_count=device_login_token.login_count+1
                 device_login_token.save()
-                print("data")
 
                 login_dtl = {
                     "device_os_name" : device_os_name,
                     "clg_id" : str(user_available.clg_ref_id),
-                    "clg_login_time" : str(timezone.now())
+                    "clg_login_time" : str(datetime.now())
                 }
 
                 clg_login_dtl_serializer = UserLoginInfoSerializer(data=login_dtl)
-                print("clg login dtl-- ", clg_login_dtl_serializer)
+                
                 if clg_login_dtl_serializer.is_valid():
                     clg_lng = clg_login_dtl_serializer.save()
                     clg_lng_id = clg_lng.id
 
 
                 token = get_tokens_for_user(user_available, clg_lng_id)
-    
                 user_available.clg_is_login=True
                 user_available.save()
                 return Response({'token':token, "message": "Login successfully"}, status=status.HTTP_200_OK)
@@ -552,7 +892,6 @@ class OTPCHECK(APIView):
         except Exception as e:
             return Response({"message": "An error occurred: {}".format(str(e))})
         
-
 class LogoutView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -593,7 +932,8 @@ class LogoutView(APIView):
             return Response({'msg':'Token is blacklisted successfully.'},status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'msg':'Token is not correct. Please try again with correct token.'},status=status.HTTP_200_OK)
-                
+        
+
 class SosDtlView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -614,19 +954,18 @@ class SosDtlView(APIView):
 
             if serializer.is_valid():
                 serializer.save()
-                # Send WhatsApp message start----------------------------------------
+    #######-----------Send WhatsApp message start---------#######
                 name_number=dtl_obj.srv_prof_id.prof_fullname+" ("+str(dtl_obj.srv_prof_id.phone_no)+")"
                 placeholders = [name_number]
-                phone_numbers=('918956193882','919130029103','919975063761')
+                phone_numbers=('918956193882','919130029103','919975063761','918097077998')
                 for i in phone_numbers:
                     whatsapp_sms(i,"sos_button",placeholders)
-                # Send WhatsApp message end-------------------------------------------
+
+    #######-----------Send WhatsApp message end---------#######
                 return Response({'msg':'Sos details added successfully.'},status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'msg':'Something went wrong.'},status=status.HTTP_200_OK) 
-
-        
+            return Response({'msg':'Something went wrong.'},status=status.HTTP_200_OK)      
 
 class UserProfileView(APIView):
     renderer_classes = [UserRenderer]
@@ -637,13 +976,13 @@ class UserProfileView(APIView):
 
     def put(self, request, *args, **kwargs):
         clgref_id = get_prof(request)[3]
-        
         request.data['last_modified_by'] = clgref_id
-        
         data_to_change = json.loads(request.body)
         clg_id = data_to_change['id']
+        
         user = agg_com_colleague.objects.get(id = clg_id)
         serializer = UserProfileSerializer2(user, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.update(user, request.data)
         return Response(serializer.data)
@@ -654,17 +993,14 @@ class updateprofprofile(APIView):
     def get(self, request, format=None):
         # pro = request.GET.get('pro')
         pro = get_prof(request)[0]
-        print("TOKEN___________ ", pro)
         file_path = None
         # Get CORS_ALLOWED_ORIGINS from settings
         cors_allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
-
         srvs = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id = pro, is_cancelled = 2,status=1)
         srv_count = 0
         for i in srvs:
             srv_count = srv_count + 1
         user = agg_hhc_service_professionals.objects.get(srv_prof_id = int(pro))
-        
         if user.profile_file:
             file_path = str(cors_allowed_origins[1])+ "/media/" + str(user.profile_file)
         serializer = UserProfileSerializer3(user)
@@ -673,23 +1009,17 @@ class updateprofprofile(APIView):
 
     def put(self, request, *args, **kwargs):
         clgref_id = get_prof(request)[3]
-        
         # request.data['last_modified_by'] = clgref_id
-
         # pro = request.GET.get('pro')
         pro = get_prof(request)[0]
-        print("TOKEN___________ ", pro)
+        
         user = agg_hhc_service_professionals.objects.get(srv_prof_id = pro)
-        print("hi i am profile")
         serializer = UserProfileSerializer4(user, data=request.data, partial=True)
-        print("seri")
-        print(request.data.get('profile_file'))
+        
         if serializer.is_valid():
-            print("in serializer")
             serializer.update(user, request.data)
-            print("after serializer")
-        print(serializer.data)
         return Response(serializer.data)
+    
 
 
 class DelAvalView(APIView):
@@ -762,16 +1092,83 @@ class AddAvalView(APIView):
     #             for i in aval:
     #                 aval_id = i.professional_avaibility_id
     #                 aval_id_arr.append(aval_id)
-    #             print("aval id arr-- ", aval_id_arr)
+    #             # print("aval id arr-- ", aval_id_arr)
     #             aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id__in=aval_id_arr)
 
-    #         print("aval-- ", aval)    
+    #         # print("aval-- ", aval)    
 
 
-    #         print("aval_detls--", aval_detls)
+    #         # print("aval_detls--", aval_detls)
+
+    #         rough_work_arr = []
 
     #         unique_date_obj = []
     #         for p in aval_detls:
+
+    #             # try:
+                    
+    #             #     print(p.prof_avaib_dt_id)
+    #             #     # print(p.prof_avaib_id)
+    #             #     # print("aval_detls i--", type(p.start_time), p.start_time)
+
+    #             #     # try:
+    #             #     #     zone_obj = {
+    #             #     #         "prof_zone_id" : p.prof_zone_id.prof_zone_id,
+    #             #     #         "prof_zone_name" : p.prof_zone_id.Name
+    #             #     #     }
+
+    #             #     #     obj = {
+    #             #     #         "prof_avaib_dt_id": p.prof_avaib_dt_id,
+    #             #     #         "prof_avaib_id": p.prof_avaib_id.professional_avaibility_id,
+    #             #     #         "start_time": str(p.start_time),
+    #             #     #         "end_time": str(p.end_time),
+    #             #     #         "prof_loc_zone_id": None,
+    #             #     #         "last_modified_by": None,
+    #             #     #         # "prof_zone_id": 7,
+    #             #     #         # "prof_zone_name": "Hingane",
+    #             #     #         "prof_loc_zone_dtls" : zone_obj
+    #             #     #     }
+    #             #     #     # print("aval_detls i--", p.prof_zone_id.prof_zone_id, p.prof_zone_id.Name)
+    #             #     # except:
+    #             #             loc_zone_obj = {
+    #             #                 "prof_loc_zone_id" : p.prof_loc_zone_id.prof_loc_zone_id,
+    #             #                 "prof_loc_zone_name" : p.prof_loc_zone_id.prof_loc_dtl_id.location_name
+    #             #             }
+
+
+    #             #             # same_zone_time = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=p.prof_avaib_id, start_time=str(p.start_time), end_time=str(p.end_time))
+    #             #             # # print("Same time-----diff zone----", same_zone_time)
+    #             #             # for sz in same_zone_time:
+    #             #             #     print("sssssssssssszzzzzzzzzzz2222----", sz.prof_loc_zone_id.prof_loc_zone_id)
+    #             #             #     print("sssssssssssszzzzzzzzzzz2222----", sz.prof_loc_zone_id.prof_loc_dtl_id.location_name)
+    #             #             #     print("start end prof_avaib_id prof_avaib_dt_id- 22222---", str(p.start_time) , str(p.end_time), p.prof_avaib_id, p.prof_avaib_dt_id)
+
+
+
+    #             #             obj = {
+    #             #                 "prof_avaib_dt_id": p.prof_avaib_dt_id,
+    #             #                 "prof_avaib_id": p.prof_avaib_id.professional_avaibility_id,
+    #             #                 "start_time": str(p.start_time),
+    #             #                 "end_time": str(p.end_time),
+    #             #                 "prof_loc_zone_id": None,
+    #             #                 "last_modified_by": None,
+    #             #                 # "prof_zone_id": 7,
+    #             #                 # "prof_zone_name": "Hingane",
+    #             #                 "prof_loc_zone_dtls" : loc_zone_obj
+    #             #             }
+    #             #             # print("aval_detls i--", p.prof_loc_zone_id.prof_loc_zone_id, p.prof_loc_zone_id.prof_loc_dtl_id.location_name)
+
+                    
+    #             #     rough_work_arr.append(obj)
+    #             # except:
+    #             #     pass
+
+                
+    #             # print("rough_work_arr--", rough_work_arr)
+
+
+    #             # print("aval_detls i--", p.prof_loc_zone_id, p.prof_loc_zone_id.prof_loc_dtl_id.location_name)
+
     #             st = p.start_time
     #             et = p.end_time
 
@@ -788,11 +1185,12 @@ class AddAvalView(APIView):
 
     #         aval_unique_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_dt_id__in=list(unique_date_obj))
 
-    #         print("unique_date_obj--", unique_date_obj)
-    #         print("aval_unique_detls--", aval_unique_detls)
+    #         # print("unique_date_obj--", unique_date_obj)
+    #         # print("aval_unique_detls--", aval_unique_detls)
 
     #         loc_arr = []
-    #         for i in aval_unique_detls:
+    #         # for i in aval_unique_detls:
+    #         for i in aval_detls:
     #             try:
     #                 loc_name = i.prof_zone_id.Name
     #                 loc_data = {
@@ -812,16 +1210,21 @@ class AddAvalView(APIView):
     #                 loc_arr.append(loc_data)
     #             except:
     #                 pass
+            
+    #         # print("loc arr----------------", loc_arr)
 
-
-    #         if aval_unique_detls:
-    #             serializer = agg_hhc_professional_availability_detail_serializer(aval_unique_detls, many=True)
+    #         # if aval_unique_detls:
+    #         if aval_detls:
+    #             # serializer = agg_hhc_professional_availability_detail_serializer(aval_unique_detls, many=True)
+    #             serializer = agg_hhc_professional_availability_detail_serializer(aval_detls, many=True)
                 
     #             for j in loc_arr:
     #                 try:
     #                     for i in serializer.data:
-    #                         i['prof_loc_zone_id'] = j['loc_zone_id']
-    #                         i["prof_loc_zone_name"] = j['loc_zone_name']
+    #                         i['prof_zone_id'] = j['loc_zone_id']
+    #                         i["prof_zone_name"] = j['loc_zone_name']
+    #                         # i['prof_loc_zone_id'] = j['loc_zone_id']
+    #                         # i["prof_loc_zone_name"] = j['loc_zone_name']
     #                 except:
     #                     pass
 
@@ -847,8 +1250,141 @@ class AddAvalView(APIView):
     #             response_data={
     #             'Res_Data': serializer.data
     #             }
+    #             # return Response(rough_work_arr, status=status.HTTP_200_OK)
     #             return Response(response_data, status=status.HTTP_200_OK)
     #         return Response(serializer.errors, status=status.HTTP_200_OK)
+    #     except:
+    #         return Response({'Res_Data':[]}, status=status.HTTP_200_OK)
+
+        # def get(self, request, format=None):
+    #     try:
+    #         day = request.GET.get('day')
+            
+    #         pro = get_prof(request)[0]
+
+    #         aval_id_arr = []
+    #         print("pro, day--", pro, day)
+
+    #         if day:
+    #             aval = agg_hhc_professional_availability.objects.get(srv_prof_id=pro, day=day)
+    #             aval_id = aval.professional_avaibility_id
+    #             aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=aval_id)
+    #         else:
+    #             aval = agg_hhc_professional_availability.objects.filter(srv_prof_id=pro)
+    #             for i in aval:
+    #                 aval_id = i.professional_avaibility_id
+    #                 aval_id_arr.append(aval_id)
+    #             # print("aval id arr-- ", aval_id_arr)
+    #             aval_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id__in=aval_id_arr)
+
+    #         # print("aval-- ", aval)    
+
+
+    #         # print("aval_detls--", aval_detls)
+
+    #         unique_date_obj = []
+    #         for p in aval_detls:
+    #             st = p.start_time
+    #             et = p.end_time
+
+    #             if len(unique_date_obj) == 0:
+    #                 stt = st
+    #                 ett = et
+    #                 unique_date_obj.append(p.prof_avaib_dt_id)
+    #             elif stt == st and ett == et:
+    #                 pass
+    #             else:
+    #                 stt = st
+    #                 ett = et
+    #                 unique_date_obj.append(p.prof_avaib_dt_id)
+
+    #         aval_unique_detls = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_dt_id__in=list(unique_date_obj))
+
+    #         # print("unique_date_obj--", unique_date_obj)
+    #         # print("aval_unique_detls--", aval_unique_detls)
+
+    #         loc_arr = []
+    #         # for i in aval_unique_detls:
+    #         for i in aval_detls:
+    #             try:
+    #                 loc_name = i.prof_zone_id.Name
+    #                 loc_data = {
+    #                     "loc_zone_id" : i.prof_zone_id.prof_zone_id,
+    #                     "loc_zone_name" : loc_name
+    #                 }
+    #                 loc_arr.append(loc_data)
+    #             except:
+    #                 pass
+
+    #             try:
+    #                 loc_name = i.prof_loc_zone_id.prof_loc_dtl_id.location_name
+    #                 loc_data = {
+    #                     "loc_id" : i.prof_loc_zone_id.prof_loc_dtl_id.prof_loc_id.prof_loc_id,
+    #                     "loc_name" : loc_name
+    #                 }
+    #                 loc_arr.append(loc_data)
+    #             except:
+    #                 pass
+    #         # print("loc arr---", loc_arr)
+
+    #         # if aval_unique_detls:
+    #         if aval_detls:
+    #             # serializer = agg_hhc_professional_availability_detail_serializer(aval_unique_detls, many=True)
+    #             serializer = agg_hhc_professional_availability_detail_serializer123(aval_detls, many=True)
+                
+                
+            
+    #         for i in serializer.data:
+    #             # print("in for loop", i)
+    #             if i['prof_zone_id'] != None:
+    #                 profzoneid = i['prof_zone_id']
+    #                 profzoneobj = agg_hhc_professional_zone.objects.get(prof_zone_id = profzoneid)
+    #                 # print("serializer i---", profzoneobj)
+    #                 # i['prof_zone_id'] = profzoneobj.prof_zone_id
+    #                 i["prof_loc_zone_name"] = profzoneobj.Name
+    #                 # i['prof_loc_zone_id'] = profzoneobj.prof_zone_id
+    #                 # i["prof_loc_zone_name"] = profzoneobj.Name
+    #             else:
+    #                 profloczoneid = i['prof_loc_zone_id']
+    #                 profloczoneobj = agg_hhc_professional_locations_as_per_zones.objects.get(prof_loc_zone_id = profloczoneid)
+    #                 # print("serializer j---", profloczoneobj)
+    #                 # i['prof_loc_zone_id'] = profloczoneobj.prof_loc_dtl_id.prof_loc_id
+    #                 i["prof_loc_zone_name"] = profloczoneobj.prof_loc_dtl_id.location_name
+    #                 # i['prof_loc_zone_id'] = profloczoneobj.prof_loc_dtl_id.prof_loc_id
+    #                 # i["prof_loc_zone_name"] = profloczoneobj.prof_loc_dtl_id.location_name
+
+    #         # print("serializer data---",serializer.data)
+
+    #             #     try:
+    #             #         for i in serializer.data:
+    #             #             # loc_id = j['loc_id']
+
+    #             #             # loc_zone = agg_hhc_professional_locations_as_per_zones.objects.get(prof_loc_zone_id=i['prof_loc_zone_id'])
+
+    #             #             # i['prof_loc_id'] = loc_id
+
+    #             #             # # i['main_zone_name'] = loc_zone.prof_zone_id.Name
+    #             #             # # i["prof_loc_name"] = j['loc_name']
+
+    #             #             # i['prof_zone_name'] = loc_zone.prof_zone_id.Name
+    #             #             # i["prof_loc_zone_name"] = j['loc_name']
+
+    #             #             # print("!!!!!!!!!!!!!!!!!!!!!!---", i['prof_zone_name'], i["prof_loc_zone_name"])
+
+    #             #             # # if loc_id == i['prof_loc_id']:
+    #             #             # #     i["prof_loc_name"] = j['loc_name']
+
+    #             #             i['prof_loc_zone_id'] = j['loc_id']
+    #             #             i["prof_loc_zone_name"] = j['loc_name']
+    #             #     except:
+    #             #         pass
+
+    #         response_data={
+    #         'Res_Data': serializer.data
+    #         }
+            
+    #         return Response(response_data, status=status.HTTP_200_OK)
+    #     # return Response(serializer.errors, status=status.HTTP_200_OK)
     #     except:
     #         return Response({'Res_Data':[]}, status=status.HTTP_200_OK)
 
@@ -984,9 +1520,10 @@ class AddAvalView(APIView):
         # return Response(serializer.errors, status=status.HTTP_200_OK)
         except:
             return Response({'Res_Data':[]}, status=status.HTTP_200_OK)
-        
 
-    # def get(self, request, format=None): #UPDATED GET API WITH COMPACT RESPONSE LIKE HCM
+
+
+    # def get(self, request, format=None):#UPDATED GET API WITH COMPACT RESPONSE LIKE HCM
     #     try:
     #         day = request.GET.get('day')
             
@@ -1171,10 +1708,10 @@ class AddAvalView(APIView):
     #     except:
     #         return Response({'Res_Data':[]}, status=status.HTTP_200_OK)
 
-
     # def delete(self, request, format=None):
     #     pro_detl_id = request.GET.get('pro_detl_id')
     #     pro = get_prof(request)[0]
+    #     # pro = 276
 
     #     print("pro_detl_id-- ", pro_detl_id)
     #     print("pro-- ", pro)
@@ -1203,7 +1740,11 @@ class AddAvalView(APIView):
 
     #                 try:
     #                     # detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id=pro, actual_StartDate_Time__week_day=aval_day,status=1)
-    #                     detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__week_day=aval_day, start_time__gte=avaldt[0].start_time, end_time__lte=avaldt[0].end_time, srv_prof_id=pro, status=1 | Q(Session_status=1) | Q(Session_status=3) | Q(Session_status= 8))
+
+    #                     detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__week_day=aval_day, start_time__gte=aval.start_time, end_time__lte=aval.end_time, srv_prof_id=pro, status=1 | Q(Session_status=1) | Q(Session_status=3) | Q(Session_status= 8))
+
+    #                     # detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__week_day=aval_day, start_time__gte=avaldt[0].start_time, end_time__lte=avaldt[0].end_time, srv_prof_id=pro, status=1 | Q(Session_status=1) | Q(Session_status=3) | Q(Session_status= 8)) # to delete all time slots
+
     #                     # detail_events = agg_hhc_detailed_event_plan_of_care.objects.filter(actual_StartDate_Time__week_day=aval_day, start_time__gte=avaldt[0].start_time, end_time__lte=avaldt[0].end_time, srv_prof_id=88)
     #                     print("detail_events---", detail_events)
 
@@ -1221,6 +1762,7 @@ class AddAvalView(APIView):
     #         return Response({'Res_Data':{'msg':'Time slot deleted successfully.'}}, status=status.HTTP_200_OK)            
     #     except:
     #         return Response({'Res_Data':{'msg': 'Record not found'}}, status=status.HTTP_200_OK)
+
 
     def delete(self, request, format=None):
         pro_detl_id = request.GET.get('pro_detl_id')
@@ -1345,9 +1887,7 @@ class AddAvalView(APIView):
                         print("start --- end--- ", j[0], j[1])
 
                         try:
-                            
-                            # prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gte=j[0], start_time__lte=j[1])
-                            prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gt=j[0], start_time__lt=j[1])
+                            prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_aval_id, end_time__gte=j[0], start_time__lte=j[1])
 
                             print("prof_aval_dtl_exts-----  ", prof_aval_dtl_exts)
 
@@ -1364,7 +1904,7 @@ class AddAvalView(APIView):
                         except:
                             pass
                         
-
+                        print("Outside888", request.data['prof_avaib_id'])
 
                         if prof_loc_zone != None:
                             
@@ -1374,21 +1914,129 @@ class AddAvalView(APIView):
                                 request.data['prof_loc_zone_id'] = loc_zone
                                 
                                 prof_aval_detail_serializer = agg_hhc_professional_availability_detail_serializer(data=request.data)
-                                print("prof_aval_detail_serializer---", prof_aval_detail_serializer)
+                                # print("prof_aval_detail_serializer---", prof_aval_detail_serializer)
+                                print("Got serialized")
                                 if prof_aval_detail_serializer.is_valid(raise_exception=True):
+                                    print("its valid")
                                     prof_aval_detail_serializer.save()
+                                    print("Saved in loc zone")
 
                         else:
                             for z_id in prof_zone_id:
+                                print(z_id)
                                 request.data['start_time'] = j[0]
                                 request.data['end_time'] = j[1]
                                 request.data['prof_zone_id'] = z_id
                             
                                 prof_aval_detail_serializer1 = agg_hhc_professional_availability_detail_serializer2(data=request.data)
                                 if prof_aval_detail_serializer1.is_valid(raise_exception=True):
+                                    print("its valid")
                                     prof_aval_detail_serializer1.save()
-                                    # pass
+                                    print("Saved in zone")
+                            
+            response_data={
+            'Res_Data': {'msg':'Professional Availability Added Successfully'}
+            }
+            return Response(response_data,status=status.HTTP_200_OK)
+            
+        except:
+            return Response({'Res_Data': {'msg':'Professional Availability Already Exist.'}}, status=status.HTTP_200_OK)
+        
 
+    def put(self, request, format=None):
+
+        clgref_id = get_prof(request)[3]
+        request.data['last_modified_by'] = clgref_id
+        try:
+            # prof = request.data['srv_prof_id']
+            # dates = request.data['date']
+
+            # days = request.data['day']
+            # time_slots = request.data['time']
+            prof = get_prof(request)[0]
+            # prof = 155
+            request.data['srv_prof_id'] = prof
+            prof_avaib_dt_id = request.data['prof_avaib_dt_id']
+            prof_avaib_id = request.data['prof_avaib_id']
+            start_time = request.data['start_time']
+            end_time = request.data['end_time']
+            print("prof--", prof)
+
+            prof_loc_zone = None
+            prof_zone_id = None
+
+            try:
+                prof_loc_zone = request.data['prof_loc_zone_id']
+            except:
+                pass
+            try:
+                prof_zone_id = request.data['prof_zone_id']
+            except:
+                pass
+
+
+
+            try:
+                print("trying")
+                prof_aval_dtl_blk = agg_hhc_professional_availability_detail.objects.get(prof_avaib_dt_id=prof_avaib_dt_id)
+                prof_aval_dtl_blk.start_time = None
+                prof_aval_dtl_blk.end_time = None
+                prof_aval_dtl_blk.prof_loc_zone_id = None
+                prof_aval_dtl_blk.prof_zone_id = None
+                prof_aval_dtl_blk.save()
+
+                print("deleted")
+
+
+                prof_aval_dtl_exts = agg_hhc_professional_availability_detail.objects.filter(prof_avaib_id=prof_avaib_id, end_time__gte=start_time, start_time__lte=end_time)
+
+                print("prof_aval_dtl_exts-----  ", prof_aval_dtl_exts)
+
+                if prof_aval_dtl_exts:
+                
+                    response_data={
+                    'Res_Data': {'msg':f'Professional availability already exists for {start_time} to {end_time} time slot.'}
+                    }
+                    return Response(response_data,status=status.HTTP_200_OK)
+                
+                else:
+                    pass
+
+            except:
+                pass
+            
+            print("Outside888", request.data['prof_avaib_id'])
+
+            if prof_loc_zone != None:
+                
+                for loc_zone in prof_loc_zone:
+                    request.data['start_time'] = start_time
+                    request.data['end_time'] = end_time
+                    request.data['prof_loc_zone_id'] = loc_zone
+                    
+                    prof_aval_detail_serializer = agg_hhc_professional_availability_detail_serializer3(prof_aval_dtl_blk, data=request.data)
+                    print("prof_aval_detail_serializer3---", prof_aval_detail_serializer)
+                    print("Got serialized")
+                    if prof_aval_detail_serializer.is_valid(raise_exception=True):
+                        print("its valid")
+                        prof_aval_detail_serializer.save()
+                        print("Saved in loc zone")
+
+            else:
+                for z_id in prof_zone_id:
+                    print(z_id)
+                    request.data['start_time'] = start_time
+                    request.data['end_time'] = end_time
+                    request.data['prof_zone_id'] = z_id
+                
+                    print("prof_aval_detail_serializer1 request.data--", request.data)
+                    prof_aval_detail_serializer1 = agg_hhc_professional_availability_detail_serializer4(prof_aval_dtl_blk, data=request.data)
+                    # print("prof_aval_detail_serializer4--", prof_aval_detail_serializer1.data)
+
+                    if prof_aval_detail_serializer1.is_valid(raise_exception=True):
+                        print("its valid")
+                        prof_aval_detail_serializer1.save()
+                        print("Saved in zone")
                             
             response_data={
             'Res_Data': {'msg':'Professional Availability Added Successfully'}
@@ -1580,7 +2228,7 @@ class AvalZoneView(APIView):
 
 
 # ------------------------------- professional register API view -------------------------------
-import ast       
+  
 class Register_professioanl_for_interview(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1606,57 +2254,59 @@ class Register_professioanl_for_interview(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         
     def put(self, request):
-        mutable_data = request.data.copy()
+        mutable_data = request.data.copy()  # Create a mutable copy of request.data
         clgref_id = get_prof(request)[3]
-        # print("Register_professioanl_for_interview data rrrrrrrrrrrrrrrrrrrrr\n",request.data)
-        mutable_data['last_modified_by'] = clgref_id
+
+        mutable_data['last_modified_by'] = clgref_id  # Modify mutable_data instead of request.data
 
         clg_id = get_prof(request)[1]
-        # print("CLG ID___________ ", clg_id)
         instance = self.get_object(clg_id)
-        print("instance",instance)
-        # print(request.data,'request.data')
-        serializer = self.serializer_class(instance, data=request.data, partial=True)
-        prof_fullname = request.data.get('prof_fullname', None)
-        # print("data of professional name is,",prof_fullname)
-        dob = request.data.get('dob', None)
-        gender = request.data.get('gender', None)
-        clg_email = request.data.get('email_id', None)
-        phone_no = request.data.get('phone_no', None)
-        eme_contact_no = request.data.get('eme_contact_no', None)
-        prof_zone_id = request.data.get('prof_zone_id', None)
-        state_name = request.data.get('state_name', None)
-        prof_address = request.data.get('prof_address', None)
 
-        is_exist_email_in_clg = agg_com_colleague.objects.filter(clg_email= clg_email)
-        is_exist_phone_in_clg = agg_com_colleague.objects.filter(clg_Work_phone_number= eme_contact_no)
+        if not mutable_data.get('lattitude'):
+            mutable_data['lattitude'] = 1234.0
+
+        if not mutable_data.get('langitude'):
+            mutable_data['langitude'] = 1234.0
+
+        serializer = self.serializer_class(instance, data=mutable_data, partial=True)  # Pass mutable_data to the serializer
+
+        prof_fullname = mutable_data.get('prof_fullname', None)
+        dob = mutable_data.get('dob', None)
+        gender = mutable_data.get('gender', None)
+        clg_email = mutable_data.get('email_id', None)
+        phone_no = mutable_data.get('phone_no', None)
+        eme_contact_no = mutable_data.get('eme_contact_no', None)
+        prof_zone_id = mutable_data.get('prof_zone_id', None)
+        state_name = mutable_data.get('state_name', None)
+        prof_address = mutable_data.get('prof_address', None)
+
+        is_exist_email_in_clg = agg_com_colleague.objects.filter(clg_email=clg_email)
+        is_exist_phone_in_clg = agg_com_colleague.objects.filter(clg_Work_phone_number=eme_contact_no)
 
         if is_exist_email_in_clg.exists():
-            return Response({"error":"Email Already Exists"})
-        
+            return Response({"error": "Email Already Exists"})
+
         if is_exist_phone_in_clg.exists():
-            return Response({"error":"Phone Number Already Exists"})
-        
-        zone_id = agg_hhc_professional_zone.objects.get(Name=prof_zone_id) 
+            return Response({"error": "Phone Number Already Exists"})
+
+        zone_id = agg_hhc_professional_zone.objects.get(Name=prof_zone_id)
         data2 = {
-            'clg_email': clg_email, 
-            'clg_first_name':prof_fullname, 
-            'clg_gender': gender, 
-            'clg_mobile_no':phone_no, 
-            # 'clg_Work_phone_number': phone_no,
+            'clg_email': clg_email,
+            'clg_first_name': prof_fullname,
+            'clg_gender': gender,
+            'clg_mobile_no': phone_no,
             'clg_Date_of_birth': dob,
-            'clg_address':prof_address, 
-            'clg_state':state_name,
+            'clg_address': prof_address,
+            'clg_state': state_name,
             'clg_district': zone_id.prof_zone_id
-    }
-        
+        }
+
         try:
             if serializer.is_valid():
                 serializer.save()
             else:
-                print(serializer.errors,"serializer.error")
+                print(serializer.errors, "serializer.error")
 
-            
             clg_ref_id = agg_com_colleague.objects.get(id=clg_id)
             set_status_prof_registered = agg_hhc_service_professionals.objects.get(clg_ref_id=clg_ref_id)
             set_status_prof_registered.prof_registered = True
@@ -1664,65 +2314,56 @@ class Register_professioanl_for_interview(APIView):
             set_status_prof_registered.prof_doc_verified = True
             set_status_prof_registered.professinal_status = 4
             set_status_prof_registered.save()
-            print("half")
-            
+
             instance2 = self.get_object2(clg_id)
             serializer2 = self.serializer_class2(instance2, data=data2, partial=True)
             if serializer2.is_valid():
                 serializer2.save()
-         
             else:
-                print(serializer.errors,'serializer.errors')
-                print(serializer2.errors,'serializer2.errors')
-                return Response({'error': serializer2.errors,'error2':'serializer2-serializer2-serializer2-0serializer2'}, status=status.HTTP_400_BAD_REQUEST)
-            
-      
+                print(serializer2.errors, 'serializer2.errors')
+                return Response({'error': serializer2.errors, 'error2': 'serializer2-serializer2-serializer2-0serializer2'}, status=status.HTTP_400_BAD_REQUEST)
 
-            multiple_zone_str = request.data.get('multile_zone')
-            sub_srv_ids_str = request.data.get('sub_srv_ids')
+            # Handling sub_services and location zones as per your logic
+            multiple_zone_str = mutable_data.get('multile_zone')
+            sub_srv_ids_str = mutable_data.get('sub_srv_ids')
 
             try:
-                
                 cleaned_ids_str = sub_srv_ids_str.strip('[]')
                 cleaned_zone_str = multiple_zone_str.strip('[]')
-            
+
                 iiids = list(cleaned_ids_str.split(','))
                 xones = list(cleaned_zone_str.split(','))
 
                 received_ids = [int(idd) for idd in iiids]
                 received_zone = [idd for idd in xones]
 
-                print(received_ids,'received_ids')
-                print(received_zone,'received_zone')
-
                 for srv_id in received_ids:
-                    # print(srv_id)
                     sub_service_instance = agg_hhc_sub_services.objects.get(sub_srv_id=srv_id)
                     agg_hhc_professional_sub_services.objects.create(
                         srv_prof_id_id=set_status_prof_registered.srv_prof_id,
                         sub_srv_id=sub_service_instance
                     )
-                 
+
                 for zone in received_zone:
                     cleaned_zone = zone.strip()
-                    
                     agg_hhc_professional_location.objects.create(
                         srv_prof_id_id=set_status_prof_registered.srv_prof_id,
                         location_name=cleaned_zone
                     )
-               
+
                 sub_service_instance_first = agg_hhc_sub_services.objects.get(sub_srv_id=int(received_ids[0]))
                 set_status_prof_registered.prof_sub_srv_id_id = sub_service_instance_first.sub_srv_id
                 set_status_prof_registered.save()
 
             except (ValueError, TypeError) as e:
                 print(f"Error: {e}")
-                
-            return Response({'Prof_data': serializer.data, 'Collegue_data': serializer2.data, "error":None}, status=status.HTTP_200_OK)
-        
+
+            return Response({'Prof_data': serializer.data, 'Collegue_data': serializer2.data, "error": None}, status=status.HTTP_200_OK)
+
         except Exception as e:
             print(str(e))
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # --------------------------------- Sandip Shimpi -------------------------------------------------------------------------
 # ---------------------------- Professional document upload and check ----------------------------------------------------
@@ -1754,8 +2395,8 @@ class agg_hhc_document_list(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 class agg_hhc_add_document(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
 
     def match_lists(self, list1, list2):
         dict2 = {record["doc_li_id"]: record.get("professional_document") for record in list2}
@@ -1776,9 +2417,8 @@ class agg_hhc_add_document(APIView):
 
     # def get(self, request, prof_id, role):
     def get(self, request, role):
-        # prof_id = get_prof(request)[0]
-        # print("TOKEN___________ ", prof_id)
-        prof_id=224
+        prof_id = get_prof(request)[0]
+        print("TOKEN___________ ", prof_id)
         doc_list= webmodel.agg_hhc_documents_list.objects.filter(professional_role=role)
         serializers=agg_hhc_document_list_serializer(doc_list,many=True)
         doc= webmodel.agg_hhc_professional_documents.objects.filter(srv_prof_id=prof_id)
@@ -1788,19 +2428,27 @@ class agg_hhc_add_document(APIView):
         return Response({'data':result}, status=status.HTTP_200_OK)   # return response in dictionary as per frontend requirment
     
     def post(self,request):
-        # clgref_id = get_prof(request)[3]
+        clgref_id = get_prof(request)[3]
         
-        # request.data['last_modified_by'] = clgref_id
+        request.data['last_modified_by'] = clgref_id
 
         # try:
         #     is_exist = agg_hhc_professional_documents.objects.get(srv_prof_id=request.data['srv_prof_id'],doc_li_id=request.data['doc_li_id'])
         # except agg_hhc_professional_documents.DoesNotExist:
         #     pass
-        serialized= agg_hhc_add_document_serializer(data=request.data)
-        if serialized.is_valid():
-            serialized.save()
-            return Response({'message':'successful'},status=status.HTTP_201_CREATED)
-        return Response(serialized.errors,status=status.HTTP_200_OK)
+        doc=agg_hhc_professional_documents.objects.filter(srv_prof_id=request.data['srv_prof_id'],doc_li_id=request.data['doc_li_id']).last()
+        if doc:
+            serialized= agg_hhc_add_document_serializer(doc,data=request.data)
+            if serialized.is_valid():
+                serialized.save()
+                return Response({'message':'successful'},status=status.HTTP_201_CREATED)
+            return Response(serialized.errors,status=status.HTTP_200_OK)
+        else:
+            serialized= agg_hhc_add_document_serializer(data=request.data)
+            if serialized.is_valid():
+                serialized.save()
+                return Response({'message':'successful'},status=status.HTTP_201_CREATED)
+            return Response(serialized.errors,status=status.HTTP_200_OK)
 
 class date_wise_location_details(APIView):
     renderer_classes = [UserRenderer]
@@ -1819,6 +2467,16 @@ class date_wise_location_details(APIView):
             return Response({'message':'sucessful'},status=status.HTTP_201_CREATED)
         return Response(serialized.errors,status=status.HTTP_200_OK)
     
+    # def get(self,request,pk):
+    #     data=webmodel.agg_hhc_professional_documents.objects.filter(professional_id=pk)
+    #     serializers = agg_hhc_add_document_serializer(data,many=True)
+    #     doc_list_ID = [{'prof_doc_id': item['prof_doc_id'],'professional_id':item['professional_id'],'doc_list_id':item['doc_li_id'],'professional_document':item['professional_document']} for item in serializers.data]
+
+    #     response_data={
+    #         'doc_list_ID':doc_list_ID
+    #     }
+    #         # data.append(data1)
+    #     return Response(response_data)
 # --------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------- add professional zone -------------------------------------------------------
 class Add_Prof_location_api(APIView):
@@ -1877,6 +2535,7 @@ class UpcomingServiceAPI(APIView):
 #---------------------Completed services(updated by vishal)--------------------------------------
 
 
+
 class CompletedServiceAPI(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -1926,7 +2585,7 @@ class CompletedServiceAPI(APIView):
                             'patient_name': detail_event_plan.eve_id.agg_sp_pt_id.name,
                             'service_name': detail_event_plan.srv_id.service_title,
                             'address': detail_event_plan.eve_id.agg_sp_pt_id.address,
-                            'start_date':date_conveter(detail_event_plan.start_date),
+                            'start_date': date_conveter(detail_event_plan.start_date),
                             'event_id': int(i['eve_id'])
                         }
                         print("service completed data is ", completed_service)
@@ -1942,7 +2601,6 @@ class CompletedServiceAPI(APIView):
 
 
 
-
 #-------------------------cancel-----------------
 class CancellationHistoryAPIView(APIView):
     renderer_classes = [UserRenderer]
@@ -1950,10 +2608,88 @@ class CancellationHistoryAPIView(APIView):
     def get(self, request, *args, **kwargs):
         srv_prof_id = get_prof(request)[0]
         print("TOKEN___________ ", srv_prof_id)
-        cancellation_history_objects = agg_hhc_cancellation_history.objects.filter(srv__srv_prof_id=srv_prof_id)
+        cancellation_history_objects = agg_hhc_cancellation_history.objects.filter(srv__srv_prof_id=srv_prof_id).order_by('added_date')
         serializer = cancellation_history(cancellation_history_objects, many=True)
         data = {'data': serializer.data}
         return Response(data, status=status.HTTP_200_OK)
+
+
+
+#feedback ---------------api-------created-----by---------vishal--🤣--------------------------next 
+class feedback(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    def get(self,request,lan):
+            data_list=[]
+            questions=FeedBack_Questions.objects.filter(status=1,question_for=2)#2=professional
+            for i in questions:
+                if(int(lan)==1):#marathi
+                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_mar}
+                elif(int(lan)==2):#hindi
+                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_hin}
+                else:#English
+                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_eng}
+                data_list.append(mar_data)
+            # question_serializer=question_feedback_serializer(questions,many=True)
+            return Response({"message":data_list})
+
+    def post(self,request):
+        try:
+            if(int(request.data.get('feedback_by'))==3):
+                srv_prof_id_is=request.data.get('serv_prof_id')
+            else:
+                srv_prof_id_is = get_prof(request)[0]
+            unused=['[','{',']','}']
+            # request.data['feedback_by']=2#2 is for patient and 1 is for professional
+            rating_data=request.data.get('question_answers')
+            new_list=''
+            for i in rating_data:
+                if i in unused:
+                    pass
+                else:
+                    new_list=new_list+i
+            new_list=new_list.split(',')
+            print("final list is ",new_list)
+            dictionary=dict(request.data)
+            if 'additional_comment' in dictionary:
+                del dictionary['additional_comment']
+            if 'image' in dictionary:
+                del dictionary['image']
+            if 'vedio' in dictionary:
+                del dictionary['vedio']
+            if 'audio' in dictionary:
+                del dictionary['audio']
+            event_id_is=int(dictionary['eve_id'][0])
+            feedback_by_is=1 #1 for professional = 1
+            del dictionary['eve_id']
+            del  dictionary['feedback_by']
+            print("list is not ",dictionary)
+            question_data=FeedBack_Questions.objects.filter(status=1,question_for=2)#.values('F_questions')
+            list_comp = [k.F_questions for k in question_data]
+            print(list_comp)
+# get professional object from professinoal id #
+            professional=agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id_is)
+#end get professional object from professinoal id #
+#------------------------------------save feedback media--------------------
+            feed_serializer=feedback_media_serializer(data=request.data)
+            if feed_serializer.is_valid():
+                feed_serializer.save()
+            feedback_obj=agg_hhc_feedback_media_note.objects.get(feedbk_med_id=feed_serializer.data['feedbk_med_id']) # this is feedback id
+            t=0
+            for i in list_comp:
+                try:
+                    question=question_data.filter(F_questions=int(list_comp[t])).last()
+                    event_record=agg_hhc_events.objects.filter(eve_id=event_id_is).last()
+                    print("this is the professional ",professional)
+                    agg_hhc_Professional_app_feedback.objects.create(eve_id=event_record,q1=question,rating=new_list[t],feedback_by=int(feedback_by_is),srv_prof_id=professional,feedbk_med_id=feedback_obj,added_by=get_prof(request)[1])#,
+                    t=t+1
+                except:
+                    t=t+1
+            return Response({'message':"Feedback submited "})
+        except Exception as e:
+            return Response({"message":str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 # ---------------------------- Vinayak - Professional Services and session  multiple updation made by vishal in api ---------------------------
@@ -1964,9 +2700,8 @@ class get_professional_srv_dtl_apiview(APIView):
     def get(self, request):
         srv_prof_id = get_prof(request)[0]
         print("TOKEN___________ ", srv_prof_id)
-        today = timezone.now().date()
         detail_event_plan_of_care_data=agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id=srv_prof_id,status=1).order_by('actual_StartDate_Time')
-        detial_event_plan_of_care_ids=detail_event_plan_of_care_data.filter(status=1,actual_StartDate_Time__lte=today)
+        detial_event_plan_of_care_ids=detail_event_plan_of_care_data.filter(status=1,actual_StartDate_Time__lte=timezone.now().date())
         remove_id=[]
 #################################################################get all last detail_event_plan_of_care date and event_plan_of_care id  ########################################################################
         for dt in detial_event_plan_of_care_ids:
@@ -1976,7 +2711,7 @@ class get_professional_srv_dtl_apiview(APIView):
                 if(actual_start_datetime< timezone.now().date()):
                     remove_id.append(last_detial.eve_poc_id)
 #################################################################get all last detail_event_plan_of_care date and event_plan_of_care id  Ends ########################################################################
-        dtl_plan_data_prof = detail_event_plan_of_care_data.filter(status=1,actual_StartDate_Time__lte=today).values_list('eve_poc_id', flat=True).distinct()
+        dtl_plan_data_prof = detail_event_plan_of_care_data.filter(status=1,actual_StartDate_Time__lte=timezone.now().date()).values_list('eve_poc_id', flat=True).distinct()
         # dtl_plan_data_prof = detail_event_plan_of_care_data.filter(status=1,actual_StartDate_Time=today).values_list('eve_poc_id', flat=True).distinct()
         get_professional_srv_data1 = agg_hhc_event_plan_of_care.objects.filter(eve_poc_id__in=dtl_plan_data_prof,status=1).exclude(service_status=4)
         # print("data from event plan of care table",get_professional_srv_data1)
@@ -1988,9 +2723,11 @@ class get_professional_srv_dtl_apiview(APIView):
             detail_event_plan_of_care_record_completed=detail_event_plan_of_care_record.filter(Session_jobclosure_status=1).count()#total count of session
             if(detail_event_plan_of_care_record.count()!=detail_event_plan_of_care_record_completed):
                 ongoing_record.append(i)
+        print("this is onging record afeter filter logic",ongoing_record)
         serializer = self.serializer_class(ongoing_record, many=True)
         return Response({'message':serializer.data}, status=status.HTTP_200_OK)
-
+				
+	
 #------------------------------------vishal send otp for patient before serice start------------------
 
 class patient_start_service_otp_send(APIView):
@@ -1999,16 +2736,15 @@ class patient_start_service_otp_send(APIView):
 
     def post(self, request):
         clgref_id = get_prof(request)[3]
-        
         request.data['last_modified_by'] = clgref_id
 
-        otp = random.randint(1000, 9999)
+        # otp = random.randint(1000, 9999)
+        otp = 1234
         number = request.data.get('phone')
         event_id=request.data.get('eve_id')
         otp_expire_time = timezone.now() + timezone.timedelta(minutes=10)
         msg = f"Use {otp} as your verification code on Spero Application. The OTP expires within 10 mins, {otp} Team Spero"
         try:
-            # patient_info = agg_hhc_patients.objects.get(phone_no=number)
             detail_eve_plan_of_care=agg_hhc_detailed_event_plan_of_care.objects.get(agg_sp_dt_eve_poc_id=request.data.get('agg_sp_dt_eve_poc_id'))
             print("data found ")
             if detail_eve_plan_of_care:
@@ -2019,7 +2755,9 @@ class patient_start_service_otp_send(APIView):
                 detail_eve_plan_of_care.otp_expire_time = otp_expire_time
                 detail_eve_plan_of_care.last_modified_by = clgref_id
                 detail_eve_plan_of_care.save()
+                print("data found 2")
                 # send_otp(number,msg)       #this function will be used to send otp 
+                print("data found 3")
                 return Response({'phone_no': number, 'OTP': otp}, status=status.HTTP_200_OK)
         except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
             return Response({'message': "Patient or caller with that number does not exist"}, status=status.HTTP_200_OK)
@@ -2027,12 +2765,9 @@ class patient_start_service_otp_send(APIView):
 class patient_start_service_otp_check(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
-
     def post(self,request):
         clgref_id = get_prof(request)[3]
-        
         request.data['last_modified_by'] = clgref_id
-
         try:
             otp=request.data.get('otp')
             time = timezone.now()
@@ -2120,7 +2855,7 @@ class patient_pending_amount(APIView):
                     plan_of_care_serializer=agg_hhc_event_plan_of_care_serializer(event_plan_of_care)
                     service=agg_hhc_services.objects.get(srv_id=plan_of_care_serializer.data.get('srv_id'))
                     service_serilizer=agg_hhc_services_serializer(service)
-                    return Response({"patient_name":patient_serializer.data.get('name'),"patient_email":patient_email,"patient_number":patient_serializer.data.get('phone_no'),"patient_address":patient_serializer.data.get('address'),"remaining payment":remaning_payment,"service_cost":int(event_serializer.data.get('final_amount')),"service_title":service_serilizer.data.get('service_title'),"service_id":service_serilizer.data.get('srv_id'),"success":True,"event_id":plan_of_care_serializer.data.get('eve_id')}, status=status.HTTP_200_OK)
+                    return Response({"patient_name":patient_serializer.data.get('name'),"patient_email":patient_serializer.data.get('patient_email_id'),"patient_number":patient_serializer.data.get('phone_no'),"patient_address":patient_serializer.data.get('address'),"remaining payment":remaning_payment,"service_cost":int(event_serializer.data.get('final_amount')),"service_title":service_serilizer.data.get('service_title'),"service_id":service_serilizer.data.get('srv_id'),"success":True,"event_id":plan_of_care_serializer.data.get('eve_id')}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": "An error occurred: {}".format(str(e))}) 
         
@@ -2140,13 +2875,11 @@ class select_number_to_send_opt(APIView):
             return Response({"message": "An error occurred: {}".format(str(e))})
 
 
-
 class payment_recived_by_prof(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         # clgref_id = get_prof(request)[3]
-        
         # request.data['last_modified_by'] = clgref_id
         print("hi")
         try:
@@ -2154,11 +2887,19 @@ class payment_recived_by_prof(APIView):
             amount_paid = int(request.data.get('amount_paid'))
             cheque_image_file = request.data.get('cheque_image')
             clg_ref_id = request.data.get("pay_recived_by")
-            # print(clg_ref_id)
+            wallet_amount=request.data.get("wallet_Amount")
+            print(clg_ref_id)
             colleague = agg_com_colleague.objects.get(clg_ref_id=clg_ref_id)#w
-            print("hi 2")
+############ wallet calculation function starts from here ##################################################
+            print("wallet_record")
+            wallet_record=wallet_calculate_fun(int(request.data.get('eve_id')),amount_paid,wallet_amount)
+            if wallet_record=="Amount is not Available":
+                return Response({"message": "That much Amount is not Available in Wallet"})
+            else:
+                amount_paid=wallet_record
+            print("This wallet record end's")
+############ wallet calculation function ends from here ##################################################
             if int(request.data.get('mode'))==2:
-                print("hi 3")
                 cheque_status=1
                 payment_status=1
             else:
@@ -2166,7 +2907,8 @@ class payment_recived_by_prof(APIView):
                 cheque_status=None
                 print("hi 4")
             # print(str(request.data.get("pay_recived_by")))
-           
+
+             
             data = {
                 'amount_paid': amount_paid,
                 'pay_recived_by': colleague.id,
@@ -2186,18 +2928,16 @@ class payment_recived_by_prof(APIView):
                 'added_by':colleague.id,
                 'last_modified_by':colleague.id
             }
-            print("hi 5")            
             payment_details_serializer = agg_hhc_payment_details_serializer(data=data)
-            print("h6")
             if payment_details_serializer.is_valid():
-                print("working ")
                 payment_details_serializer.save()
-                print("data saved ")
                 # print(payment_details_serializer.data)
+                #wallet payment id in  this Start  -----------------------------------------------------------------
+                Add_payment_id_in_wallet(payment_details_serializer.data.get('pay_dt_id'),int(request.data.get('eve_id')))
+                #wallet payment id in ends --------------------------------------------------------------
                 return Response({"message": payment_details_serializer.data}, status=status.HTTP_200_OK)
             print("record not saved")
             return Response({"message": "Invalid data provided"}, status=status.HTTP_400_BAD_REQUEST)
-        
         except Exception as e:
             return Response({"message": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -2259,7 +2999,7 @@ class SrvSessAPIView(APIView):
             ongoing_sessions = []
             upcoming_sessions = []
             completed_sessions = []
-          
+            serializer_cancel=[]          
 
             for session in serializer.data:
                 start_date = datetime.strptime(session['actual_StartDate_Time'], "%Y-%m-%d").date()
@@ -2268,7 +3008,6 @@ class SrvSessAPIView(APIView):
                 cancelled = agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=eve_id, srv_prof_id=srv_prof_id, is_cancelled=1, status=2)
                 serializer_cancel = get_canceled_data_prof(cancelled, many=True)
                 
-
                 if session['Session_jobclosure_status'] == 1:
                     completed_sessions.append(session)
                 elif start_date == timezone.now().date():
@@ -2282,12 +3021,15 @@ class SrvSessAPIView(APIView):
 
                 # if cancelled.exists:
                 #     
-
+            try:
+                cancelled_sessions=serializer_cancel.data
+            except Exception as e:
+                cancelled_sessions=[]
             data = {
                 "ongoing_session": ongoing_sessions,
                 "upcoming_session": upcoming_sessions,
                 "completed_session": completed_sessions,
-                "cancelled_sessions":serializer_cancel.data
+                "cancelled_sessions":cancelled_sessions,#serializer_cancel.data if serializer_cancel.data else None
             }
 
             return Response({"data": data}, status=status.HTTP_200_OK)
@@ -2341,13 +3083,17 @@ class CurrentSessAPIView(APIView):
             print("TOKEN_______________", srv_prof_id)
             today = timezone.now()
             sessions = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id=srv_prof_id, status=1,Session_jobclosure_status=2,actual_StartDate_Time=today.date()).order_by('start_time')
+            print("h1",sessions)
             lis=[]
             serializer = srv_sess_serializer(sessions, many=True)
             for i in serializer.data:
                 lis.append(i['start_time'])
             all_sessions = []
+            print("this is list",lis)
             s=0
             for session in serializer.data:
+                # print("old session time",lis[s])
+                # print("new session time ",session['start_time'])
                 s=s+1
                 if session['actual_StartDate_Time'] is None or session['actual_EndDate_Time'] is None \
                         or session['start_time'] is None or session['end_time'] is None:
@@ -2356,6 +3102,7 @@ class CurrentSessAPIView(APIView):
                 time_string = session['start_time']
                 format_string = '%H:%M:%S.%f' if '.' in time_string else '%H:%M:%S'
                 start_time = datetime.strptime(time_string, format_string).time()
+                # start_time = datetime.strptime(session['start_time'], '%H:%M:%S').time()
                 end_date = datetime.strptime(session['actual_EndDate_Time'], "%Y-%m-%d").date()
                 time_string = session['end_time']
                 format_string = '%H:%M:%S.%f' if '.' in time_string else '%H:%M:%S'
@@ -2364,10 +3111,12 @@ class CurrentSessAPIView(APIView):
                 end_datetime = timezone.make_aware(datetime.combine(end_date, end_time), timezone.get_current_timezone())
                 start_time=time.fromisoformat(session['start_time'])
                 end_time=time.fromisoformat(session['end_time'])
+
+
                 try:
                     hr1add = (datetime.now() + timedelta(hours=1)).time()
-                    if start_time<=hr1add and  datetime.now().time()<time.fromisoformat(lis[s]):
-                        # if datetime.now().time() in range(start_time,time.fromisoformat(lis[s])):
+                    if start_time<=hr1add and datetime.now().time()<time.fromisoformat(lis[s]):
+                        # if  hr1add in range(start_time,new_time):#time.fromisoformat(lis[s])#datetime.now().time()
                         if start_time <= hr1add <= time.fromisoformat(lis[s]):
                             all_sessions.append((start_datetime, end_datetime, session))
                         elif(end_time<datetime.now().time() and end_time<time.fromisoformat(lis[s]) and start_time<datetime.now().time()):
@@ -2393,7 +3142,7 @@ class CurrentSessAPIView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         except agg_hhc_detailed_event_plan_of_care.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        
+
 
 
 
@@ -2459,6 +3208,7 @@ class payment_from_professional_to_spero(APIView):
 
 
 
+
 # ------------------- professional service cancellation api --------------------
 
 class srv_cancelled_pro_app(APIView):
@@ -2473,7 +3223,9 @@ class srv_cancelled_pro_app(APIView):
         cancellation_history_objects = agg_hhc_detailed_event_plan_of_care.objects.filter(srv_prof_id=srv_prof_id_is).values('eve_poc_id').distinct().order_by('actual_StartDate_Time')
         for event_plan_of_care in cancellation_history_objects:
             cancellation_history_objects = agg_hhc_event_plan_of_care.objects.filter(eve_poc_id=event_plan_of_care['eve_poc_id'],status=2).order_by('start_date')#srv_prof_id = srv_prof_id_is,
-            # print(cancellation_history_objects[0].canceled_date, ';..............')
+            # if cancellation_history_objects:
+            #     print(cancellation_history_objects[0].canceled_date, ';..............')
+            # print(cancellation_history_objects, ';.........')
             serialized_data = self.serializer_class(cancellation_history_objects, many=True).data
 
             if serialized_data:
@@ -2493,80 +3245,6 @@ class srv_cancelled_pro_app(APIView):
 
 
 
-#feedback ---------------api-------created-----by---------vishal--🤣--------------------------next 
-class feedback(APIView):
-    renderer_classes = [UserRenderer]
-    permission_classes = [IsAuthenticated]
-    def get(self,request,lan):
-            data_list=[]
-            questions=FeedBack_Questions.objects.filter(status=1,question_for=2)#2=professional
-            for i in questions:
-                if(int(lan)==1):#marathi
-                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_mar}
-                elif(int(lan)==2):#hindi
-                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_hin}
-                else:#English
-                    mar_data={'F_questions':i.F_questions,'Question_mar':i.Question_eng}
-                data_list.append(mar_data)
-            # question_serializer=question_feedback_serializer(questions,many=True)
-            return Response({"message":data_list})
-
-    def post(self,request):
-        try:
-            if(int(request.data.get('feedback_by'))==3):
-                srv_prof_id_is=request.data.get('serv_prof_id')
-            else:
-                srv_prof_id_is = get_prof(request)[0]
-            unused=['[','{',']','}']
-            # request.data['feedback_by']=2#2 is for patient and 1 is for professional
-            rating_data=request.data.get('question_answers')
-            new_list=''
-            for i in rating_data:
-                if i in unused:
-                    pass
-                else:
-                    new_list=new_list+i
-            new_list=new_list.split(',')
-            print("final list is ",new_list)
-            dictionary=dict(request.data)
-            if 'additional_comment' in dictionary:
-                del dictionary['additional_comment']
-            if 'image' in dictionary:
-                del dictionary['image']
-            if 'vedio' in dictionary:
-                del dictionary['vedio']
-            if 'audio' in dictionary:
-                del dictionary['audio']
-            event_id_is=int(dictionary['eve_id'][0])
-            feedback_by_is=1 #1 for professional = 1
-            del dictionary['eve_id']
-            del  dictionary['feedback_by']
-            print("list is not ",dictionary)
-            question_data=FeedBack_Questions.objects.filter(status=1,question_for=2)#.values('F_questions')
-            list_comp = [k.F_questions for k in question_data]
-            print(list_comp)
-# get professional object from professinoal id #
-            professional=agg_hhc_service_professionals.objects.get(srv_prof_id=srv_prof_id_is)
-#end get professional object from professinoal id #
-#------------------------------------save feedback media--------------------
-            feed_serializer=feedback_media_serializer(data=request.data)
-            if feed_serializer.is_valid():
-                feed_serializer.save()
-            feedback_obj=agg_hhc_feedback_media_note.objects.get(feedbk_med_id=feed_serializer.data['feedbk_med_id']) # this is feedback id
-            t=0
-            for i in list_comp:
-                try:
-                    question=question_data.filter(F_questions=int(list_comp[t])).last()
-                    event_record=agg_hhc_events.objects.filter(eve_id=event_id_is).last()
-                    print("this is the professional ",professional)
-                    agg_hhc_Professional_app_feedback.objects.create(eve_id=event_record,q1=question,rating=new_list[t],feedback_by=int(feedback_by_is),srv_prof_id=professional,feedbk_med_id=feedback_obj,added_by=get_prof(request)[1])#,
-                    t=t+1
-                except:
-                    t=t+1
-            return Response({'message':"Feedback submited "})
-        except Exception as e:
-            return Response({"message":str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 
@@ -2574,6 +3252,7 @@ class MyView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]    
     def get(self, request, pt_id, eve_id, agg_sp_dt_eve_poc_id=None, *args, **kwargs):
+        patient_document_seri=None
         try:
             try:
                 data_from_table1 = agg_hhc_Professional_app_feedback.objects.filter(pt_id=pt_id,eve_id=eve_id,status=1).first()                
@@ -2586,6 +3265,13 @@ class MyView(APIView):
                 suffer_from=events.Suffered_from
             except:
                 suffer_from="None"
+
+            try:
+                patient_documents=agg_hhc_patient_documents.objects.filter(eve_id=eve_id,status=1).last()
+                patient_document_seri=agg_hhc_patient_documents_serializer(patient_documents)
+            except:
+                patient_document_seri=None
+
             try:
                 payment_details=agg_hhc_payment_details.objects.filter(eve_id=eve_id,status=1,overall_status="SUCCESS").last()
                 pending_amount=int(payment_details.amount_remaining)
@@ -2620,6 +3306,7 @@ class MyView(APIView):
                 'feedback': feeedback,
                 'pending_amount':pending_amount,
                 'suffer_from':suffer_from,
+                'patient_document':patient_document_seri.data if patient_document_seri !=None else None
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
@@ -2650,11 +3337,22 @@ class cancelled_request_professional(APIView):
         request.data['last_modified_by'] = clgref_id
         request.data['srv_prof_id'] = srv_prof
 
+        try:
+            res_idd = int(request.data.get('req_resson'))
+            get_reson = agg_hhc_enquiry_follow_up_cancellation_reason.objects.get(
+                cancelation_reason_id=res_idd
+            )
+            request.data['req_resson'] = get_reson.cancelation_reason
 
+        except (ValueError, TypeError):
+            request.data['req_resson'] = "error"
+
+        except agg_hhc_enquiry_follow_up_cancellation_reason.DoesNotExist:
+            request.data['req_resson'] = "error"
         try:
             srv_sen=request.data.get('is_srv_sesn')
             if srv_sen == 1:
-                # request.data['dtl_eve_id']=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'], srv_prof_id=srv_prof, status=1).last().agg_sp_dt_eve_poc_id if agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'], srv_prof_id=srv_prof, status=1).last().agg_sp_dt_eve_poc_id else None
+                request.data['dtl_eve_id']=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'], srv_prof_id=srv_prof, status=1).last().agg_sp_dt_eve_poc_id if agg_hhc_detailed_event_plan_of_care.objects.filter(eve_id=request.data['eve_id'], srv_prof_id=srv_prof, status=1).last().agg_sp_dt_eve_poc_id else None
                 serailizer = self.serializer_class_service(data=request.data)
                 if serailizer.is_valid():
                     serailizer.save()
@@ -2691,12 +3389,9 @@ class Reschedule_request_professional(APIView):
     def post(self, request):
         clgref_id = get_prof(request)[3]
         srv_prof = get_prof(request)[0]
-
         
         request.data['last_modified_by'] = clgref_id
         request.data['srv_prof_id'] = srv_prof
-
-
 
         try:
             srv_sen=request.data.get('is_srv_sesn')
@@ -2757,7 +3452,6 @@ class Transport_api(APIView):
         
     def post(self,request):
         clgref_id = get_prof(request)[3]
-        
         request.data['last_modified_by'] = clgref_id
         types = int(request.GET.get('type'))
         srv_prof_id = get_prof(request)[0]
@@ -2768,7 +3462,6 @@ class Transport_api(APIView):
             #     transport_serializer=agg_hhc_transport_serializer1(data=request.data)
             # if types == 2:
             transport_serializer=agg_hhc_transport_serializer(data=request.data)
-
             if transport_serializer.is_valid():
                 transport_serializer.save()
                 return Response({"Response":"Successfully Added Record"}, status=status.HTTP_200_OK)
@@ -2781,6 +3474,8 @@ class Transport_api(APIView):
 
 
 class last_login_check(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
     def post(self,request):
         # clg_id=request.data.get('clg_id')
         device_token=request.data.get('token')
@@ -2844,9 +3539,7 @@ class call_back_api(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request):
         clgref_id = get_prof(request)[3]
-        
         request.data['last_modified_by'] = clgref_id
-
         try:
             request.data['clg_id']= get_prof(request)[1]
             serialized= professional_call_back_serializer(data=request.data)
@@ -2880,6 +3573,7 @@ class feedback_status(APIView):
 
 
 
+
 class pending_services(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -2887,9 +3581,9 @@ class pending_services(APIView):
         try:
             pending_service_list=[]
             prof = get_prof(request)[0]
+            print("prof",prof)
             today = timezone.now().date()
             all_detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,srv_prof_id=prof,Session_jobclosure_status=2,actual_StartDate_Time__lt=today).order_by('actual_StartDate_Time')
-            # all_detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,srv_prof_id=prof,Session_jobclosure_status=2,actual_StartDate_Time__lt=today)
             event_list=all_detail_event.filter(Session_jobclosure_status=2).values_list('eve_poc_id', flat=True).distinct()
             for i in event_list:
                 detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(eve_poc_id=i,status=1,srv_prof_id=prof).last()
@@ -2910,9 +3604,7 @@ class pending_services(APIView):
             return Response({'pending_services':pending_service_list})
         except Exception as e:
             return Response({"Error":str(e)})
-
-
-
+        
 class pending_sessions(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -2920,6 +3612,7 @@ class pending_sessions(APIView):
         try:
             pending_service_list=[]
             prof = get_prof(request)[0]
+            print("professional",prof)
             all_detail_event=agg_hhc_detailed_event_plan_of_care.objects.filter(status=1,srv_prof_id=prof,Session_jobclosure_status=2,eve_id=eve_id,actual_StartDate_Time__lt=timezone.now().date()).order_by('actual_StartDate_Time')
             for i in all_detail_event:
                 time= timezone.now()# + timedelta(hours=24)
@@ -2928,19 +3621,10 @@ class pending_sessions(APIView):
                 start_datetime_naive = datetime.combine(i.actual_StartDate_Time, i.start_time)
                 start_datetime = timezone.make_aware(start_datetime_naive, timezone.get_default_timezone())#+timedelta(hours=24)
                 start_datetime=start_datetime+timedelta(hours=24)
-#------------------------current datetime foramte changed for test server-------------------------------------------------
-                current_time = timezone.now().astimezone(pytz.utc)
-                formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S.%f%z')
-                formatted_time = formatted_time[:-2] + ':' + formatted_time[-2:]
-                datetime_format = '%Y-%m-%d %H:%M:%S.%f%z'
-                formatted_time = formatted_time[:-3] + formatted_time[-2:]
-                parsed_datetime = datetime.strptime(formatted_time, datetime_format)
-                print("Parsed datetime object:", parsed_datetime)
+                print("my time zone",timezone.get_default_timezone())
+                print("add date",start_datetime)
                 print("timezone",timezone.now())
-                print("new time",formatted_time,type(formatted_time))
-#------------------------current datetime foramte changed end for test server-------------------------------------------------
-
-                if start_datetime<parsed_datetime:
+                if start_datetime<time:
                     session_start=False
                 else:
                     session_start=True
@@ -2971,9 +3655,9 @@ class pending_sessions(APIView):
             return Response({'pending_services':pending_service_list})
         except Exception as e:
             return Response({"Error":str(e)})
-
         
 
+        
 ########-----------------------------payment_skip_from_professional----------------------------------################
 
 class payment_skip(APIView):
@@ -2987,8 +3671,8 @@ class payment_skip(APIView):
             return Response({'payment_skip':True})
         except Exception as e:
             return Response({'Error':str(e)})
-
         
+
 class cancel_request(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
@@ -3000,7 +3684,9 @@ class cancel_request(APIView):
         reschedule_services=[]
         redchedule_session=[]
         try:
-            rejected_cancel_session=agg_hhc_cancellation_and_reschedule_request.objects.filter(professional_request_status=2,added_by=str(clgref_id)).order_by('added_date')#dtl_eve_id__srv_prof_id=prof,
+            print("clg_ref_id",str(clgref_id))
+            rejected_cancel_session=agg_hhc_cancellation_and_reschedule_request.objects.filter(professional_request_status=2,added_by=str(clgref_id)).order_by('added_date')#dtl_eve_id__srv_prof_id=prof
+            print("data insid this ",rejected_cancel_session)
             for i in rejected_cancel_session:
                 if i.is_srv_sesn==1:
                     try:
@@ -3025,6 +3711,7 @@ class cancel_request(APIView):
                         patient_name=''
                         service_date=''
                 service_detials={'req_id':i.req_id,'service_type':service_type,'patient_name':patient_name,'remark':i.req_rejection_remark,'session_or_eve':session_or_eve,'service_date':service_date}
+                print("this is i ",i.req_rejection_remark)
                 if (i.is_canceled==1):#cancel request 
                     if(i.is_srv_sesn==1):#service
                         can_services.append(service_detials)
@@ -3040,3 +3727,18 @@ class cancel_request(APIView):
             return Response({'Error':str(e)})
         
 
+
+
+class Orm_api(APIView):
+    def get(self,request):
+        # services=agg_hhc_services.objects.filter(status=1)
+        # services=agg_hhc_services.objects.filter(status=1,service_title__startswith='P')
+        # services=agg_hhc_services.objects.filter(status=1,service_title__istartswith='P')
+        # services=agg_hhc_services.objects.filter(status=1,service_title__startswith='p')#__startswith='p' is case sensitive
+        # services=agg_hhc_services.objects.filter(status=1,service_title__istartswith='p',service_title__iendswith='py')#__istartswith='p' is case insensitive
+        services=agg_hhc_services.objects.filter(status=1,service_title__iexact='Physiotherapy')
+        service=[]
+        for i in services:
+            dict={i.srv_id:i.service_title}
+            service.append(dict)
+        return Response({'services':service})

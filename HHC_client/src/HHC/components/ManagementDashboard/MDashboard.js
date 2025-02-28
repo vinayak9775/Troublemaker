@@ -437,6 +437,7 @@ const MDashboard = () => {
         tilldate: ''
     });
 
+
     const inCancelledCount = (id) => {
 
         const url = id === 'all'
@@ -872,6 +873,17 @@ const [totalServiceCount, setTotalServiceCount] = useState(0);
         })
         .catch(error => console.error('Error fetching hospital data:', error));
     }
+
+    const [abc, setAbc] = useState([]);
+
+    useEffect(() => {
+        if (allServices.services && Array.isArray(allServices.services)) {
+          setAbc(allServices.services);
+        }
+      }, [allServices.services]);
+  
+    console.log(abc, 'abccccccccccccccc');
+
     return (
         <div>
             <Header />
@@ -961,7 +973,7 @@ const [totalServiceCount, setTotalServiceCount] = useState(0);
 
                 <Grid item xs={12} container spacing={1}>
                     <Grid item lg={8} md={8} xs={12}>
-                        <Services enquiry={enquiry} converted={converted} followup={followup} cancelled={cancelled} services={services} cancelledEnq={cancelledEnq} value={value} totalServiceCount={totalServiceCount} allServices={allServices} servicesname={allServices.services} pendinginq={pendinginq} />
+                    {abc.length > 0 && ( <Services abc={abc} enquiry={enquiry} converted={converted} followup={followup} cancelled={cancelled} services={services} cancelledEnq={cancelledEnq} value={value} totalServiceCount={totalServiceCount} allServices={allServices} servicesname={allServices.services} pendinginq={pendinginq} />)}
                     </Grid>
                     <Grid item lg={4} md={4} xs={12}>
                         <Payment inprocesscount={inProcess} inpaymentcount={payment} inpendingcount={pending} value={value} assign={assign} inprocessEnq={inprocessEnq} pendingEnq={pendingEnq} unassignProf={unassignProf} />

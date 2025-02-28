@@ -44,7 +44,7 @@ const JonClosure = () => {
     const [endDate, setEndDate] = useState('');
     const [jobClosureData, setJobClosureData] = useState([]);
     const accessToken = localStorage.getItem('token');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -71,17 +71,16 @@ const JonClosure = () => {
             console.log(res);
             const data = await res.json();
             setJobClosureData(data);
-            setLoading(false); // Stop loading
+            setLoading(false);
             console.log("Data from Closure", data);
         } catch (error) {
             console.error("Error fetching Closure Data:", error);
-            setLoading(false); // Stop loading in case of error
+            setLoading(false);
         }
     };
 
     const handleDownloadExcel = async () => {
         try {
-            setLoading(true);
             let url = `${port}/hhc_repo/Job_closure_report/?`;
 
             if (startDate) {
@@ -91,23 +90,43 @@ const JonClosure = () => {
                 url += `todate=${endDate}&`;
             }
 
-            const res = await fetch(url.slice(0, -1), {
+            url = url.endsWith('&') ? url.slice(0, -1) : url;
+
+            const res = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                 },
             });
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
             const data = await res.json();
-            const worksheet = XLSX.utils.json_to_sheet(data);
+            const renamedData = data.Record.map(item => ({
+                'eve_id': item.eve_id,
+                'event_code': item.event_code,
+                'patient_name': item.patient_name,
+                'prof_name_session': item.prof_name_session?.name,
+                'service_from': item.service_from,
+                'service_to': item.service_to,
+                'service_name': item.service_name?.service
+            }));
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(renamedData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Closure Report");
+
+            // Write the workbook to an array buffer
             const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+            // Create a blob and save it
             const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
             saveAs(blob, "closure_report.xlsx");
-            setLoading(false); // Stop loading
         } catch (error) {
             console.error("Error fetching Closure Data:", error);
-            setLoading(false); // Stop loading in case of error
         }
     };
 
