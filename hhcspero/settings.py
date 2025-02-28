@@ -108,10 +108,10 @@ DATABASES = {
     
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'HHC_main',
-        'USER': 'hhcpython',
-        'PASSWORD': 'Python!1!hhc',
-        'HOST': '192.168.1.174',
+        'NAME': 'test_cicd',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': '192.168.1.109',
         'PORT': '5432',  # Default PostgreSQL port
         'OPTIONS': {
             'options': '-c timezone=Asia/Kolkata',
