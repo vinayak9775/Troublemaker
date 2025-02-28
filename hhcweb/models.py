@@ -5238,7 +5238,7 @@ class agg_hhc_insurance_gen_dtl(models.Model):
 	total_cost = models.BigIntegerField(blank=True, null = True)
 	discount = models.BigIntegerField(blank=True, null = True)
 	conveyance = models.BigIntegerField(blank=True, null = True)
-	final_cost = models.BigIntegerField(max_length=100,blank=True, null = True)
+	final_cost = models.BigIntegerField(blank=True, null = True)
 	policy_number = models.CharField(max_length=100, blank=True, null = True)
 	status = enum.EnumField(status_enum,null=True)
 	added_by = models.CharField(max_length=100, blank=True,null=True)
