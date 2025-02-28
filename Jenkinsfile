@@ -11,6 +11,7 @@ pipeline {
                 sh '''
                     echo "Checking current workspace directory"
                     #ls -al
+                    echo $PWD
                     chmod +x envsetup.sh
                     ./envsetup.sh
                 '''
