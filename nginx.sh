@@ -12,3 +12,4 @@ sudo systemctl enable nginx
 echo "Nginx has been started"
 
 sudo systemctl status nginx
+sudo systemctl restart nginx
