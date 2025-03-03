@@ -223,12 +223,10 @@ PASSWORD_RESET_TIMEOUT=900
 CORS_ALLOW_ALL_ORIGINS = False
 
 CORS_ALLOWED_ORIGINS=[
-    "http://192.168.0.109:8000",
-    "http://122.176.232.35:8008",
-    "http://122.176.232.35:30",
+    "http://192.168.1.109:8050",
+    "http://122.176.232.35:8050",
     "http://localhost:3000",
-    "http://localhost:3001",
-    "http://sperohealthcare.in"
+    "http://localhost:3001"
 ]
 
 
