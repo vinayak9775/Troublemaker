@@ -26,7 +26,7 @@ DEBUG = True
 
 #ALLOWED_HOSTS = ['172.16.164.41','139.5.190.205','www.hospitalguru.in','hospitalguru.in','guru.hospitalguru.in','www.guru.hospitalguru.in']
 # ALLOWED_HOSTS = ['172.16.164.41','139.5.190.205','hospitalguru.in','www.hospitalguru.in']
-ALLOWED_HOSTS = ['172.16.164.41','139.5.190.205','hhc.hospitalguru.in']
+ALLOWED_HOSTS = ['192.168.1.109','127.0.0.1','localhost']
 # AUTH_USER_MODEL = 'hhcweb.agg_hhc_callers'
 # SECURE_SSL_REDIRECT = True
 
@@ -120,10 +120,10 @@ DATABASES = {
 
     'default': {
        'ENGINE': 'django.db.backends.postgresql',
-       'NAME': 'HHC_main_2024',
-       'USER': 'dbadmin',
-       'PASSWORD': 'DB!adm!18524!',
-       'HOST': '139.5.190.205',
+       'NAME': 'test_cicd',
+       'USER': 'postgres',
+       'PASSWORD': 'postgres',
+       'HOST': '192.168.1.109',
        'PORT': '5432',  # Default PostgreSQL port
     }
 }
@@ -240,6 +240,10 @@ PASSWORD_RESET_TIMEOUT=900
 
 # CORS_ALLOW_ALL_ORIGINS = False
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.1.109:8050",
+    "http://localhost:8050", 
+]
 CORS_ALLOWED_ORIGINS=[
     "https://hhc.hospitalguru.in",
     "http://hhc.hospitalguru.in",
