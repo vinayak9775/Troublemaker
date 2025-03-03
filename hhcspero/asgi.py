@@ -1,5 +1,5 @@
 """
-ASGI config for hhcspero project.
+ASGI config for HHC project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
