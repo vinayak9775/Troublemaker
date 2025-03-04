@@ -228,14 +228,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8050", 
 ]
 CORS_ALLOWED_ORIGINS=[
-    "https://hhc.hospitalguru.in",
-    "http://hhc.hospitalguru.in",
-    "http://139.5.190.205:8000",
-    "http://139.5.190.205",
-    "http://localhost:3000",
-    "http://hhc.hospitalguru.in:8000",
-    "https://www.sperohealthcare.in",
-    "https://sperohealthcare.in",
+    "http://localhost:8050",
+    "http://192.168.1.109:8050"
     
 ]
 
