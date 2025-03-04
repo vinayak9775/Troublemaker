@@ -9,6 +9,19 @@ import requests
 
 
 # We are writing this because we need confirm password field in our Registration Request
+# We are writing this because we need confirm password field in our Registration Request
+# We are writing this because we need confirm password field in our Registration Request
+# We are writing this because we need confirm password field in our Registration Request
+# We are writing this because we need confirm password field in our Registration Request
+
+
+
+
+
+
+
+
+# We are writing this because we need confirm password field in our Registration Request
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(style={'input_type':'password'}, write_only=True)
     grp_id = serializers.PrimaryKeyRelatedField(queryset=agg_mas_group.objects.all(),many=False)
