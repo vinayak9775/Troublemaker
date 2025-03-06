@@ -243,6 +243,7 @@ urlpatterns = [
     path('Post_User/', views.Create_Post_User_Views.as_view()),                                     # For HR Module - System User - registered User - Amit
     path('Edit_User/<int:clg_id>/', views.Edit_User_Views.as_view()),                               # For HR Module - System User - Edit_User - Amit
     path('active_inActive_User/<int:clg_id>/', views.active_inActive_User_Views.as_view()),         # For HR Module - System User - Active InActive User - Amit     
+    path('active_inActive_User21/<int:clg_id>/', views.active_inActive_User_Views.as_view()), 
 
     
 
