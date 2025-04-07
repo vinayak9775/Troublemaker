@@ -10,6 +10,8 @@ urlpatterns = [
     path('prof_api/', Prof_api.as_view()),
     path('manage_cons/', manage_cons.as_view()),
     path('callbackbtn/', CallBackButton.as_view()),
+
+    
     path('prof_aval_api/', Prof_aval_api.as_view()),
 
     # ------------------------------------------- Sandip Shimpi ------------------------------------------
